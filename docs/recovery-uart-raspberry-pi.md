@@ -76,6 +76,10 @@ the loader uses. It also removes the Linux serial console and installs
 - [ ] Remove the four rubber feet, loosen the four screws, take off the
       bottom cover and lift the board out
       ([CNX Software teardown](https://www.cnx-software.com/2022/11/09/gl-inet-gl-mt2500a-security-gateway-review-unboxing-teardown/)).
+- [ ] While the board is out, photograph the chip next to the **WAN** port
+      and read its marking: MaxLinear `GPY211` means profile
+      `glinet_gl-mt2500`, Airoha `EN8811H` means `glinet_gl-mt2500-airoha`.
+      This unit's chip is not necessarily the same as the replacement's.
 - [ ] Find the 4-pin UART near the LAN port and read **its silkscreen
       labels**. Don't trust photos of other board revisions.
 - [ ] Wire it up. TX and RX cross over, and **3V3 is not connected**:
@@ -146,9 +150,27 @@ Either way:
 - [ ] Enter the recovery page again (reset-button sequence) and flash
       **stock 4.7.4** from the kit at `http://192.168.1.1/`. This proves the
       eMMC can be written and gives a known-good baseline.
-- [ ] Check the WAN PHY variant:
+- [ ] Check the WAN PHY variant on **this** unit, and compare it with the
+      chip marking from step 2:
       `dmesg | grep -iE 'en8811|airoha|gpy|maxlinear'`
 - [ ] Only then flash our OpenWrt build for the matching profile.
+
+### Which chip, and does it matter for recovery?
+
+- **For recovery it doesn't matter.** GL.iNet's fixed U-Boot runs its
+  recovery page on the LAN port, which uses the SoC's built-in gigabit PHY.
+  The only PHY ID in the binary is `03a2.9461`, the MT7981's internal PHY,
+  so it doesn't depend on the WAN chip.
+- **For OpenWrt it does.** Both profiles list `glinet,mt2500-emmc` as a
+  supported device, which appears to be the board name GL.iNet's firmware
+  uses. So when flashing from stock firmware, the compatibility check
+  probably **won't catch** the wrong image. (The Airoha image carries no
+  image metadata at all.) The result would be a dead WAN port with LAN
+  still working. That's recoverable by flashing the right image over LAN,
+  but it's easy to avoid.
+- **A guess, not a fact:** a unit that shipped with the September 2022
+  U-Boot predates the Airoha revision, so it is most likely MaxLinear. The
+  step 1 boot log shows the U-Boot date, and the chip marking settles it.
 
 ## Stop conditions
 
