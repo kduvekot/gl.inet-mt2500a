@@ -51,7 +51,59 @@ env:
   STOCK_SHA256: 3de78f88a2cc204c089cd1c262346786796d43a223564b1f792f3e8515cc8904
 
 jobs:
+  loader:
+    name: mtk_uartboot (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          # 64-bit Raspberry Pi OS: built and smoke-tested natively on ARM.
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+            run: ""
+          # 32-bit Raspberry Pi OS: the ARM runners cannot execute AArch32
+          # code, so cross-build on x86 and smoke-test under qemu.
+          - arch: armv7
+            runner: ubuntu-24.04
+            target: armv7-unknown-linux-musleabihf
+            run: qemu-arm-static
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: 981213/mtk_uartboot
+          ref: ${{ env.MTK_UARTBOOT_REF }}
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build static binary
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: rust-lld
+          CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABIHF_LINKER: rust-lld
+        run: |
+          cargo build --locked --release --target "${{ matrix.target }}"
+          cp "target/${{ matrix.target }}/release/mtk_uartboot" "mtk_uartboot-${{ matrix.arch }}"
+          file "mtk_uartboot-${{ matrix.arch }}"
+
+      - name: Install qemu
+        if: matrix.run != ''
+        run: sudo apt-get update -q && sudo apt-get install -y -q qemu-user-static
+
+      - name: Smoke test
+        run: |
+          ${{ matrix.run }} "./mtk_uartboot-${{ matrix.arch }}" --help | tee help.txt
+          grep -q '^mtk_uartboot - ' help.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mtk_uartboot-${{ matrix.arch }}
+          path: mtk_uartboot-${{ matrix.arch }}
+          if-no-files-found: error
+
   kit:
+    needs: loader
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -63,23 +115,11 @@ jobs:
           bash -n recovery/*.sh
           shellcheck recovery/*.sh
 
-      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
         with:
-          repository: 981213/mtk_uartboot
-          ref: ${{ env.MTK_UARTBOOT_REF }}
-          path: mtk_uartboot
-
-      - name: Build mtk_uartboot for the Raspberry Pi
-        working-directory: mtk_uartboot
-        env:
-          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: rust-lld
-          CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABIHF_LINKER: rust-lld
-        run: |
-          rustup target add aarch64-unknown-linux-musl armv7-unknown-linux-musleabihf
-          for t in aarch64-unknown-linux-musl armv7-unknown-linux-musleabihf; do
-            cargo build --locked --release --target "$t"
-            file "target/$t/release/mtk_uartboot"
-          done
+          pattern: mtk_uartboot-*
+          path: loaders
+          merge-multiple: true
 
       - name: Assemble kit
         env:
@@ -87,8 +127,7 @@ jobs:
         run: |
           kit=mt2500-recovery-kit
           mkdir -p "$kit/bin"
-          cp mtk_uartboot/target/aarch64-unknown-linux-musl/release/mtk_uartboot "$kit/bin/mtk_uartboot-aarch64"
-          cp mtk_uartboot/target/armv7-unknown-linux-musleabihf/release/mtk_uartboot "$kit/bin/mtk_uartboot-armv7"
+          cp loaders/mtk_uartboot-aarch64 loaders/mtk_uartboot-armv7 "$kit/bin/"
 
           gh release download "$TFA_RELEASE" -R 981213/tf-a-mtk -p "$BL2_NAME" -D "$kit"
 
