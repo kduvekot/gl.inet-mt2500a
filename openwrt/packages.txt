@@ -1,0 +1,18 @@
+# Extra packages added on top of the OpenWrt default package set.
+# One package per line; prefix with "-" to remove a default package.
+# Lines starting with "#" are comments.
+
+# Web interface (HTTPS-capable)
+luci
+
+# Network diagnostics, used to measure WAN/LAN throughput (see docs/journey.md)
+iperf3
+ethtool-full
+tcpdump-mini
+
+# Temperature and traffic graphs: WAN packet loss on this board has been
+# linked to the SoC running hot (around 50 °C), so we want to see it.
+luci-app-statistics
+collectd-mod-thermal
+collectd-mod-interface
+collectd-mod-cpu

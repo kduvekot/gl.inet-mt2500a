@@ -1,0 +1,170 @@
+name: Recovery kit
+
+# Bundles everything a Raspberry Pi needs to recover a GL-MT2500(A) over UART
+# when its U-Boot web recovery page accepts uploads but fails to write them
+# (the September 2022 U-Boot cannot initialise the eMMC on some units).
+#
+# Contents (all pinned and checksum-verified):
+#   mtk_uartboot   - MediaTek BootROM UART loader, built static for the Pi
+#                    (aarch64 for 64-bit Pi OS, armv7 for 32-bit Pi OS)
+#   bl2            - RAM-only BL2 for MT7981 BGA + DDR4, with UART download
+#   fip            - GL.iNet's fixed MT2500 U-Boot (FIP) from 2025-02-24
+#   firmware       - GL.iNet stock firmware 4.7.4 (latest stable), to prove
+#                    the eMMC is writable again before moving to OpenWrt
+#   scripts        - recovery/*.sh from this repository
+#
+# Run it manually with "publish" ticked to (re)publish the kit as the
+# "recovery-kit" release, so the Pi can download it with plain curl.
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the kit as the "recovery-kit" release
+        type: boolean
+        default: false
+  push:
+    branches: ["**"]
+    paths:
+      - "recovery/**"
+      - ".github/workflows/recovery-kit.yml"
+  pull_request:
+    paths:
+      - "recovery/**"
+      - ".github/workflows/recovery-kit.yml"
+
+permissions:
+  contents: read
+
+env:
+  # https://github.com/981213/mtk_uartboot (v0.1.1 + later fixes)
+  MTK_UARTBOOT_REF: b0ec7bdf1bab7089df948e745e17d206f3426dc1
+  # https://github.com/981213/tf-a-mtk/releases/tag/v2.10.0-mtk
+  TFA_RELEASE: v2.10.0-mtk
+  BL2_NAME: bl2-mt7981-bga-ddr4-ram.bin
+  # https://github.com/gl-inet/mt798x-boot
+  GL_BOOT_REF: 8f73dd1a66e2a9037e48ca7df6c5b14a48672a6e
+  FIP_NAME: uboot-mt2500-20250224-md5-74286e770cfb041b611d80d4adaef189.bin
+  FIP_SHA256: 90b28ab596783e8cab09e1e38d77a37cdbc1e3b9fba855847bc8248b213a40be
+  # GL.iNet stock firmware 4.7.4 (from firmware-api.gl-inet.com)
+  STOCK_URL: https://fw.gl-inet.com/firmware/mt2500/release/openwrt-mt2500-4.7.4-0328-1743128340.bin
+  STOCK_SHA256: 3de78f88a2cc204c089cd1c262346786796d43a223564b1f792f3e8515cc8904
+
+jobs:
+  loader:
+    name: mtk_uartboot (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          # 64-bit Raspberry Pi OS: built and smoke-tested natively on ARM.
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+            run: ""
+          # 32-bit Raspberry Pi OS: the ARM runners cannot execute AArch32
+          # code, so cross-build on x86 and smoke-test under qemu.
+          - arch: armv7
+            runner: ubuntu-24.04
+            target: armv7-unknown-linux-musleabihf
+            run: qemu-arm-static
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: 981213/mtk_uartboot
+          ref: ${{ env.MTK_UARTBOOT_REF }}
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build static binary
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: rust-lld
+          CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABIHF_LINKER: rust-lld
+        run: |
+          cargo build --locked --release --target "${{ matrix.target }}"
+          cp "target/${{ matrix.target }}/release/mtk_uartboot" "mtk_uartboot-${{ matrix.arch }}"
+          file "mtk_uartboot-${{ matrix.arch }}"
+
+      - name: Install qemu
+        if: matrix.run != ''
+        run: sudo apt-get update -q && sudo apt-get install -y -q qemu-user-static
+
+      - name: Smoke test
+        run: |
+          ${{ matrix.run }} "./mtk_uartboot-${{ matrix.arch }}" --help | tee help.txt
+          grep -q '^mtk_uartboot - ' help.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mtk_uartboot-${{ matrix.arch }}
+          path: mtk_uartboot-${{ matrix.arch }}
+          if-no-files-found: error
+
+  kit:
+    needs: loader
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check recovery scripts
+        run: |
+          bash -n recovery/*.sh
+          shellcheck recovery/*.sh
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mtk_uartboot-*
+          path: loaders
+          merge-multiple: true
+
+      - name: Assemble kit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          kit=mt2500-recovery-kit
+          mkdir -p "$kit/bin"
+          cp loaders/mtk_uartboot-aarch64 loaders/mtk_uartboot-armv7 "$kit/bin/"
+
+          gh release download "$TFA_RELEASE" -R 981213/tf-a-mtk -p "$BL2_NAME" -D "$kit"
+
+          curl -fsSL -o "$kit/fip-mt2500-20250224.bin" \
+            "https://raw.githubusercontent.com/gl-inet/mt798x-boot/${GL_BOOT_REF}/bin/${FIP_NAME}"
+          echo "${FIP_SHA256}  $kit/fip-mt2500-20250224.bin" | sha256sum -c -
+
+          curl -fsSL -o "$kit/$(basename "$STOCK_URL")" "$STOCK_URL"
+          echo "${STOCK_SHA256}  $kit/$(basename "$STOCK_URL")" | sha256sum -c -
+
+          cp recovery/*.sh "$kit/"
+          chmod +x "$kit"/*.sh "$kit"/bin/*
+
+          (cd "$kit" && find . -type f -print0 | sort -z | xargs -0 sha256sum) > SHA256SUMS
+          mv SHA256SUMS "$kit/SHA256SUMS"
+          cat "$kit/SHA256SUMS"
+          tar -czf "$kit.tar.gz" "$kit"
+          sha256sum "$kit.tar.gz" > "$kit.tar.gz.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mt2500-recovery-kit
+          path: |
+            mt2500-recovery-kit.tar.gz
+            mt2500-recovery-kit.tar.gz.sha256
+
+      - name: Publish "recovery-kit" release
+        if: inputs.publish
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: recovery-kit
+          target_commitish: ${{ github.sha }}
+          name: MT2500 UART recovery kit
+          make_latest: false
+          files: |
+            mt2500-recovery-kit.tar.gz
+            mt2500-recovery-kit.tar.gz.sha256
+          body: |
+            UART recovery kit for the GL.iNet GL-MT2500 / GL-MT2500A, built from ${{ github.sha }}.
+            See `docs/recovery-uart-raspberry-pi.md` for the procedure.
