@@ -1,0 +1,125 @@
+name: Build OpenWrt
+
+# Builds upstream OpenWrt images for the GL.iNet GL-MT2500 / GL-MT2500A
+# (Brume 2) with the official OpenWrt ImageBuilder, for both hardware
+# revisions:
+#   glinet_gl-mt2500         - MaxLinear GPY211C 2.5G WAN PHY (original)
+#   glinet_gl-mt2500-airoha  - Airoha EN8811H 2.5G WAN PHY (newer units)
+# Flashing the wrong one leaves the 2.5G WAN port without a working PHY.
+
+on:
+  workflow_dispatch:
+    inputs:
+      openwrt_version:
+        description: OpenWrt release to build from
+        default: "25.12.6"
+        required: true
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+    paths:
+      - "openwrt/**"
+      - ".github/workflows/build-openwrt.yml"
+  pull_request:
+    paths:
+      - "openwrt/**"
+      - ".github/workflows/build-openwrt.yml"
+
+permissions:
+  contents: read
+
+env:
+  OPENWRT_VERSION: ${{ inputs.openwrt_version || '25.12.6' }}
+  TARGET: mediatek
+  SUBTARGET: filogic
+
+jobs:
+  build:
+    name: Build ${{ matrix.profile }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        profile:
+          - glinet_gl-mt2500
+          - glinet_gl-mt2500-airoha
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ImageBuilder prerequisites
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q build-essential gawk gettext git libncurses-dev \
+            python3 rsync unzip wget xsltproc zlib1g-dev zstd file
+
+      - name: Restore ImageBuilder from cache
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: imagebuilder.tar.zst
+          key: imagebuilder-${{ env.OPENWRT_VERSION }}-${{ env.TARGET }}-${{ env.SUBTARGET }}
+
+      - name: Download and verify ImageBuilder
+        run: |
+          base="https://downloads.openwrt.org/releases/${OPENWRT_VERSION}/targets/${TARGET}/${SUBTARGET}"
+          name="openwrt-imagebuilder-${OPENWRT_VERSION}-${TARGET}-${SUBTARGET}.Linux-x86_64.tar.zst"
+          wget -q -O sha256sums "${base}/sha256sums"
+          if [ ! -f imagebuilder.tar.zst ]; then
+            wget -q -O imagebuilder.tar.zst "${base}/${name}"
+          fi
+          expected=$(grep " \*${name}\$" sha256sums | cut -d' ' -f1)
+          [ -n "$expected" ] || { echo "ImageBuilder not listed in sha256sums"; exit 1; }
+          echo "${expected}  imagebuilder.tar.zst" | sha256sum -c -
+          mkdir imagebuilder
+          tar --zstd -xf imagebuilder.tar.zst -C imagebuilder --strip-components=1
+
+      - name: Build image
+        working-directory: imagebuilder
+        run: |
+          packages=$(grep -vE '^[[:space:]]*(#|$)' ../openwrt/packages.txt | tr '\n' ' ')
+          echo "Extra packages: ${packages}"
+          if [ -d ../openwrt/files ]; then
+            make image PROFILE="${{ matrix.profile }}" PACKAGES="${packages}" FILES="$(realpath ../openwrt/files)"
+          else
+            make image PROFILE="${{ matrix.profile }}" PACKAGES="${packages}"
+          fi
+
+      - name: Collect output
+        run: |
+          out="imagebuilder/bin/targets/${TARGET}/${SUBTARGET}"
+          mkdir dist
+          cp "${out}"/openwrt-* dist/
+          (cd dist && sha256sum openwrt-* > "sha256sums-${{ matrix.profile }}")
+          ls -la dist
+          cat dist/sha256sums-*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openwrt-${{ env.OPENWRT_VERSION }}-${{ matrix.profile }}
+          path: dist/
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          body: |
+            Upstream OpenWrt ${{ env.OPENWRT_VERSION }} for the GL.iNet GL-MT2500 / GL-MT2500A,
+            built with the official ImageBuilder plus the packages in `openwrt/packages.txt`.
+
+            * `glinet_gl-mt2500` images: MaxLinear WAN PHY (original hardware revision)
+            * `glinet_gl-mt2500-airoha` images: Airoha EN8811H WAN PHY (newer hardware revision)
+
+            Check which PHY your unit has before flashing; see `docs/journey.md`.
