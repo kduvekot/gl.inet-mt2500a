@@ -48,8 +48,8 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
 - **Next:** run `recovery/pi-setup.sh --download` on the Pi (needs `sudo`
   and a reboot; ask first) → open the old router and wire the UART → follow
   [docs/recovery-uart-raspberry-pi.md](docs/recovery-uart-raspberry-pi.md).
-- WAN PHY: old unit MaxLinear (photo, part number not yet read);
-  replacement unknown (table in docs/journey.md). The old unit's UART is
+- WAN PHY: old unit MaxLinear GPY211C0VC (`glinet_gl-mt2500`; board
+  MT2500-V1.1, DDR4 1 GB, Samsung 8 GB eMMC); replacement unknown (table in docs/journey.md). The old unit's UART is
   J13: 3.3V (square pad), RX, TX, GND, open through-holes.
 
 ## Hardware
