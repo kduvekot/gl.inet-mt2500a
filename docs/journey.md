@@ -169,6 +169,43 @@ a Mac with a CP2102 adapter.
   * `cloud-init status` says "degraded done" because of a missing optional
     `cc_netplan_nm_patch` module. `errors: []`, and WiFi came up fine.
 
+## Chapter 6: A power switch for the router (2026-10-23)
+
+The UART loader has to catch the BootROM at power-on, so the router will be
+power-cycled many times. Rather than pulling the USB-C plug by hand, the Pi
+switches the router's power adapter with a smart plug.
+
+* **Options weighed:** a smart plug with a local API (chosen: no wiring, no
+  mains work), a relay on the 5 V side (fiddly with USB-C, needs a relay
+  that accepts 3.3 V), or the Pi's own USB ports (rejected: too little
+  current for the router's 5 V/3 A, and on a Pi 3 B+ switching them off
+  also cuts `eth0`, which sits on the same internal USB hub).
+* **The house already had an IKEA DIRIGERA hub.** It wasn't on the network:
+  its double-blinking light meant no connection, and the wall socket it was
+  plugged into turned out to be dead. On another port it came up at once.
+  It announces itself over mDNS (`_ihsp._tcp`, port 8443, plus HomeKit), so
+  the Pi finds it by name and its IP may change.
+* **Local API:** not documented by IKEA, but the community library
+  [Leggin/dirigera](https://github.com/Leggin/dirigera) (MIT) describes it:
+  OAuth with PKCE on port 8443. You press the Action button on the bottom of
+  the hub (not Reset) to approve. Our `pi/dirigera-token.py` uses only the
+  Python standard library and retries the token request for 90 s, so nobody
+  has to press Enter on the Pi. The token is stored in `~/.config/dirigera/`
+  on the Pi, never in the repo.
+* **A second INSPELNING plug just for the router,** named `MT2500A` in the
+  IKEA Home smart app. `pi/plug.sh` does `status`, `on`, `off`,
+  `cycle [s]` and `startup <on|off|previous|toggle>`, and only ever touches
+  the plug with exactly that name. Another plug in the house drives a
+  1.8 kW space heater. INSPELNING also reports watts, volts and amps, so
+  we can see whether the router is drawing power.
+* **Tested:** the heater's plug switched on and off on request and read
+  1858 W while on; the empty `MT2500A` plug clicked on and off, and a
+  wrong plug name is refused.
+* **Public repo, so no secrets in it,** not even encrypted: a public
+  repo keeps its history forever, the key would live on the same Pi
+  anyway, and the tokens are cheap to replace. Home-specific details (hub
+  name, IDs, addresses) stay in local files on the Pi.
+
 ---
 
 ## Next steps
@@ -187,7 +224,7 @@ a Mac with a CP2102 adapter.
 | Unit | WAN PHY | How determined |
 |---|---|---|
 | Replacement (working) | _unknown_ | |
-| Old unit (stuck at U-Boot) | _unknown, likely MaxLinear_ | |
+| Old unit (stuck at U-Boot) | MaxLinear (MXL logo; part number not yet read, expected GPY211) → `glinet_gl-mt2500` | Photo of the opened board, 2026-10-23 |
 
 - [ ] Baseline speed test on the working unit with stock firmware (iperf3, WAN↔LAN;
       needs a gigabit peer, so not the Pi 3).
@@ -208,3 +245,5 @@ a Mac with a CP2102 adapter.
 | 2026-10-23 | The Pi 3 B+ runs Raspberry Pi OS Lite 64-bit (Trixie), configured by cloud-init. Claude Code 2.1.309 runs on it (7 s answers, no swap needed) and is reachable through Remote Control from the phone and Chromebook. Swap on Trixie is rpi-swap (zram), not dphys-swapfile. |
 | 2026-10-23 | `recovery-kit` release published (run 39948369152; aarch64 and armv7 `mtk_uartboot` built, kit 55.7 MB). Next: cables for the UART, then `pi-setup.sh`. |
 | 2026-10-23 | First reboot test of `claude-rc.service` passed: Remote Control back online about 30 s after boot, and the served session came back with its history. The interactive tmux session `claude` does not survive a reboot (not a service). |
+| 2026-10-23 | Opened the old unit. Its UART is **J13**: four open through-holes next to the RJ45 port, labelled 3.3V (square pad), RX, TX, GND, so no soldering needed (angled header, male jumpers or a pogo clip). Its external Ethernet PHY carries the MaxLinear logo, so it's very likely the original `glinet_gl-mt2500` variant. |
+| 2026-10-23 | Power switching for the router: the IKEA DIRIGERA hub (back online after a dead wall socket) and a second INSPELNING plug named `MT2500A`, switched from the Pi through the hub's undocumented local API. Added `pi/dirigera-token.py` and `pi/plug.sh`; tokens stay on the Pi, out of the public repo. |

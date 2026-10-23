@@ -115,6 +115,10 @@ creates the `mt2500-lan` profile for eth0 described above.
       This unit's chip is not necessarily the same as the replacement's.
 - [ ] Find the 4-pin UART near the LAN port and read **its silkscreen
       labels**. Don't trust photos of other board revisions.
+      On the old unit it's **J13**: four open through-holes at the board
+      edge, labelled 3.3V (square pad), RX, TX, GND. Open holes take an
+      unsoldered male header pressed in at a slight angle, male jumper
+      ends, or a 2.54 mm pogo-pin clip.
 - [ ] Wire it up. TX and RX cross over, and **3V3 is not connected**:
 
 | Raspberry Pi header | Router UART |
