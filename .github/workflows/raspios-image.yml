@@ -1,0 +1,90 @@
+name: Raspberry Pi OS image
+
+# Repackages the latest official Raspberry Pi OS Lite (64-bit) as a .zip
+# that the Chromebook Recovery Utility can write to an SD card ("Use local
+# image"). The utility lists .img.xz files but does not actually write them.
+#
+# The image is taken unmodified from the official Raspberry Pi image list
+# (the one Raspberry Pi Imager uses), checked against both published
+# SHA256 sums, and published as the "raspios-lite-arm64" release, so the
+# .zip downloads directly (a workflow artifact would wrap it in a second
+# zip). Configure it after writing; see docs/raspberry-pi-sd-chromebook.md.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  OS_LIST_URL: https://downloads.raspberrypi.com/os_list_imagingutility_v4.json
+  RELEASE_TAG: raspios-lite-arm64
+
+jobs:
+  repackage:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Find the latest Raspberry Pi OS Lite (64-bit)
+        id: find
+        run: |
+          curl -fsSL -o os_list.json "$OS_LIST_URL"
+          jq -r '[.. | objects
+                  | select(has("url") and (.url | test("/raspios_lite_arm64/"))
+                           and ((.devices // []) | index("pi3-64bit")))]
+                 | first
+                 | "name=\(.name)\ndate=\(.release_date)\nurl=\(.url)\nimg_sha256=\(.extract_sha256)\nimg_size=\(.extract_size)"' \
+            os_list.json | tee -a "$GITHUB_OUTPUT"
+          grep -q '^url=https://downloads.raspberrypi.com/' "$GITHUB_OUTPUT"
+
+      - name: Download and verify
+        env:
+          URL: ${{ steps.find.outputs.url }}
+          IMG_SHA256: ${{ steps.find.outputs.img_sha256 }}
+        run: |
+          xz_name=$(basename "$URL")
+          img_name=${xz_name%.xz}
+          curl -fsSL -o "$xz_name" "$URL"
+          curl -fsSL -o "$xz_name.sha256" "$URL.sha256"
+          sha256sum -c "$xz_name.sha256"
+          xz -d -T0 "$xz_name"
+          echo "${IMG_SHA256}  ${img_name}" | sha256sum -c -
+          echo "IMG_NAME=$img_name" >> "$GITHUB_ENV"
+
+      - name: Repackage as zip
+        run: |
+          zip_name="${IMG_NAME%.img}.zip"
+          size=$(stat -c %s "$IMG_NAME")
+          # Above 4 GiB, zip needs Zip64, which the Recovery Utility may not read.
+          [ "$size" -lt 4294967296 ] || { echo "Image is >= 4 GiB; Zip64 would be needed"; exit 1; }
+          zip -6 -j "$zip_name" "$IMG_NAME"
+          unzip -t "$zip_name"
+          sha256sum "$zip_name" "$IMG_NAME" > SHA256SUMS
+          cat SHA256SUMS
+          echo "ZIP_NAME=$zip_name" >> "$GITHUB_ENV"
+
+      - name: Remove the previous release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete "$RELEASE_TAG" -R "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          target_commitish: ${{ github.sha }}
+          name: Raspberry Pi OS Lite (64-bit) for Chromebook Recovery Utility
+          prerelease: true
+          make_latest: false
+          files: |
+            ${{ env.ZIP_NAME }}
+            SHA256SUMS
+          body: |
+            ${{ steps.find.outputs.name }}, released ${{ steps.find.outputs.date }}, unmodified.
+
+            * Source: ${{ steps.find.outputs.url }}
+            * Image SHA256 (from the official image list): `${{ steps.find.outputs.img_sha256 }}`
+
+            Write `${{ env.ZIP_NAME }}` with the Chromebook Recovery Utility (gear icon → Use local image).
+            Then set up user, SSH and WiFi on the boot partition: see `docs/raspberry-pi-sd-chromebook.md`.
