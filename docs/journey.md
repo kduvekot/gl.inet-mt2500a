@@ -119,12 +119,44 @@ Options that do work:
 2. **Semi-manual:** you run the scripts. They log everything under
    `logs/`; commit or paste the logs, and we analyse them here.
 
+## Chapter 5: The Pi becomes the workbench (2026-10-23)
+
+The only hardware available is the Raspberry Pi 3 and a phone, so the Pi
+does everything: Irakli's procedure, but with the Pi's own UART instead of
+a Mac with a CP2102 adapter.
+
+* **Is a Pi 3 enough?** Yes, for the recovery. It's small, light work. The
+  Pi's PL011 UART handles the loader's 921,600 baud once Bluetooth is moved
+  off it, and WiFi is unaffected. Its 100 Mbit Ethernet is fine for uploads
+  but useless for router speed tests.
+* **Three connections:** WiFi goes to the home network, for internet and the
+  phone. Ethernet goes to the router's LAN port, with fixed 192.168.1.2 and
+  192.168.8.2 and no gateway, so it can stay plugged in permanently. The
+  UART pins go to the router's serial header, ideally with 1 kΩ in series on
+  the Pi's TX line against back-powering.
+* **No browser needed:** we extracted the recovery page's HTML and
+  JavaScript from GL.iNet's fixed U-Boot. The flow is `POST /upload` (field
+  `fip` or `firmware`) → `"<size> <md5>"`, then `/flashing.html` →
+  `/result`. `recovery/web-flash.sh` copies it with curl. It only accepts
+  the known FIP (by SHA256) or a GL-MT2500 sysupgrade image, refuses the
+  `bl2` and `gpt` pages, and checks the size and MD5 the router reports
+  before writing. Tested against a simulated server.
+* **A console both of us can use:** `recovery/console.sh` runs picocom in
+  tmux. The user watches with `attach`; Claude reads and types with `show`
+  and `send`. `uartboot.sh` now uses it, and types `gl` to stop autoboot.
+  Tested over a virtual serial port.
+* **Claude on the Pi 3:** this is being tested now. Officially Claude Code
+  wants 4 GB RAM and ARM64; the Pi 3 has 1 GB, so swap is added. If it runs,
+  the session can be steered from the phone via Remote Control.
+
 ---
 
 ## Next steps
 
-- [ ] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
+- [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
 - [ ] Run the **Recovery kit** workflow with *publish* ticked.
+- [ ] Test Claude Code on the Pi 3 (64-bit OS, 2 GB swap, Remote Control from the phone).
+- [ ] Run `pi-setup.sh --download` on the Pi; join WiFi; cable eth0 to the router's LAN port.
 - [ ] Find the WAN PHY variant of **each** unit separately. The replacement
       may well have a different chip than the broken one. Running unit:
       `dmesg | grep -iE 'en8811|airoha|gpy|maxlinear'`. Broken unit: chip
@@ -134,9 +166,10 @@ Options that do work:
 |---|---|---|
 | Replacement (working) | _unknown_ | |
 | Old unit (stuck at U-Boot) | _unknown, likely MaxLinear_ | |
-- [ ] Baseline speed test on the working unit with stock firmware (iperf3, WAN↔LAN).
-- [ ] Plan A on the broken unit; record the result.
-- [ ] Decide on remote access (see chapter 4).
+
+- [ ] Baseline speed test on the working unit with stock firmware (iperf3, WAN↔LAN;
+      needs a gigabit peer, so not the Pi 3).
+- [ ] Plan A on the broken unit (`./web-flash.sh fip` from the Pi); record the result.
 
 ## Logbook
 
@@ -148,3 +181,4 @@ Options that do work:
 | 2026-10-22 | VPN from the cloud session ruled out; remote access via a local Claude Code session instead. |
 | 2026-10-22 | The kit's aarch64 `mtk_uartboot` is now built and run on a native GitHub ARM runner (`ubuntu-24.04-arm`). armv7 stays cross-built and is tested under qemu, because the ARM runners cannot run 32-bit code. |
 | 2026-10-22 | PR #1 merged. Each unit's WAN PHY has to be identified separately. Checked that GL.iNet's fixed U-Boot only drives the internal LAN PHY, so recovery doesn't depend on the WAN chip. The OpenWrt compatibility check probably won't catch a wrong-variant image when flashing from stock firmware. |
+| 2026-10-23 | The Pi 3 becomes the workbench: WiFi for access, Ethernet to the router's LAN, UART pins to its serial header. Added `web-flash.sh` (browser-free recovery uploads) and `console.sh` (shared tmux console). Testing Claude Code on the Pi 3. |

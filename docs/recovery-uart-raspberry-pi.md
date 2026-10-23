@@ -25,15 +25,19 @@ flash. So we:
 
 ## Plan A: try first, without opening the case
 
-- [ ] PC with a static address `192.168.1.2/24`, one cable to the router's
-      **LAN** port, nothing in WAN or USB.
+This only needs the Pi prepared as in Plan B step 1: kit downloaded, and
+eth0 cabled to the router's **LAN** port. Nothing goes in WAN or USB.
+
 - [ ] Router unplugged. Hold reset, plug in power, keep holding until the LED
       has flashed about 5 times and then stays on.
-- [ ] In **Chrome or Edge** (not Firefox), open `http://192.168.1.1/uboot.html`
-      and upload
-      `uboot-mt2500-20250224-md5-74286e770cfb041b611d80d4adaef189.bin`
-      from [gl-inet/mt798x-boot](https://github.com/gl-inet/mt798x-boot/tree/main/bin).
-- [ ] If it says success: open `http://192.168.1.1/` and flash stock 4.7.4.
+- [ ] On the Pi: `cd ~/mt2500-recovery-kit && ./web-flash.sh fip`. This
+      uploads the fixed U-Boot
+      (`uboot-mt2500-20250224-md5-74286e770cfb041b611d80d4adaef189.bin`
+      from [gl-inet/mt798x-boot](https://github.com/gl-inet/mt798x-boot/tree/main/bin)).
+      With a PC instead: give it a static `192.168.1.2/24`, then open
+      `http://192.168.1.1/uboot.html` in Chrome or Edge (not Firefox).
+- [ ] If it succeeds:
+      `./web-flash.sh firmware openwrt-mt2500-4.7.4-0328-1743128340.bin`.
 
 Result: _not tried yet_. If it reports "UPDATE FAILED", go to Plan B.
 
@@ -42,12 +46,35 @@ Result: _not tried yet_. If it reports "UPDATE FAILED", go to Plan B.
 ### What you need
 
 - [ ] Raspberry Pi (3 or later) with Raspberry Pi OS; 64-bit is preferred
-      but 32-bit works too.
+      but 32-bit works too. A Pi 3 is plenty for this job. Give it its own
+      good 2.5 A supply.
 - [ ] 3 female-female jumper wires. If the router's UART has bare pads, you'll
       need a 4-pin 2.54 mm header soldered on, or test hooks.
+- [ ] Optional but recommended: a 1 kΩ resistor for the Pi TX → router RX
+      wire (see step 2).
 - [ ] The router's own USB-C power supply.
-- [ ] An Ethernet cable between a PC and the router's LAN port, for the web
-      steps later.
+- [ ] An Ethernet cable from the Pi to the router's **LAN** port.
+
+### The setup
+
+```
+  phone ──WiFi── home network ──WiFi── Raspberry Pi 3
+                                        │  eth0 192.168.1.2 + 192.168.8.2
+                                        │  (no gateway)
+                                        ├──Ethernet──► router LAN port
+                                        └──UART pins─► router serial header
+```
+
+* **WiFi:** the Pi's internet connection, and how you reach it (SSH, or
+  Claude via Remote Control).
+* **Ethernet:** the Pi takes the place of "a PC with Chrome". It reaches
+  U-Boot recovery and OpenWrt at 192.168.1.1, and GL.iNet stock firmware
+  at 192.168.8.1. There's no gateway on this link, so the router never
+  becomes the Pi's route to the internet. The cable can stay connected the
+  whole time. WAN stays unplugged until the OpenWrt tests.
+* **UART:** the serial console, and loading U-Boot into RAM.
+* **Limit:** the Pi 3's Ethernet is 100 Mbit. That's fine for uploading
+  firmware, but not for measuring the router's throughput.
 
 ### 1. Prepare the Pi
 
@@ -66,10 +93,16 @@ sudo reboot
 - [ ] After the reboot, `ls -l /dev/serial0` points to `ttyAMA0`.
 - [ ] `~/mt2500-recovery-kit/` exists, and `sha256sum -c SHA256SUMS` passes inside it.
 
+If the Pi isn't on WiFi yet:
+`sudo nmcli dev wifi connect "YourSSID" password "YourPassword"`.
+
+- [ ] `nmcli connection show mt2500-lan` shows the fixed eth0 profile.
+
 `pi-setup.sh` enables the full PL011 UART on GPIO14/15. On a Pi 3 this
-moves Bluetooth off it, because the mini-UART can't hold the 921600 baud
-the loader uses. It also removes the Linux serial console and installs
-`picocom` and `lrzsz`.
+takes the UART away from Bluetooth, because the mini-UART can't hold the
+921600 baud the loader uses. WiFi is not affected. The script also removes
+the Linux serial console, installs `picocom`, `lrzsz` and `tmux`, and
+creates the `mt2500-lan` profile for eth0 described above.
 
 ### 2. Open the router and connect the UART
 
@@ -93,11 +126,22 @@ the loader uses. It also removes the Linux serial console and installs
 Both sides use 3.3 V logic, so no level shifter is needed. Don't use the
 Pi's 5 V pins anywhere near the router.
 
-- [ ] Sanity check, with the router not yet modified: run
-      `picocom -b 115200 /dev/serial0`, power the router on, and you should
-      see the BootROM/BL2/U-Boot log. If you see nothing, swap TX and RX.
-      If you see garbage, check GND. Save this log: it shows the old U-Boot
-      version and the MMC errors.
+**Why the resistor:** while the router is unpowered, the Pi's TX pin still
+drives 3.3 V into the router's RX pin. That can partly power the SoC
+through its input protection and cause odd boots. A 1 kΩ resistor in
+series on that one wire limits the current, and it's harmless at these
+baud rates. It matters most if the wires stay connected permanently.
+
+- [ ] Sanity check, with the router not yet modified:
+      `~/mt2500-recovery-kit/console.sh start`, power the router on, then
+      `console.sh show`. You should see the BootROM/BL2/U-Boot log. If you
+      see nothing, swap TX and RX; if you see garbage, check GND. Stop it
+      with `console.sh stop`. The log in `logs/` shows the old U-Boot version
+      and the MMC errors: keep it.
+
+`console.sh` runs picocom inside tmux. You can watch it live from your
+phone with `console.sh attach`, while Claude reads it with `console.sh show`
+and types with `console.sh send`.
 
 ### 3. Load the fixed U-Boot into RAM
 
@@ -106,21 +150,22 @@ cd ~/mt2500-recovery-kit
 ./uartboot.sh
 ```
 
-1. Router **unplugged**, then press Enter. The loader waits at `Handshake...`.
+1. Router **unplugged**, then press Enter (or use `./uartboot.sh -y`). The
+   loader waits at `Handshake...` for as long as it takes.
 2. Plug in the router's power.
 3. The loader sends BL2 (at 460800 baud), then the FIP (at 921600 baud).
    Wait for `NOTICE: Received FIP`.
-4. The script then opens a logged console. U-Boot from RAM starts. Type `gl`
-   during the countdown to stop autoboot.
+4. The script starts the console in tmux and types `gl` for a few seconds
+   to stop autoboot (`-n` skips that). Check with `./console.sh show`.
 
-- [ ] At the `MT7981>` prompt, `mmc info` shows the eMMC (about 7.3 GiB).
-      **This is the decisive test.** If the new U-Boot can't see the eMMC
-      either, stop: the eMMC may really be faulty.
-- [ ] `gpt` (or `mmc part`) lists the partitions, including `fip`.
+- [ ] At the `MT7981>` prompt, `./console.sh send "mmc info"` shows the eMMC
+      (about 7.3 GiB). **This is the decisive test.** If the new U-Boot
+      can't see the eMMC either, stop: the eMMC may really be faulty.
+- [ ] `./console.sh send "mmc part"` lists the partitions, including `fip`.
 
-If the handshake never completes, try powering the router a little later or
-earlier. The BootROM only listens for a short moment after power-on.
-Logs are in `~/mt2500-recovery-kit/logs/`.
+If the handshake never completes, check the wiring and that nothing else
+holds the serial port. The loader keeps retrying, so the moment you power
+the router on doesn't matter. Logs are in `~/mt2500-recovery-kit/logs/`.
 
 ### 4. Write the fixed U-Boot permanently
 
@@ -128,11 +173,20 @@ Two known ways. Use the first; the second is a fallback.
 
 **a) Recovery web page served by the RAM U-Boot**
 
-- [ ] Repeat step 3, but this time after `Received FIP`, press and hold the
-      router's reset button until the LED flashes about 5 times and stays on.
-- [ ] From the PC (static `192.168.1.2`, LAN port), open
-      `http://192.168.1.1/uboot.html` in Chrome and upload
-      `fip-mt2500-20250224.bin` from the kit.
+- [ ] Repeat step 3 with `./uartboot.sh -n` (don't stop autoboot), and
+      after `Received FIP` press and hold the router's reset button until
+      the LED flashes about 5 times and stays on.
+- [ ] From the Pi: `./web-flash.sh fip`. It only accepts the kit's FIP (by
+      SHA256), uploads it, checks that the size and MD5 the router reports
+      match, asks before writing, and then runs the same `/flashing.html`
+      → `/result` steps as the browser.
+
+`web-flash.sh` copies the recovery page's own JavaScript, extracted from
+the U-Boot binary: `POST /upload` with field `fip` or `firmware` → reply
+`"<size> <md5>"` or `fail`. It refuses the page's `bl2` and `gpt` uploads,
+which would overwrite the first-stage loader and the partition table.
+This has been tested against a simulated server only, not yet against the
+real router.
 
 **b) `mtkupgrade fip` over XMODEM on the console**
 
@@ -148,8 +202,11 @@ Either way:
 ### 5. Put firmware back
 
 - [ ] Enter the recovery page again (reset-button sequence) and flash
-      **stock 4.7.4** from the kit at `http://192.168.1.1/`. This proves the
-      eMMC can be written and gives a known-good baseline.
+      **stock 4.7.4** from the kit:
+      `./web-flash.sh firmware openwrt-mt2500-4.7.4-0328-1743128340.bin`.
+      This proves the eMMC can be written and gives a known-good baseline.
+      The stock web UI is then at `http://192.168.8.1/`, reachable from the
+      Pi as well.
 - [ ] Check the WAN PHY variant on **this** unit, and compare it with the
       chip marking from step 2:
       `dmesg | grep -iE 'en8811|airoha|gpy|maxlinear'`
@@ -180,8 +237,9 @@ Either way:
 
 ## Remote help
 
-This cloud session can't open connections to your network. To let Claude
-drive the Pi directly, run Claude Code on a machine on your LAN, either
-your own computer or the Pi itself with 64-bit OS, and have it SSH into the Pi.
-Otherwise, run the scripts yourself: everything is logged under `logs/`, so
-the logs can be committed or pasted for analysis.
+This cloud session can't open connections to your network. The plan is to
+run Claude Code on the Pi itself and steer it from the phone via Remote
+Control (see journey chapter 5). That session can use `console.sh`,
+`uartboot.sh` and `web-flash.sh` directly. Otherwise, run the scripts
+yourself: everything is logged under `logs/`, so the logs can be committed
+or pasted for analysis.
