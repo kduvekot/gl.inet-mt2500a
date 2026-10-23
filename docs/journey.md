@@ -145,9 +145,29 @@ a Mac with a CP2102 adapter.
   tmux. The user watches with `attach`; Claude reads and types with `show`
   and `send`. `uartboot.sh` now uses it, and types `gl` to stop autoboot.
   Tested over a virtual serial port.
-* **Claude on the Pi 3:** this is being tested now. Officially Claude Code
-  wants 4 GB RAM and ARM64; the Pi 3 has 1 GB, so swap is added. If it runs,
-  the session can be steered from the phone via Remote Control.
+* **Claude on the Pi 3: it works.** Officially Claude Code wants 4 GB RAM
+  and ARM64; the Pi 3 has 1 GB. On Raspberry Pi OS Lite 64-bit (Trixie) on
+  a Pi 3 Model B+:
+  * `curl -fsSL https://claude.ai/install.sh | bash` installed 2.1.309 for
+    `linux-arm64`. `~/.local/bin` had to be added to `PATH` by hand, and
+    `claude doctor` reported no issues.
+  * `claude auth login` worked over SSH: open the link on the phone, paste
+    the code back.
+  * A first question that ran a shell command was answered in **7 s**, with
+    about 360 MiB used, about 545 MiB still available, and **no swap used**.
+  * `/remote-control` made the session visible and usable at claude.ai/code
+    on the Chromebook, and in the Claude app on the phone.
+* **Swap on Trixie** is not `dphys-swapfile` any more. It is **rpi-swap**:
+  compressed swap in RAM (zram, here 904 MiB) plus a backing file at
+  `/var/swap`, configured in `/etc/rpi/swap.conf` or drop-ins under
+  `/etc/rpi/swap.conf.d/`. The default was enough. If Claude ever runs out
+  of memory, double the zram with `[Zram]` `FixedSizeMiB=2048` in a drop-in,
+  then reboot.
+* **First-boot oddities, all harmless:**
+  * "Failed to start userconfig.service": cloud-init masks Raspberry Pi's
+    first-user wizard.
+  * `cloud-init status` says "degraded done" because of a missing optional
+    `cc_netplan_nm_patch` module. `errors: []`, and WiFi came up fine.
 
 ---
 
@@ -155,7 +175,9 @@ a Mac with a CP2102 adapter.
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
 - [ ] Run the **Recovery kit** workflow with *publish* ticked.
-- [ ] Test Claude Code on the Pi 3 (64-bit OS, 2 GB swap, Remote Control from the phone).
+- [x] Test Claude Code on the Pi 3 (64-bit OS, Remote Control from phone and Chromebook).
+- [ ] Clone this repo on the Pi and continue this conversation there
+      (`claude --teleport`), with `/remote-control`.
 - [ ] Run `pi-setup.sh --download` on the Pi; join WiFi; cable eth0 to the router's LAN port.
 - [ ] Find the WAN PHY variant of **each** unit separately. The replacement
       may well have a different chip than the broken one. Running unit:
@@ -183,3 +205,4 @@ a Mac with a CP2102 adapter.
 | 2026-10-22 | PR #1 merged. Each unit's WAN PHY has to be identified separately. Checked that GL.iNet's fixed U-Boot only drives the internal LAN PHY, so recovery doesn't depend on the WAN chip. The OpenWrt compatibility check probably won't catch a wrong-variant image when flashing from stock firmware. |
 | 2026-10-23 | The Pi 3 becomes the workbench: WiFi for access, Ethernet to the router's LAN, UART pins to its serial header. Added `web-flash.sh` (browser-free recovery uploads) and `console.sh` (shared tmux console). Testing Claude Code on the Pi 3. |
 | 2026-10-23 | The Chromebook Recovery Utility can't write `.img.xz`, so a manual workflow repackages the official Raspberry Pi OS Lite 64-bit (2026-10-06, Trixie) as a verified `.zip`. First boot is configured with cloud-init files on the boot partition. 16 GB SD is enough. |
+| 2026-10-23 | The Pi 3 B+ runs Raspberry Pi OS Lite 64-bit (Trixie), configured by cloud-init. Claude Code 2.1.309 runs on it (7 s answers, no swap needed) and is reachable through Remote Control from the phone and Chromebook. Swap on Trixie is rpi-swap (zram), not dphys-swapfile. |
