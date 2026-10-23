@@ -12,6 +12,11 @@ name: Raspberry Pi OS image
 
 on:
   workflow_dispatch:
+    inputs:
+      force:
+        description: Rebuild even if the release already has this image
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -38,7 +43,37 @@ jobs:
             os_list.json | tee -a "$GITHUB_OUTPUT"
           grep -q '^url=https://downloads.raspberrypi.com/' "$GITHUB_OUTPUT"
 
+      - name: Check whether the release already has this image
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          URL: ${{ steps.find.outputs.url }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          zip_name="$(basename "$URL" .img.xz).zip"
+          release_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$RELEASE_TAG"
+          assets=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq '.assets[].name' 2> /dev/null || true)
+          if grep -qxF "$zip_name" <<< "$assets"; then
+            if [ "$FORCE" = true ]; then
+              echo "Release already has $zip_name; rebuilding because 'force' is set." | tee -a "$GITHUB_STEP_SUMMARY"
+              echo "skip=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "::notice title=Already up to date::$zip_name is already published: $release_url"
+              {
+                echo "### Already up to date"
+                echo "[\`$RELEASE_TAG\`]($release_url) already has \`$zip_name\`, the latest image. Nothing to do."
+                echo
+                echo "Run again with **force** to rebuild it anyway."
+              } >> "$GITHUB_STEP_SUMMARY"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "New image: $zip_name" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Download and verify
+        if: steps.check.outputs.skip != 'true'
         env:
           URL: ${{ steps.find.outputs.url }}
           IMG_SHA256: ${{ steps.find.outputs.img_sha256 }}
@@ -53,6 +88,7 @@ jobs:
           echo "IMG_NAME=$img_name" >> "$GITHUB_ENV"
 
       - name: Repackage as zip
+        if: steps.check.outputs.skip != 'true'
         run: |
           zip_name="${IMG_NAME%.img}.zip"
           size=$(stat -c %s "$IMG_NAME")
@@ -65,12 +101,15 @@ jobs:
           echo "ZIP_NAME=$zip_name" >> "$GITHUB_ENV"
 
       - name: Remove the previous release
+        if: steps.check.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release delete "$RELEASE_TAG" -R "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
 
       - name: Publish release
-        uses: softprops/action-gh-release@v2
+        id: publish
+        if: steps.check.outputs.skip != 'true'
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           target_commitish: ${{ github.sha }}
@@ -88,3 +127,14 @@ jobs:
 
             Write `${{ env.ZIP_NAME }}` with the Chromebook Recovery Utility (gear icon → Use local image).
             Then set up user, SSH and WiFi on the boot partition: see `docs/raspberry-pi-sd-chromebook.md`.
+
+      - name: Link the release
+        if: steps.check.outputs.skip != 'true'
+        env:
+          RELEASE_URL: ${{ steps.publish.outputs.url }}
+        run: |
+          echo "::notice title=Published::$ZIP_NAME: $RELEASE_URL"
+          {
+            echo "### Published"
+            echo "[\`$ZIP_NAME\`]($RELEASE_URL) is ready for the Chromebook Recovery Utility."
+          } >> "$GITHUB_STEP_SUMMARY"
