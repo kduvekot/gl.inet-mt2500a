@@ -44,7 +44,7 @@ jobs:
           - glinet_gl-mt2500
           - glinet_gl-mt2500-airoha
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Install ImageBuilder prerequisites
         run: |
@@ -54,7 +54,7 @@ jobs:
 
       - name: Restore ImageBuilder from cache
         id: cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: imagebuilder.tar.zst
           key: imagebuilder-${{ env.OPENWRT_VERSION }}-${{ env.TARGET }}-${{ env.SUBTARGET }}
@@ -93,7 +93,7 @@ jobs:
           ls -la dist
           cat dist/sha256sums-*
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: openwrt-${{ env.OPENWRT_VERSION }}-${{ matrix.profile }}
           path: dist/
@@ -107,7 +107,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true

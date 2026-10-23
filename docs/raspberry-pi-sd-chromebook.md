@@ -25,7 +25,9 @@ A1/A2). If both are equally good, take the 32 GB one.
 ## 1. Build the zip on GitHub
 
 - [ ] GitHub → **Actions** → **Raspberry Pi OS image** → **Run workflow**.
-- [ ] Wait about 5 minutes. The workflow:
+- [ ] Wait about 5 minutes. If the release already has the latest image,
+      the run stops after a few seconds with "nothing to do" in its summary.
+      Tick **force** to rebuild it anyway. Otherwise the workflow:
   - finds the latest *Raspberry Pi OS Lite (64-bit)* in the official image
     list that Raspberry Pi Imager uses, filtered to images that support the
     Pi 3
