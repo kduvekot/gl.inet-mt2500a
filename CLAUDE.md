@@ -41,8 +41,7 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   a pin header or test hooks if the router's UART is bare pads (shopping
   trip to Fakkert, Zwolle).
 - **Next:** run `recovery/pi-setup.sh --download` on the Pi (needs `sudo`
-  and a reboot; ask first; the reboot is also the first test of
-  `claude-rc.service`) → open the old router and wire the UART → follow
+  and a reboot; ask first) → open the old router and wire the UART → follow
   [docs/recovery-uart-raspberry-pi.md](docs/recovery-uart-raspberry-pi.md).
 - WAN PHY of both routers still unknown (table in docs/journey.md).
 
@@ -66,11 +65,16 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   [pi/claude-rc.sh](pi/claude-rc.sh): `claude remote-control --name
   mt2500-bench --spawn same-dir` in its own tmux server, restarted when it
   exits and started at boot. Sessions are started and switched from
-  claude.ai/code or the Claude app. Reboot behaviour not tested yet.
+  claude.ai/code or the Claude app. Reboot tested 2026-10-23: online
+  again ~30 s after boot, with the served session and its history restored.
   - Status: `systemctl --user status claude-rc.service`
   - Terminal: `tmux -L claude-rc attach -t claude-rc` (detach: Ctrl-B, D)
-- The original conversation also runs interactively in tmux session
-  `claude` (default tmux server): `tmux attach -t claude`.
+- The original conversation (`fee797e3-…`) ran interactively in tmux
+  session `claude`; that isn't a service, so it ended with the reboot.
+  Reopen it from SSH with `cd ~/gl.inet-mt2500a && claude --resume`.
+- The user journal isn't persistent (`journalctl --user` is empty); the
+  service's output is in its tmux pane:
+  `tmux -L claude-rc capture-pane -p -t claude-rc`.
 
 ## Earlier conversations (transcripts)
 
