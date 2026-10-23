@@ -69,7 +69,7 @@ jobs:
             target: armv7-unknown-linux-musleabihf
             run: qemu-arm-static
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           repository: 981213/mtk_uartboot
           ref: ${{ env.MTK_UARTBOOT_REF }}
@@ -96,7 +96,7 @@ jobs:
           ${{ matrix.run }} "./mtk_uartboot-${{ matrix.arch }}" --help | tee help.txt
           grep -q '^mtk_uartboot - ' help.txt
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: mtk_uartboot-${{ matrix.arch }}
           path: mtk_uartboot-${{ matrix.arch }}
@@ -108,14 +108,14 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Check recovery scripts
         run: |
           bash -n recovery/*.sh
           shellcheck recovery/*.sh
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: mtk_uartboot-*
           path: loaders
@@ -147,7 +147,7 @@ jobs:
           tar -czf "$kit.tar.gz" "$kit"
           sha256sum "$kit.tar.gz" > "$kit.tar.gz.sha256"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: mt2500-recovery-kit
           path: |
@@ -156,7 +156,7 @@ jobs:
 
       - name: Publish "recovery-kit" release
         if: inputs.publish
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: recovery-kit
           target_commitish: ${{ github.sha }}
