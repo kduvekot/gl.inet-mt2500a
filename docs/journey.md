@@ -187,7 +187,7 @@ a Mac with a CP2102 adapter.
 | Unit | WAN PHY | How determined |
 |---|---|---|
 | Replacement (working) | _unknown_ | |
-| Old unit (stuck at U-Boot) | _unknown, likely MaxLinear_ | |
+| Old unit (stuck at U-Boot) | MaxLinear (MXL logo; part number not yet read, expected GPY211) → `glinet_gl-mt2500` | Photo of the opened board, 2026-10-23 |
 
 - [ ] Baseline speed test on the working unit with stock firmware (iperf3, WAN↔LAN;
       needs a gigabit peer, so not the Pi 3).
@@ -208,3 +208,4 @@ a Mac with a CP2102 adapter.
 | 2026-10-23 | The Pi 3 B+ runs Raspberry Pi OS Lite 64-bit (Trixie), configured by cloud-init. Claude Code 2.1.309 runs on it (7 s answers, no swap needed) and is reachable through Remote Control from the phone and Chromebook. Swap on Trixie is rpi-swap (zram), not dphys-swapfile. |
 | 2026-10-23 | `recovery-kit` release published (run 39948369152; aarch64 and armv7 `mtk_uartboot` built, kit 55.7 MB). Next: cables for the UART, then `pi-setup.sh`. |
 | 2026-10-23 | First reboot test of `claude-rc.service` passed: Remote Control back online about 30 s after boot, and the served session came back with its history. The interactive tmux session `claude` does not survive a reboot (not a service). |
+| 2026-10-23 | Opened the old unit. Its UART is **J13**: four open through-holes next to the RJ45 port, labelled 3.3V (square pad), RX, TX, GND, so no soldering needed (angled header, male jumpers or a pogo clip). Its external Ethernet PHY carries the MaxLinear logo, so it's very likely the original `glinet_gl-mt2500` variant. |
