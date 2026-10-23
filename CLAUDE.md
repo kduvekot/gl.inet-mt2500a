@@ -30,6 +30,10 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   construction rather than documented.
 - Keep [docs/journey.md](docs/journey.md) up to date: a chapter per stage,
   a logbook line per milestone.
+- **The repo is public: no secrets in it, not even encrypted** (tokens,
+  setup codes), and no home-specific details (hub names, IDs, MACs,
+  addresses, home domain). Those stay in local files on the Pi, such as
+  `~/.config/dirigera/`.
 
 ## Where things stand (2026-10-23)
 
@@ -37,9 +41,10 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   OS image** (all Node 24 actions). The `recovery-kit` release is
   published (2026-10-23).
 - Raspberry Pi set up and running Claude Code (below).
-- **Waiting on cables:** female-female jumper wires, a 1 kΩ resistor, maybe
-  a pin header or test hooks if the router's UART is bare pads (shopping
-  trip to Fakkert, Zwolle).
+- **Waiting on parts:** a 1 kΩ resistor and male-female jumpers (shopping
+  trip to Fakkert, Zwolle). The old unit's UART holes are open, so no
+  soldering.
+- **Router power** is switchable from the Pi: `pi/plug.sh` (below).
 - **Next:** run `recovery/pi-setup.sh --download` on the Pi (needs `sudo`
   and a reboot; ask first) → open the old router and wire the UART → follow
   [docs/recovery-uart-raspberry-pi.md](docs/recovery-uart-raspberry-pi.md).
@@ -51,13 +56,18 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
 
 - **Pi:** Raspberry Pi 3 Model B+, hostname `mt2500-bench`, user `kees`,
   Raspberry Pi OS Lite 64-bit (Trixie, 2026-10-06), WiFi only so far
-  (172.31.125.180 via DHCP). 905 MiB RAM; swap is rpi-swap (zram), not
+  (DHCP). 905 MiB RAM; swap is rpi-swap (zram), not
   dphys-swapfile. Configured by cloud-init.
 - **Planned wiring** (not done yet): Pi eth0 → router LAN port (eth0 gets
   192.168.1.2 + 192.168.8.2, no gateway, via `pi-setup.sh`); Pi pins 6/8/10
   (GND/TX/RX) → router UART GND/RX/TX, never 3V3, ideally 1 kΩ in series on
   Pi TX. `/dev/serial0` only exists after `pi-setup.sh` and a reboot.
 - **Routers:** the old MT2500A (stuck at U-Boot) and a working replacement.
+- **Router power:** an IKEA INSPELNING smart plug named **`MT2500A`**, via
+  the house's IKEA DIRIGERA hub (found by mDNS). `pi/plug.sh status|on|off|
+  cycle [s]|startup <on|off|previous|toggle>`; hub name and token in
+  `~/.config/dirigera/` (from `pi/dirigera-token.py`). **Only ever switch
+  `MT2500A`**: another plug drives a space heater.
 
 ## Claude on the Pi
 
@@ -120,7 +130,8 @@ for line in open(sys.argv[1]):
   `raspios-image.yml`
 - `openwrt/packages.txt`: extra packages for the OpenWrt images
 - `recovery/`: `pi-setup.sh`, `uartboot.sh`, `console.sh`, `web-flash.sh`
-- `pi/`: `claude-rc.sh`, `claude-rc.service`
+- `pi/`: `claude-rc.sh`, `claude-rc.service`, `dirigera-token.py`,
+  `plug.sh`
 - `docs/`: `journey.md`, `firmware-sources.md`,
   `recovery-uart-raspberry-pi.md`, `raspberry-pi-sd-chromebook.md`
 
