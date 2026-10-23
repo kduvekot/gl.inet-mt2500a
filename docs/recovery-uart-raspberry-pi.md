@@ -54,6 +54,12 @@ Result: _not tried yet_. If it reports "UPDATE FAILED", go to Plan B.
       wire (see step 2).
 - [ ] The router's own USB-C power supply.
 - [ ] An Ethernet cable from the Pi to the router's **LAN** port.
+- [ ] A hard, non-conductive surface for the bare board while it's
+      powered: cardboard (a flat box tray works well), wood or plastic, with
+      air around it. Not packing foam, which traps heat (the SoC normally
+      cools through the case), and certainly not black conductive foam, a
+      silver antistatic bag or metal, which short the pads on the
+      underside. Conductive foam is fine for storing the board unpowered.
 
 ### The setup
 
