@@ -1,0 +1,25 @@
+# systemd user service: start pi/claude-rc.sh at boot, inside tmux.
+#
+# Install (as the normal user, not root):
+#   mkdir -p ~/.config/systemd/user
+#   ln -s ~/gl.inet-mt2500a/pi/claude-rc.service ~/.config/systemd/user/
+#   sudo loginctl enable-linger "$USER"   # start at boot without a login
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now claude-rc.service
+#
+# Watch it:  tmux -L claude-rc attach -t claude-rc   (detach: Ctrl-B, then D)
+# Status:    systemctl --user status claude-rc.service
+# Stop:      systemctl --user disable --now claude-rc.service
+
+[Unit]
+Description=Claude Code Remote Control server in tmux session "claude-rc"
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/tmux -L claude-rc new-session -d -s claude-rc %h/gl.inet-mt2500a/pi/claude-rc.sh
+ExecStop=/usr/bin/tmux -L claude-rc kill-session -t claude-rc
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=default.target

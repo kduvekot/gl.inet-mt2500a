@@ -15,12 +15,17 @@ makes that zip for us.
 ## Which SD card?
 
 **16 GB is enough.** The image is 3.1 GB and the OS expands to fill the
-card. Claude Code, the recovery kit, logs and 2 GB of swap leave around
-8 GB free.
+card. Claude Code, the recovery kit, logs and the 2 GB `/var/swap` backing
+file leave around 8 GB free.
 
-32 GB has one real advantage: the same writes are spread over more flash,
-and swap writes a lot. So pick the **better card** (a known brand, rated
-A1/A2). If both are equally good, take the 32 GB one.
+32 GB has one real advantage: the same writes are spread over more flash.
+So pick the **better card** (a known brand, rated A1/A2). If both are
+equally good, take the 32 GB one.
+
+Swap on Trixie is handled by **rpi-swap**: compressed swap in RAM (zram)
+that spills over into `/var/swap`. There is no `dphys-swapfile` any more.
+The default was enough for Claude Code on a Pi 3. See
+[journey chapter 5](journey.md) for how to enlarge it if needed.
 
 ## 1. Build the zip on GitHub
 
