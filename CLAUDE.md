@@ -34,12 +34,16 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
 ## Where things stand (2026-10-23)
 
 - Workflows on `main`: **Build OpenWrt**, **Recovery kit**, **Raspberry Pi
-  OS image** (all Node 24 actions). The `recovery-kit` release is **not
-  published yet**: Actions → Recovery kit → Run workflow with *publish*.
+  OS image** (all Node 24 actions). The `recovery-kit` release is
+  published (2026-10-23).
 - Raspberry Pi set up and running Claude Code (below).
-- **Next:** publish the kit → run `recovery/pi-setup.sh --download` on the Pi
-  (needs `sudo` and a reboot; ask first) → open the old router and wire the
-  UART → follow [docs/recovery-uart-raspberry-pi.md](docs/recovery-uart-raspberry-pi.md).
+- **Waiting on cables:** female-female jumper wires, a 1 kΩ resistor, maybe
+  a pin header or test hooks if the router's UART is bare pads (shopping
+  trip to Fakkert, Zwolle).
+- **Next:** run `recovery/pi-setup.sh --download` on the Pi (needs `sudo`
+  and a reboot; ask first; the reboot is also the first test of
+  `claude-rc.service`) → open the old router and wire the UART → follow
+  [docs/recovery-uart-raspberry-pi.md](docs/recovery-uart-raspberry-pi.md).
 - WAN PHY of both routers still unknown (table in docs/journey.md).
 
 ## Hardware
@@ -118,5 +122,7 @@ for line in open(sys.argv[1]):
 
 - Work on branch `claude/gifted-edison-lbt8ep`; changes reach `main` through
   pull requests the owner merges.
-- The Pi clone uses HTTPS **without push credentials**, so commits made here
-  can't be pushed yet. Uncommitted right now: `pi/` and this file.
+- The Pi clone pushes over HTTPS with a fine-grained token for this repo
+  only (Contents and Pull requests: read/write), stored in
+  `~/.git-credentials`. There's no `gh` CLI; check Actions runs and
+  releases through the public GitHub API with `curl`.
