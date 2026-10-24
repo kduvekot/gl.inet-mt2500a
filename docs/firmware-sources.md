@@ -103,7 +103,7 @@ only some have public source.
 | `parental_control` | GPL | yes: [gl-inet/parental-control](https://github.com/gl-inet/parental-control) (2023) |
 | `mtkhnat` | GPL v2 | partly: MediaTek's source is in the feed mirror, GL.iNet's patches `3004`/`3009`/`3010` are in the 4.2.0 recipe; the later builds (changed up to 4.6.2) are not published |
 | `kmwan`, `black_white_list`, `gl-mpflow` | GPL | not found |
-| `mtfwd`, `mtqos` | Dual BSD/GPL | not found |
+| `mtfwd`, `mtqos` | Dual BSD/GPL | not found (both are Wi-Fi features; see driver-analysis.md) |
 
 Also not found: the `fwdd` daemon and the `mtk-base-files` package. What
 these modules do is in [driver-analysis.md](driver-analysis.md).
