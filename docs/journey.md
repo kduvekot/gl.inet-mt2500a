@@ -443,6 +443,46 @@ firmware **4.7.4**, reset to factory settings and set up again. Only the
 
 ---
 
+## Chapter 11: Inside GL.iNet's firmware (2026-10-24/25)
+
+With the old unit running again, we turned to the question behind the whole
+project: what does GL.iNet's firmware do with the hardware that upstream
+OpenWrt doesn't? Four pieces of work, all read-only.
+
+**Recreating 4.2.0 from public sources** (workflow `gl-recreate-4.2.0.yml`).
+GL.iNet's firmware is OpenWrt 21.02 plus patches, and the build recipe
+survives in a fork, so we tried to rebuild 4.2.0 and compare.
+
+- Run 1 gave the identical OpenWrt version string; 142 of 143 shared
+  packages had the same version, 1029 of 1169 shared files were identical.
+- Run 2 mirrored the official package set: 360 of 466 packages built. Only 7
+  public packages were missing; the rest are GL.iNet's closed or private
+  ones. The official kernel carries its configuration (`IKCONFIG`), so we
+  extracted it and found GL.iNet built with `ALL_KMODS`.
+- Run 3 switched on `DEVEL`, ccache and `ALL_KMODS` (95 minutes). `ALL_KMODS`
+  barely changed anything: the generated config already held hundreds of
+  explicit "not set" lines for kernel modules, and Kconfig defaults never
+  override explicit values. Fixed for run 4, which is still to come.
+
+**Driver analysis, phases A and B.** The running 4.7.4 gave a baseline
+(registers, debugfs, eMMC clock); the source comparison covered the WAN PHY,
+the SGMII path, hardware NAT and the eMMC. The result, including what
+upstream lacks (hardware QoS, tunnel offload) and why the eMMC runs at 26
+MHz, is in [driver-analysis.md](driver-analysis.md).
+
+**Sixteen firmware versions side by side.** A script unpacked every
+version we have (the 15 published ones, 4.1.1 to 4.9.0_beta3, plus 4.7.13) and compared kernel, config, device
+tree and modules. The hardware layer barely moves; 4.6.2 is the big step (the
+Airoha PHY, a new reset scheme). One version, 4.5.16, looks wild but only
+because its kernel was built with far fewer modules.
+
+**The replacement unit.** Its WAN PHY is an Airoha EN8811H at MDIO address 5,
+while upstream's device tree says 13: a likely upstream bug. Its firmware,
+4.7.13, is not published by GL.iNet; we read it from the unit and keep it
+private. Details in [firmware-sources.md](firmware-sources.md).
+
+---
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -459,6 +499,12 @@ firmware **4.7.4**, reset to factory settings and set up again. Only the
 - [x] Boot from the eMMC without UART; factory-reset 4.7.4 and set it up.
 - [ ] Connect WAN and finish GL.iNet's internet setup; check `dmesg` for the WAN PHY.
 - [ ] Decide: keep stock 4.7.4, or flash our upstream OpenWrt build (`glinet_gl-mt2500`).
+- [x] Driver analysis phases A and B ([driver-analysis.md](driver-analysis.md)).
+- [x] Compare 16 GL.iNet versions (15 published plus 4.7.13).
+- [ ] Report the EN8811H address (5 on GL.iNet's firmware, 13 upstream) to OpenWrt, after checking it on the unit from an initramfs.
+- [ ] Recreation run 4 (module "not set" lines dropped first) and compare.
+- [ ] Phase C: the same measurements on upstream OpenWrt, with a fast peer (the GMKtec, next week).
+- [ ] Phase D (optional): the closed `mtfwd` / `mtqos` modules in depth.
 - [x] Find the WAN PHY variant of **each** unit separately: the two units
       have **different** chips (table below).
 
@@ -522,3 +568,7 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-24 | Complete eMMC backup: OpenWrt 25.12.6 initramfs booted over TFTP (packaged `tftpd-hpa`, eth0 only, TFTP root kept empty), boot0, boot1 and the 7.3 GiB user area copied over SSH, all SHA256-verified against the router. MAC and serial live in boot1; `rf` is empty. Backup kept on the Pi, outside the repo. |
 | 2026-10-24 | The old MT2500A boots by itself again: 2025-02-24 U-Boot written to `fip` with `dd` from the initramfs (verified), boots GL.iNet 4.7.4 from the eMMC. That firmware was an untouched official 4.7.4; only its settings (from 26 May 2025) were wiped. Factory reset in failsafe needs `mount_root` first. First-time setup done over the JSON-RPC API. |
 | 2026-10-24 | Replacement unit's WAN PHY identified (read-only over SSH, GL.iNet 4.7.13): **Airoha EN8811H** → `glinet_gl-mt2500-airoha`. The two units have different WAN PHYs. On GL.iNet's firmware it sits at MDIO address 5; upstream's device tree says 13 (open question). |
+| 2026-10-24 | Driver analysis phases A (read-only baseline on GL.iNet 4.7.4) and B (vendor against mainline source: WAN PHY, SGMII, hardware NAT, eMMC) done; results in `docs/driver-analysis.md`. |
+| 2026-10-24 | Recreating GL.iNet 4.2.0 from public sources, runs 1 to 3: identical version string, 360 of 466 packages in run 2; run 3 showed that explicit "not set" kernel module lines defeat `ALL_KMODS`. Run 4 pending. |
+| 2026-10-25 | Compared 16 GL.iNet firmware versions (the 15 published ones, 4.1.1 to 4.9.0_beta3, plus 4.7.13): the hardware layer changes mainly in 4.6.2 (Airoha PHY, reset scheme), 4.7.0 (eMMC 26 MHz) and 4.7.4 (eMMC drive strength). |
+| 2026-10-25 | Obtained GL.iNet 4.7.13 (not published) by reading the replacement unit; kept private, summary in `docs/firmware-sources.md`. |

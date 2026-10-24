@@ -160,8 +160,8 @@ for line in open(sys.argv[1]):
   bundled or stored in this public repo; private copies go on the NAS)
 - `pi/`: `claude-rc.sh`, `claude-rc.service`, `dirigera-token.py`,
   `plug.sh`
-- `docs/`: `journey.md`, `firmware-sources.md`,
-  `recovery-uart-raspberry-pi.md`, `raspberry-pi-sd-chromebook.md`
+- `docs/`: `journey.md`, `firmware-sources.md`, `driver-analysis.md`
+  (plan: `driver-analysis-plan.md`), `recovery-uart-raspberry-pi.md`, `raspberry-pi-sd-chromebook.md`
 
 ## Git
 
