@@ -25,3 +25,5 @@ root@(none):/# === 2026-10-24T16:23:20+02:00 reboot -f after firstboot
 === 2026-10-24T16:39:41+02:00 factory reset GL-style: mount_root; firstboot -y; sync
 === 2026-10-24T16:41:16+02:00 clean boot done
 === 2026-10-24T16:51:56+02:00 GL first-time setup via ui.init (lang en, Europe/Amsterdam, root password from ~/.config/mt2500/admin-password)
+=== 2026-10-24T17:02:14+02:00 power-cycle test after first-time setup
+=== 2026-10-24T17:03:53+02:00 power-cycle test passed: initialized kept, API login OK, timezone kept, console login OK

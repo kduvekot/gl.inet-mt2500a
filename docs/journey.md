@@ -435,6 +435,10 @@ firmware **4.7.4**, reset to factory settings and set up again. Only the
   and `system.get_info` (4.7.4 `release6`, kernel 5.4.211) work. The
   password was generated on the Pi and is kept there, outside the repo.
   The internet step is left for when WAN gets connected.
+* **Power-cycle test** after the setup: the 2025 U-Boot and 4.7.4 come up
+  by themselves, the web API answers 40 s after power-on, the router stays
+  `initialized`, keeps its timezone, and both the API login and the serial
+  console login (`root@GL-MT2500`) work with the new password.
 
 ---
 
