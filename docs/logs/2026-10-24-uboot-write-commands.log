@@ -1,0 +1,27 @@
+=== 2026-10-24T16:10:46+02:00 step 5: write /tmp/fip-2025.bin to /dev/mmcblk0p4
+pre-check: PARTNAME=fip start=13312 size=4096
+image: d1c62731f172ce8abbbeadf5c6783ae0ae1e79bd238e195d4edbf53757ca253d  /tmp/fip-2025.bin
+2+0 records in
+2+0 records out
+real	0m 0.18s
+user	0m 0.00s
+sys	0m 0.00s
+dd exit: 0
+kernel messages during write:
+(none)
+=== 2026-10-24T16:10:57+02:00 step 6: read back p4 with O_DIRECT
+p4 now : d1c62731f172ce8abbbeadf5c6783ae0ae1e79bd238e195d4edbf53757ca253d  -
+kernel: d00dfeed (p5 untouched, FIT magic d00dfeed expected)
+expected p4: d1c62731f172ce8abbbeadf5c6783ae0ae1e79bd238e195d4edbf53757ca253d
+2026-10-24T16:12:41+02:00
+=== step 7: power on without UART loader
+=== 2026-10-24T16:22:31+02:00 factory reset from failsafe: firstboot -y
+firstboot -y
+[  578.701853] jffs2reset: /dev/mmcblk0p7 is not mounted
+[  578.706951] jffs2reset: /dev/mmcblk0p7 will be erased on next mount
+root@(none):/# === 2026-10-24T16:23:20+02:00 reboot -f after firstboot
+=== 2026-10-24T16:25:25+02:00 retry factory reset: failsafe, firstboot -y, sync, reboot -f (first try lacked sync)
+=== 2026-10-24T16:36:46+02:00 failsafe again: read GL's reset handler (read-only)
+=== 2026-10-24T16:39:41+02:00 factory reset GL-style: mount_root; firstboot -y; sync
+=== 2026-10-24T16:41:16+02:00 clean boot done
+=== 2026-10-24T16:51:56+02:00 GL first-time setup via ui.init (lang en, Europe/Amsterdam, root password from ~/.config/mt2500/admin-password)

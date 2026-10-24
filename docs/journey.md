@@ -372,6 +372,70 @@ itself.** Still nothing written to the router.
   the exact TFTP setup, the warning about the TFTP root, and the backup
   commands, for anyone repeating this.
 
+## Chapter 10: The fixed U-Boot on the eMMC, and a clean 4.7.4 (2026-10-24)
+
+**Result: the old MT2500A boots by itself again.** BootROM → the old BL2
+in boot0 → GL.iNet's **2025-02-24 U-Boot from the eMMC** → GL.iNet
+firmware **4.7.4**, reset to factory settings and set up again. Only the
+`fip` partition and the settings volume were written.
+
+* **Method chosen:** `dd` from the running OpenWrt initramfs, not GL.iNet's
+  route. GL.iNet's official way is the U-Boot recovery page, which on this
+  unit is exactly what never wrote anything, and which GL.iNet itself says
+  "may cause the uboot flashing failure on MT2500". `mtkupgrade fip` (the
+  debrick write-up's route) was the fallback. `dd` was the only route where
+  we could check the target before and verify the result after.
+* **Preparation:** the 2025 FIP (SHA256 `90b28ab5…`, MD5 `74286e77…` as in
+  GL.iNet's file name) padded with zeros to the partition's 2 MiB
+  (`d1c62731…`), copied to the router's RAM and checked there. Target check:
+  `mmcblk0p4` is `PARTNAME=fip`, start 13312, 4096 sectors, and its content
+  equalled the backup's old FIP; `rf` ends at 13311 and `kernel` starts at
+  17408, so nothing could spill over.
+* **Write:** `dd ... of=/dev/mmcblk0p4 oflag=direct conv=fsync`, 0.18 s, no
+  kernel messages. Read back with the caches dropped: exactly `d1c62731…`;
+  `kernel` and `rf` unchanged. Commands and output:
+  [logs/2026-10-24-uboot-write-commands.log](logs/2026-10-24-uboot-write-commands.log).
+* **Boot test** (power-cycled with the plug, no UART loader): `U-Boot
+  2022.07-rc3 (Feb 24 2025 - 15:04:07 +0800)` from the eMMC reads it ("bad
+  CRC, using default environment"), tries its automatic TFTP firmware fetch
+  (nothing there), then boots GL.iNet's Linux 5.4.211. Full console:
+  [logs/2026-10-24-uboot-write-and-reset-console.log](logs/2026-10-24-uboot-write-and-reset-console.log).
+* **Version naming:** both U-Boots say `2022.07-rc3`; that's the upstream
+  U-Boot source they're based on. The fix is in GL.iNet's build of
+  **24 Feb 2025** (the old one was built 12 Sep 2022).
+* **The firmware was fine all along.** The eMMC still held GL.iNet **4.7.4**
+  (`/etc/glversion`, built 2025-03-28): the `kernel` and `root` inside
+  GL.iNet's official 4.7.4 sysupgrade file match the start of p5 and p6 byte
+  for byte. Its settings (98 files, all dated 26 May 2025, `inited 1`, root
+  password set) show the router was set up that day and never changed again,
+  consistent with it getting stuck at the next reboot because the old
+  U-Boot couldn't open the eMMC.
+* **Failsafe findings:** `- failsafe_and_factory_reset` is just a heading in
+  `/etc/banner.failsafe`; the `ssh-rsa ... root@(none)` line is a temporary
+  1024-bit host key that failsafe generates in RAM. Failsafe SSH doesn't
+  work on the MT2500 (its preinit network uses `lan1`, which this router
+  hasn't got), so failsafe is console-only. `/sbin/mtk_failsafe.sh` is
+  missing (a MediaTek SDK leftover). The old settings were inspected
+  read-only (`losetup -r` at offset 0x3090000 into p6, `mount -t f2fs -o
+  ro,norecovery`); GL.iNet's kernel also exposes that volume as a virtual
+  `mmcblk0p7` (`rootfs_data`, start 182400).
+* **The factory reset took three tries.** `firstboot -y` in failsafe without
+  `mount_root` only writes a `deadc0de` mark that this firmware ignores on
+  its f2fs settings volume. The first try also lacked a `sync` before
+  `reboot -f`; the second had the mark verifiably on the eMMC and still
+  changed nothing. GL.iNet's own reset (`/etc/rc.button/reset` →
+  `factory_reset` in `gl_util.sh`) runs `firstboot -y; reboot` on the
+  **mounted** volume, so the working sequence is `mount_root; firstboot -y;
+  sync; reboot -f` ("only erasing files", 98 → 0 files). After that the
+  router reported `initialized: false`.
+* **First-time setup without a browser:** the router's own web UI showed
+  the calls: `ui.init` with language, timezone, `root` and a password
+  (10–63 characters with `security_rule: 1`), then `challenge`/`login`
+  with an MD5-crypt hash. Set up with English and Europe/Amsterdam; login
+  and `system.get_info` (4.7.4 `release6`, kernel 5.4.211) work. The
+  password was generated on the Pi and is kept there, outside the repo.
+  The internet step is left for when WAN gets connected.
+
 ---
 
 ## Next steps
@@ -385,8 +449,11 @@ itself.** Still nothing written to the router.
 - [x] Run `pi-setup.sh --download` on the Pi; join WiFi; cable eth0 to the router's LAN port.
 - [x] Plan B: load the 2025-02-24 U-Boot into RAM over UART; it reads the eMMC.
 - [x] Back up the whole eMMC (boot0, boot1, user area) before writing anything; verified by SHA256.
-- [ ] Keep a second copy of the backup somewhere private, off the Pi.
-- [ ] Decide how to write the new U-Boot permanently (`fip` partition).
+- [x] Keep a second copy of the backup somewhere private, off the Pi (on the home NAS, verified).
+- [x] Write the 2025-02-24 U-Boot permanently (`fip` partition): `dd` from the initramfs, verified.
+- [x] Boot from the eMMC without UART; factory-reset 4.7.4 and set it up.
+- [ ] Connect WAN and finish GL.iNet's internet setup; check `dmesg` for the WAN PHY.
+- [ ] Decide: keep stock 4.7.4, or flash our upstream OpenWrt build (`glinet_gl-mt2500`).
 - [ ] Find the WAN PHY variant of **each** unit separately. The replacement
       may well have a different chip than the broken one. Running unit:
       `dmesg | grep -iE 'en8811|airoha|gpy|maxlinear'`. Broken unit: chip
@@ -425,3 +492,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-24 | `pi-setup.sh` done; first UART contact. The old U-Boot (Sep 12 2022) fails the eMMC with `unable to select a mode : -110` / `mmc_init: -524`, matching Irakli's log line for line. Ethernet link 1000 Mb/s on the LAN port. Raw log kept on the Pi. |
 | 2026-10-24 | Plan B works: GL.iNet's 2025-02-24 U-Boot loaded over UART into RAM reads the eMMC (Samsung 8 GB, eMMC 5.1, 52 MHz 8-bit) and its intact partition table. Nothing written yet. Fixed a port-release race in `uartboot.sh`. |
 | 2026-10-24 | Complete eMMC backup: OpenWrt 25.12.6 initramfs booted over TFTP (packaged `tftpd-hpa`, eth0 only, TFTP root kept empty), boot0, boot1 and the 7.3 GiB user area copied over SSH, all SHA256-verified against the router. MAC and serial live in boot1; `rf` is empty. Backup kept on the Pi, outside the repo. |
+| 2026-10-24 | The old MT2500A boots by itself again: 2025-02-24 U-Boot written to `fip` with `dd` from the initramfs (verified), boots GL.iNet 4.7.4 from the eMMC. That firmware was an untouched official 4.7.4; only its settings (from 26 May 2025) were wiped. Factory reset in failsafe needs `mount_root` first. First-time setup done over the JSON-RPC API. |

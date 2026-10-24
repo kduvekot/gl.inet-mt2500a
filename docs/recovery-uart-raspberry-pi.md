@@ -253,7 +253,28 @@ the user area holds the GPT and `log`, `u-boot-env`, `rf`, `fip`, `kernel`,
 
 ### 4. Write the fixed U-Boot permanently
 
-Two known ways. Use the first; the second is a fallback.
+Three ways. **We used c)** on 2026-10-24; a) is GL.iNet's official route
+(but GL.iNet itself warns it "may cause the uboot flashing failure on
+MT2500"), b) is the route of the published debrick write-up.
+
+**c) `dd` from the OpenWrt initramfs (used here)**
+
+With the initramfs from step 3b still running, and the backup done:
+
+```sh
+cp fip-mt2500-20250224.bin fip-2025.bin && truncate -s 2097152 fip-2025.bin   # pad to the partition size with zeros
+cat fip-2025.bin | ssh root@192.168.1.1 'cat > /tmp/fip-2025.bin'
+```
+
+- [x] On the router: `sha256sum /tmp/fip-2025.bin` matches the Pi's.
+- [x] Check the target: `/sys/class/block/mmcblk0p4/uevent` says
+      `PARTNAME=fip`, `start` is 13312 and `size` 4096 (2 MiB), and
+      `dd if=/dev/mmcblk0p4 bs=1M iflag=direct | sha256sum` equals the
+      backup's `fip` partition (the old 2022 FIP).
+- [x] Write: `dd if=/tmp/fip-2025.bin of=/dev/mmcblk0p4 bs=1M oflag=direct conv=fsync && sync`
+      (0.18 s, no kernel errors).
+- [x] Verify: `echo 3 > /proc/sys/vm/drop_caches`, then the same `dd ...
+      iflag=direct | sha256sum` equals the padded image.
 
 **a) Recovery web page served by the RAM U-Boot**
 
@@ -280,10 +301,38 @@ real router.
 
 Either way:
 
-- [ ] Power-cycle **without** UART loading. The console should now show the
-      2025 U-Boot booting from eMMC.
+- [x] Power-cycle **without** UART loading. The console should now show the
+      2025 U-Boot booting from eMMC. *(2026-10-24: yes, then it booted the
+      GL.iNet 4.7.4 that was still on the eMMC.)*
 
 ### 5. Put firmware back
+
+Check first whether this is needed at all: on our unit the eMMC still held
+an untouched official 4.7.4 (the `kernel` and `root` from GL.iNet's
+sysupgrade file matched the start of p5 and p6 byte for byte). Only the
+settings needed wiping:
+
+- [x] **Factory reset over the console.** Catch failsafe (`f` + Enter at
+      "Press the [f] key"), then:
+      ```
+      mount_root      # mount the settings volume first: without it, firstboot does nothing here
+      firstboot -y    # "only erasing files"
+      sync
+      reboot -f
+      ```
+      Without `mount_root`, `firstboot` only writes a `deadc0de` mark that
+      this firmware ignores on its f2fs settings volume (`mmcblk0p7`), so
+      the old settings survive. GL.iNet's own reset (button 8+ s, web UI)
+      runs `firstboot -y` on the mounted volume, which works. Failsafe on
+      the MT2500 is console-only: its network setup looks for `lan1`.
+- [x] **First-time setup without a browser** (router at 192.168.8.1,
+      `initialized: false`): JSON-RPC `call ["", "ui", "init", {"lang",
+      "zonename", "timezone", "username": "root", "password",
+      "security_rule": 1}]`. Login afterwards: `challenge` gives `alg`,
+      `salt`, `nonce`; hash = `md5(user + ":" + crypt(password,
+      "$alg$salt$") + ":" + nonce)`. Taken from the router's own web UI.
+
+If the firmware is damaged instead:
 
 - [ ] Enter the recovery page again (reset-button sequence) and flash
       **stock 4.7.4** from the kit:
