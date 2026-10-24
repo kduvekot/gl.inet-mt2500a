@@ -267,7 +267,10 @@ switches the router's power adapter with a smart plug.
   * `help` lists, among others, `loadx`/`loady` (serial download to RAM),
     `go`, `bootm`, `httpd` (the recovery page), `mtkupgrade`, `gpt` and
     `mmc`.
-* **Raw logs** stay on the Pi in `~/mt2500-recovery-kit/logs/` (one file per
+* **Raw logs:** a cleaned copy of this session is in
+  [logs/2026-10-24-old-uboot-first-boot.log](logs/2026-10-24-old-uboot-first-boot.log)
+  (terminal colour codes removed). The originals stay on the Pi in
+  `~/mt2500-recovery-kit/logs/` (one file per
   console session).
 
 ---
