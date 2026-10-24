@@ -470,9 +470,27 @@ firmware **4.7.4**, reset to factory settings and set up again. Only the
 Note: on GL.iNet's firmware the replacement's EN8811H answers on MDIO
 address **5** (address 13 reads 0), while upstream OpenWrt's device tree for
 this variant (`mt7981b-glinet-gl-mt2500-v2.dts`) puts it at address **13**.
-Not yet explained; check before flashing upstream on the replacement. Read
-with `mii_mgr -g -p <addr> -r 2|3` and
+Read with `mii_mgr -g -p <addr> -r 2|3` and
 `mii_mgr_cl45 -g -p <addr> -d 0x1 -r 0x2|0x3` for addresses 5 and 13.
+What we know so far:
+
+- Both the vendor driver (MediaTek feed, `air_en8811h_main.c`/`_api.c` in
+  [gl-inet/mtk-openwrt-feeds](https://github.com/gl-inet/mtk-openwrt-feeds/tree/master/21.02/files/target/linux/mediatek/files-5.4/drivers/net/phy))
+  and the mainline driver (`air_en8811h.c`, `EN8811H_PBUS_ADDR_OFFS 8`)
+  use the PHY's own address plus a second MDIO address, **address + 8**, for
+  the chip's internal bus. Neither changes the address.
+- The kernel log line `PHY(0xd) = 3a2 - a411` doesn't match the public vendor
+  driver (it prints `PHY = %x - %x`), so GL.iNet 4.7.13 runs another version.
+  0xd = 13 = 5 + 8 fits the internal-bus address (our inference).
+- Upstream added `reg = <13>` in commit
+  [8d30e07180](https://github.com/openwrt/openwrt/commit/8d30e07180367cdeb4affd79adead6e1025355c9)
+  (2025-05-14), without saying why. The two PHYs share a reset GPIO (pin 14)
+  in the common `.dtsi`.
+- The address is set by strapping pins on the board; we found no datasheet
+  with the default.
+
+So on this unit, upstream's address 13 may well be wrong (the PHY is at 5).
+Check before flashing upstream on the replacement.
 
 The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chips from weeks 46–47 of 2022. RAM is one Nanya NT5AD512M16C4-JR, **DDR4** 8 Gbit = 1 GB, which matches the kit's DDR4 BL2. The eMMC is a Samsung KLM8G1GETF-B041, 8 GB eMMC 5.1. The SoC is hidden under a thermal pad.
 
