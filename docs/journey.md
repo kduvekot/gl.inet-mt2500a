@@ -437,8 +437,9 @@ firmware **4.7.4**, reset to factory settings and set up again. Only the
   The internet step is left for when WAN gets connected.
 * **Power-cycle test** after the setup: the 2025 U-Boot and 4.7.4 come up
   by themselves, the web API answers 40 s after power-on, the router stays
-  `initialized`, keeps its timezone, and both the API login and the serial
-  console login (`root@GL-MT2500`) work with the new password.
+  `initialized`, keeps its timezone, and the new password works for the
+  API login, the serial console (`root@GL-MT2500`) and SSH (password
+  authentication on 192.168.8.1; a wrong password is refused).
 
 ---
 
