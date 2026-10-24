@@ -9,9 +9,11 @@ name: Recovery kit
 #                    (aarch64 for 64-bit Pi OS, armv7 for 32-bit Pi OS)
 #   bl2            - RAM-only BL2 for MT7981 BGA + DDR4, with UART download
 #   fip            - GL.iNet's fixed MT2500 U-Boot (FIP) from 2025-02-24
-#   firmware       - GL.iNet stock firmware 4.7.4 (latest stable), to prove
-#                    the eMMC is writable again before moving to OpenWrt
-#   scripts        - recovery/*.sh from this repository
+#   scripts        - recovery/*.sh from this repository, including
+#                    get-stock-firmware.sh, which downloads GL.iNet's stock
+#                    firmware 4.7.4 from GL.iNet when needed. The firmware
+#                    itself is not bundled: it contains GL.iNet's closed-source
+#                    components, which we don't redistribute.
 #
 # Run it manually with "publish" ticked to (re)publish the kit as the
 # "recovery-kit" release, so the Pi can download it with plain curl.
@@ -46,9 +48,6 @@ env:
   GL_BOOT_REF: 8f73dd1a66e2a9037e48ca7df6c5b14a48672a6e
   FIP_NAME: uboot-mt2500-20250224-md5-74286e770cfb041b611d80d4adaef189.bin
   FIP_SHA256: 90b28ab596783e8cab09e1e38d77a37cdbc1e3b9fba855847bc8248b213a40be
-  # GL.iNet stock firmware 4.7.4 (from firmware-api.gl-inet.com)
-  STOCK_URL: https://fw.gl-inet.com/firmware/mt2500/release/openwrt-mt2500-4.7.4-0328-1743128340.bin
-  STOCK_SHA256: 3de78f88a2cc204c089cd1c262346786796d43a223564b1f792f3e8515cc8904
 
 jobs:
   loader:
@@ -134,9 +133,6 @@ jobs:
           curl -fsSL -o "$kit/fip-mt2500-20250224.bin" \
             "https://raw.githubusercontent.com/gl-inet/mt798x-boot/${GL_BOOT_REF}/bin/${FIP_NAME}"
           echo "${FIP_SHA256}  $kit/fip-mt2500-20250224.bin" | sha256sum -c -
-
-          curl -fsSL -o "$kit/$(basename "$STOCK_URL")" "$STOCK_URL"
-          echo "${STOCK_SHA256}  $kit/$(basename "$STOCK_URL")" | sha256sum -c -
 
           cp recovery/*.sh "$kit/"
           chmod +x "$kit"/*.sh "$kit"/bin/*
