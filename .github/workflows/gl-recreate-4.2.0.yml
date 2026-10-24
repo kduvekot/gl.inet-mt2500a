@@ -175,6 +175,15 @@ jobs:
           with open(".config", "a") as f:
               f.write("CONFIG_DEVEL=y\nCONFIG_CCACHE=y\nCONFIG_CCACHE_DIR=\"/work/cache/ccache\"\n"
                       "CONFIG_ALL_KMODS=y\nCONFIG_SDK=y\n")
+              # Kernel module packages from feeds GL.iNet's build didn't have
+              # (run 4: the only 17 kernel options left that differ).
+              for k in ("dm-raid", "usb-test", "sound-soc-core", "sound-soc-ac97",
+                        "sound-soc-mt79xx", "sound-soc-spdif", "openvswitch",
+                        "openvswitch-intree", "openvswitch-geneve", "openvswitch-geneve-intree",
+                        "openvswitch-gre", "openvswitch-gre-intree", "openvswitch-vxlan",
+                        "openvswitch-vxlan-intree", "openvswitch-lisp-intree",
+                        "openvswitch-stt-intree"):
+                  f.write(f"# CONFIG_PACKAGE_kmod-{k} is not set\n")
               for p in wanted:
                   f.write(f"CONFIG_PACKAGE_{p}=y\n")
           subprocess.run(["make", "defconfig"], check=True)
