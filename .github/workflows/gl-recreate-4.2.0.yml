@@ -12,7 +12,12 @@ name: GL.iNet 4.2.0 recreation (MT2500)
 #   * profiles target_mt7981_gl-mt2500 + glinet_mt2500, via gen_config.py
 #   * then every public package that the official image contains is
 #     selected too, and anything it doesn't contain is deselected, so the
-#     package set (and with it the kernel configuration) mirrors GL.iNet's
+#     package set mirrors GL.iNet's
+#   * CONFIG_ALL_KMODS=y: GL.iNet's kernel configuration (read from the
+#     official kernel, CONFIG_IKCONFIG=y) has every kernel module package
+#     built as a module, plus the built-in options those packages set
+#     (run 2 comparison: 739 options m only there, the rest mostly options
+#     set =y by package/kernel/linux/modules/*.mk or their defaults)
 #
 # What's not public, and therefore left out (listed in the report):
 #   * GL.iNet's private GitLab feeds (gl-sdk4-collect, mt7981-feeds): the
@@ -23,6 +28,8 @@ name: GL.iNet 4.2.0 recreation (MT2500)
 #
 # Cache: downloads (dl/) and ccache are restored before and saved after
 # every run, also failed ones, so iterations only recompile what changed.
+# ccache needs CONFIG_DEVEL=y in OpenWrt 21.02 (config/Config-devel.in:
+# 'bool "Use ccache" if DEVEL').
 #
 # The official image is downloaded from GL.iNet (SHA256-checked) and used
 # only inside the run (package list, comparison); it is never stored as an
@@ -76,7 +83,16 @@ jobs:
           echo "${OFFICIAL_SHA256}  official.bin" | sha256sum -c -
           mkdir official && tar -xf official.bin -C official
           sudo unsquashfs -q -d off_root official/*/root > /dev/null
-          sed -n 's/^Package: //p' off_root/usr/lib/opkg/status | sort > ../official-packages.txt
+          # Package names as in .config: drop the ABI suffix (libjson-c5 -> libjson-c).
+          python3 - off_root/usr/lib/opkg/status > ../official-packages.txt << 'PY'
+          import sys
+          for block in open(sys.argv[1], errors="replace").read().split("\n\n"):
+              f = dict(l.split(": ", 1) for l in block.splitlines() if ": " in l)
+              if "Package" in f:
+                  name, abi = f["Package"], f.get("ABIVersion", "")
+                  print(name[:-len(abi)] if abi and name.endswith(abi) else name)
+          PY
+          sort -o ../official-packages.txt ../official-packages.txt
           wc -l ../official-packages.txt
 
       - name: Write build script
@@ -151,7 +167,8 @@ jobs:
                       or p in {"fwdd", "kmod-mtfwd", "kmod-mtqos", "mtk-base-files", "gl-line-graph"})
           wanted = sorted(p for p in official if not private(p))
           with open(".config", "a") as f:
-              f.write("CONFIG_CCACHE=y\nCONFIG_CCACHE_DIR=\"/work/cache/ccache\"\n")
+              f.write("CONFIG_DEVEL=y\nCONFIG_CCACHE=y\nCONFIG_CCACHE_DIR=\"/work/cache/ccache\"\n"
+                      "CONFIG_ALL_KMODS=y\n")
               for p in wanted:
                   f.write(f"CONFIG_PACKAGE_{p}=y\n")
           subprocess.run(["make", "defconfig"], check=True)
@@ -173,6 +190,7 @@ jobs:
           PY
 
           cp .config /work/out/config.txt
+          grep -E "^CONFIG_(DEVEL|CCACHE|ALL_KMODS)=" .config
           export CCACHE_DIR=/work/cache/ccache CCACHE_MAXSIZE=4G
           make download -j8 || make download -j1 V=s
           make -j"$(nproc)" || make -j1 V=s
@@ -200,12 +218,15 @@ jobs:
         run: |
           cd work/cmp
           ours=$(ls ../out/images/*glinet_gl-mt2500*sysupgrade*.bin 2>/dev/null | head -1 || true)
+          S="$GITHUB_WORKSPACE/.github/scripts"
+          python3 "$S/fit-ikconfig.py" official/*/kernel kconfig-official.txt || true
           if [ -n "$ours" ]; then
             mkdir ours && tar -xf "$ours" -C ours
             sudo unsquashfs -q -d our_root ours/*/root > /dev/null
+            python3 "$S/fit-ikconfig.py" ours/*/kernel kconfig-ours.txt || true
           fi
-          sudo python3 "$GITHUB_WORKSPACE/.github/scripts/compare-firmware.py" \
-            off_root our_root ../out/removed-packages.txt ../out/report
+          sudo python3 "$S/compare-firmware.py" off_root our_root \
+            ../out/removed-packages.txt ../out/report kconfig-official.txt kconfig-ours.txt
           sudo chown -R "$(id -u)" ../out
           cat ../out/report/report.md >> "$GITHUB_STEP_SUMMARY"
 
