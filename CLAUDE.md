@@ -48,10 +48,14 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   (`env -u TMUX` because Claude itself runs inside the claude-rc tmux
   server); raw logs in `~/mt2500-recovery-kit/logs/`, on the Pi only.
 - **Router power** is switchable from the Pi: `pi/plug.sh` (below).
-- **Next:** read-only checks at the `MT7981>` prompt (`version`,
-  `printenv`, `mmc info`), then Plan B: router off, `uartboot.sh` loads the
-  2025-02-24 U-Boot into RAM only, and see whether it finds the eMMC
-  ([docs/recovery-uart-raspberry-pi.md](docs/recovery-uart-raspberry-pi.md)).
+- **Plan B works** (2026-10-24): the 2025-02-24 U-Boot loaded into RAM
+  (`uartboot.sh -y` in tmux session `uartboot`, router switched with
+  `pi/plug.sh`) reads the eMMC and its intact partition table. Nothing
+  written yet; a power cycle brings back the old U-Boot. The published kit's
+  `uartboot.sh` lacks the port-release fix: stop the console a few seconds
+  before running it.
+- **Next:** back up the eMMC partitions (at least `rf`), then decide how to
+  write the new U-Boot permanently (`fip`). Ask the owner before any write.
 - WAN PHY: old unit MaxLinear GPY211C0VC (`glinet_gl-mt2500`; board
   MT2500-V1.1, DDR4 1 GB, Samsung 8 GB eMMC); replacement unknown (table in docs/journey.md). The old unit's UART is
   J13: 3.3V (square pad), RX, TX, GND, open through-holes.

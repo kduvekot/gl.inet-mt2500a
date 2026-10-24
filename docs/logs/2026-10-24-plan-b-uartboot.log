@@ -1,0 +1,30 @@
+mtk_uartboot - 0.1.1
+Using serial port: /dev/serial0
+Handshake...
+hw code: 0x7981
+hw sub code: 0x8a00
+hw ver: 0xca00
+sw ver: 0x1
+Baud rate set to 460800
+sending payload to 0x201000...
+Checksum: 0x6f0e
+Setting baudrate back to 115200
+Jumping to 0x201000 in aarch64...
+Waiting for BL2. Message below:
+==================================
+NOTICE:  BL2: v2.10.0	(release):v2.10.0-mtk
+NOTICE:  BL2: Built : 13:17:08, Mar  1 2024
+NOTICE:  WDT: Cold boot
+NOTICE:  WDT: disabled
+NOTICE:  EMI: Using DDR4 settings
+NOTICE:  EMI: Detected DRAM size: 1024MB
+NOTICE:  EMI: complex R/W mem test passed
+NOTICE:  CPU: MT7981 (1300MHz)
+NOTICE:  Starting UART download handshake ...
+==================================
+BL2 UART DL version: 0x10
+Baudrate set to: 921600
+FIP sent.
+==================================
+NOTICE:  Received FIP 0x9c8ed @ 0x40400000 ...
+==================================

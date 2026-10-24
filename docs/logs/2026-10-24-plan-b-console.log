@@ -1,0 +1,83 @@
+`I
+
+U-Boot 2022.07-rc3 (Feb 24 2025 - 15:04:07 +0800)
+
+CPU:   MediaTek MT7981
+Model: mt7981-rfb
+DRAM:  1 GiB
+Core:  43 devices, 20 uclasses, devicetree: embed
+MMC:   mmc@11230000: 0
+Loading Environment from MMC... *** Warning - bad CRC, using default environment
+
+In:    serial@11002000
+Out:   serial@11002000
+Err:   serial@11002000
+Net:   
+Warning: ethernet@15100000 (eth0) using random MAC address - 06:bf:63:da:32:6a
+eth0: ethernet@15100000
+gpio: pin 12 (gpio 12) value is 0
+Enter "gl" to stop autoboot in 2 seconds
+MT7981> glglglglglglglglglglglglgl<INTERRUPT>
+MT7981> version
+U-Boot 2022.07-rc3 (Feb 24 2025 - 15:04:07 +0800)
+
+aarch64-linux-gnu-gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0
+GNU ld (GNU Binutils for Ubuntu) 2.38
+MT7981> mmc info
+Device: mmc@11230000
+Manufacturer ID: 15
+OEM: 0
+Name: 8GTF4R 
+Bus Speed: 52000000
+Mode: MMC High Speed (52MHz)
+Rd Block Len: 512
+MMC version 5.1
+High Capacity: Yes
+Capacity: 7.3 GiB
+Bus Width: 8-bit
+Erase Group Size: 512 KiB
+HC WP Group Size: 8 MiB
+User Capacity: 7.3 GiB WRREL
+Boot Capacity: 4 MiB ENH
+RPMB Capacity: 512 KiB ENH
+Boot area 0 is not write protected
+Boot area 1 is not write protected
+MT7981> mmc part
+
+Partition Map for MMC device 0  --   Partition Type: EFI
+
+Part	Start LBA	End LBA		Name
+	Attributes
+	Type GUID
+	Partition GUID
+  1	0x00001000	0x00001fff	"log"
+	attrs:	0x0000000000000000
+	type:	0fc63daf-8483-4772-8e79-3d69d8477de4
+		(linux)
+	guid:	f8a2819e-2e86-11ed-bfe7-1fb0721adcb3
+  2	0x00002000	0x000023ff	"u-boot-env"
+	attrs:	0x0000000000000000
+	type:	0fc63daf-8483-4772-8e79-3d69d8477de4
+		(linux)
+	guid:	19a4763a-6b19-4a4b-a0c4-8cc34f4c2ab9
+  3	0x00002400	0x000033ff	"rf"
+	attrs:	0x0000000000000000
+	type:	0fc63daf-8483-4772-8e79-3d69d8477de4
+		(linux)
+	guid:	8142c1b2-1697-41d9-b1bf-a88d76c7213f
+  4	0x00003400	0x000043ff	"fip"
+	attrs:	0x0000000000000000
+	type:	0fc63daf-8483-4772-8e79-3d69d8477de4
+		(linux)
+	guid:	18de6587-4f17-4e08-a6c9-d9d3d424f4c5
+  5	0x00004400	0x000143ff	"kernel"
+	attrs:	0x0000000000000000
+	type:	0fc63daf-8483-4772-8e79-3d69d8477de4
+		(linux)
+	guid:	971f7556-ef1a-44cd-8b28-0cf8100b9c7e
+  6	0x00014400	0x00e8ffff	"rootfs"
+	attrs:	0x0000000000000000
+	type:	0fc63daf-8483-4772-8e79-3d69d8477de4
+		(linux)
+	guid:	309a3e76-270b-41b2-b5d5-ed8154e7542b
+MT7981> 
