@@ -45,11 +45,18 @@ if [ -f "$kit_dir/SHA256SUMS" ]; then
 fi
 [ -e "$port" ] || { echo "Serial port $port not found (did you run pi-setup.sh and reboot?)" >&2; exit 1; }
 
-# The loader needs the port to itself.
+# The loader needs the port to itself. picocom takes a moment to exit after
+# its tmux session is killed, so allow it up to 5 s to release the port.
 "$kit_dir/console.sh" stop > /dev/null
-if command -v fuser > /dev/null && fuser "$port" > /dev/null 2>&1; then
-	echo "$port is in use by another process; close it first." >&2
-	exit 1
+if command -v fuser > /dev/null; then
+	for _ in $(seq 1 10); do
+		fuser "$port" > /dev/null 2>&1 || break
+		sleep 0.5
+	done
+	if fuser "$port" > /dev/null 2>&1; then
+		echo "$port is in use by another process; close it first." >&2
+		exit 1
+	fi
 fi
 
 mkdir -p "$kit_dir/logs"

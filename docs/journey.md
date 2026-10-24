@@ -273,16 +273,57 @@ switches the router's power adapter with a smart plug.
   `~/mt2500-recovery-kit/logs/` (one file per
   console session).
 
+## Chapter 8: Plan B, the fixed U-Boot from RAM (2026-10-24)
+
+**Result: GL.iNet's 2025-02-24 U-Boot, loaded over UART into RAM, reads the
+eMMC without any problem.** Nothing was written to the router.
+
+* **How:** router off with `pi/plug.sh off` and 10 s wait, then
+  `uartboot.sh -y` in its own tmux session (`uartboot`), then
+  `pi/plug.sh on`. The first attempt stopped before the loader with
+  "/dev/serial0 is in use": `uartboot.sh` checked the port right after
+  stopping the console, before picocom had exited. Fixed in
+  `recovery/uartboot.sh` (waits up to 5 s); the published kit still has
+  the old version until the **Recovery kit** workflow runs again.
+* **Loader** (`mtk_uartboot` 0.1.1): handshake with the BootROM
+  (`hw code: 0x7981`), our RAM BL2 at 460,800 baud (BL2 v2.10.0-mtk, "EMI:
+  Using DDR4 settings", 1024 MB, memory test passed), then the FIP at
+  921,600 baud through the ~1.57 kΩ resistors: `Received FIP 0x9c8ed`,
+  which is exactly 641,261 bytes, the size of the 2025-02-24 FIP.
+* **The new U-Boot:** `U-Boot 2022.07-rc3 (Feb 24 2025 - 15:04:07 +0800)`,
+  built with Ubuntu 22.04's GCC 11.4. `Loading Environment from MMC... ***
+  Warning - bad CRC, using default environment`: it reads the eMMC (no
+  `-110`/`-524`), it just finds no valid saved settings. `uartboot.sh`
+  typed `gl` to stop autoboot.
+* **`mmc info`:** manufacturer ID 0x15 (Samsung), name `8GTF4R` (matching
+  the KLM8G1GETF chip), eMMC 5.1, **MMC High Speed at 52 MHz, 8-bit**,
+  7.3 GiB user area, two 4 MiB boot areas (not write-protected), 512 KiB
+  RPMB. This matches what Irakli saw.
+* **`mmc part`:** the EFI partition table is intact: `log`, `u-boot-env`,
+  `rf`, `fip`, `kernel`, `rootfs`. So the eMMC and its contents survived;
+  only the old U-Boot couldn't talk to it.
+* **Still volatile:** this U-Boot only lives in RAM. A power cycle brings
+  back the old one. Writing it permanently (the `fip` partition) is the
+  next decision, after a backup of what's on the eMMC now (at least `rf`,
+  which probably holds the unit's own data such as MAC addresses; not
+  checked yet).
+* **Logs:** [loader](logs/2026-10-24-plan-b-uartboot.log) and
+  [console](logs/2026-10-24-plan-b-console.log) (cleaned copies).
+
 ---
 
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
-- [ ] Run the **Recovery kit** workflow with *publish* ticked.
+- [x] Run the **Recovery kit** workflow with *publish* ticked.
+- [ ] Run it again so the published kit gets the `uartboot.sh` port fix.
 - [x] Test Claude Code on the Pi 3 (64-bit OS, Remote Control from phone and Chromebook).
-- [ ] Clone this repo on the Pi and continue this conversation there
+- [x] Clone this repo on the Pi and continue this conversation there
       (`claude --teleport`), with `/remote-control`.
-- [ ] Run `pi-setup.sh --download` on the Pi; join WiFi; cable eth0 to the router's LAN port.
+- [x] Run `pi-setup.sh --download` on the Pi; join WiFi; cable eth0 to the router's LAN port.
+- [x] Plan B: load the 2025-02-24 U-Boot into RAM over UART; it reads the eMMC.
+- [ ] Back up the eMMC partitions (at least `rf`) before writing anything.
+- [ ] Decide how to write the new U-Boot permanently (`fip` partition).
 - [ ] Find the WAN PHY variant of **each** unit separately. The replacement
       may well have a different chip than the broken one. Running unit:
       `dmesg | grep -iE 'en8811|airoha|gpy|maxlinear'`. Broken unit: chip
@@ -297,7 +338,8 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 
 - [ ] Baseline speed test on the working unit with stock firmware (iperf3, WAN↔LAN;
       needs a gigabit peer, so not the Pi 3).
-- [ ] Plan A on the broken unit (`./web-flash.sh fip` from the Pi); record the result.
+- [ ] ~~Plan A on the broken unit~~: skipped. The UART log showed that the old
+      U-Boot can't open the eMMC at all, so its recovery page can't write.
 
 ## Logbook
 
@@ -318,3 +360,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-23 | Power switching for the router: the IKEA DIRIGERA hub (back online after a dead wall socket) and a second INSPELNING plug named `MT2500A`, switched from the Pi through the hub's undocumented local API. Added `pi/dirigera-token.py` and `pi/plug.sh`; tokens stay on the Pi, out of the public repo. |
 | 2026-10-23 | Old unit's chips read from photos: WAN PHY MaxLinear GPY211C0VC (`glinet_gl-mt2500` confirmed), RAM Nanya DDR4 1 GB (matches the kit's DDR4 BL2), eMMC Samsung KLM8G1GETF 8 GB. Board MT2500-V1.1, 2022/11/1. |
 | 2026-10-24 | `pi-setup.sh` done; first UART contact. The old U-Boot (Sep 12 2022) fails the eMMC with `unable to select a mode : -110` / `mmc_init: -524`, matching Irakli's log line for line. Ethernet link 1000 Mb/s on the LAN port. Raw log kept on the Pi. |
+| 2026-10-24 | Plan B works: GL.iNet's 2025-02-24 U-Boot loaded over UART into RAM reads the eMMC (Samsung 8 GB, eMMC 5.1, 52 MHz 8-bit) and its intact partition table. Nothing written yet. Fixed a port-release race in `uartboot.sh`. |
