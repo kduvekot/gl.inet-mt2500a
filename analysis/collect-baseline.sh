@@ -41,7 +41,7 @@ r 'for f in $(find /sys/kernel/debug/mtketh -type f); do echo "== $f"; cat $f 2>
 
 # A3 WAN PHY (address 5): Clause 22 regs 0-31, Clause 45 key MMD registers
 r 'for n in $(seq 0 31); do printf "c22 r%02d " $n; mii_mgr -g -p 5 -r $n 2>&1 | tail -1; done' > "$out/a3-phy5-c22.txt"
-r 'for dr in 1:0 1:1 1:2 1:3 1:4 1:5 1:6 1:7 1:8 1:11 1:129 3:0 3:1 3:2 3:3 3:4 3:5 3:6 3:8 3:32 3:33 7:0 7:1 7:2 7:3 7:16 7:19 7:32 7:33 30:0 30:1 30:2 30:3 30:4 30:8 30:9 30:10 30:11 30:12 30:13 30:14 30:15 31:0 31:1 31:2 31:3 31:4 31:5 31:6 31:7 31:8 31:9 31:10; do d=${dr%%:*}; g=${dr##*:}; printf "c45 mmd%-2s r%-4s " $d $g; mii_mgr_cl45 -g -p 5 -d $d -r $g 2>&1 | tail -1; done' > "$out/a3-phy5-c45.txt"
+r 'for dr in 1:0 1:1 1:2 1:3 1:4 1:5 1:6 1:7 1:8 1:11 1:129 3:0 3:1 3:2 3:3 3:4 3:5 3:6 3:8 3:32 3:33 7:0 7:1 7:2 7:3 7:16 7:19 7:32 7:33 30:0 30:1 30:2 30:3 30:4 30:8 30:9 30:10 30:11 30:12 30:13 30:14 30:15 30:24 30:25 30:26 30:30 31:0 31:1 31:2 31:3 31:4 31:5 31:6 31:7 31:8 31:9 31:10 31:24; do d=${dr%%:*}; g=${dr##*:}; printf "c45 mmd%-2s r%-4s " $d $g; mii_mgr_cl45 -g -p 5 -d $(printf 0x%x $d) -r $(printf 0x%x $g) 2>&1 | tail -1; done; for g in 0 1 2 3 4 5 9 10 19 24 25 26; do printf "c22-via-mmd0 r%-3s " $g; mii_mgr -g -p 5 -r $(printf 0x%x $g) 2>&1 | tail -1; done' > "$out/a3-phy5-c45.txt"
 
 # A4 SGMII / PCS (regmap debugfs)
 r 'for d in /sys/kernel/debug/regmap/*; do case "$d" in *sgmii*|*SGMII*|*1006*|*1007*) echo "== $d"; cat $d/name 2>/dev/null; cat $d/registers 2>/dev/null | head -120;; esac; done' > "$out/a4-sgmii-regmap.txt"

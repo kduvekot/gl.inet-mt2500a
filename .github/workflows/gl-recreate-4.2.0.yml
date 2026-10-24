@@ -66,11 +66,13 @@ jobs:
           restore-keys: gl-recreate-${{ env.FORK_TAG }}-
 
       - name: Fetch the official 4.2.0 and list its packages
+        timeout-minutes: 20
         run: |
           sudo apt-get install -y -q squashfs-tools > /dev/null
           mkdir -p work/out work/cache/dl work/cache/ccache work/cmp
           cd work/cmp
-          curl -fsSL -o official.bin "$OFFICIAL_URL"
+          curl -fSL --connect-timeout 30 --max-time 600 --retry 5 --retry-delay 10 \
+            --retry-all-errors -o official.bin "$OFFICIAL_URL"
           echo "${OFFICIAL_SHA256}  official.bin" | sha256sum -c -
           mkdir official && tar -xf official.bin -C official
           sudo unsquashfs -q -d off_root official/*/root > /dev/null
