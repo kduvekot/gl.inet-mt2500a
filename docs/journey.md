@@ -476,8 +476,11 @@ tree and modules. The hardware layer barely moves; 4.6.2 is the big step (the
 Airoha PHY, a new reset scheme). One version, 4.5.16, looks wild but only
 because its kernel was built with far fewer modules.
 
-**The replacement unit.** Its WAN PHY is an Airoha EN8811H at MDIO address 5,
-while upstream's device tree says 13: a likely upstream bug. Its firmware,
+**The replacement unit.** Its WAN PHY is an Airoha EN8811H. On GL.iNet's
+firmware it answers at MDIO address 5, while upstream's device tree says 13.
+That looked like an upstream bug, but forum users confirm that 13 works on
+upstream: most likely GL.iNet's driver moves the PHY to 5 (our inference,
+see [driver-analysis.md](driver-analysis.md)). Its firmware,
 4.7.13, is not published by GL.iNet; we read it from the unit and keep it
 private. Details in [firmware-sources.md](firmware-sources.md).
 
@@ -501,7 +504,7 @@ private. Details in [firmware-sources.md](firmware-sources.md).
 - [ ] Decide: keep stock 4.7.4, or flash our upstream OpenWrt build (`glinet_gl-mt2500`).
 - [x] Driver analysis phases A and B ([driver-analysis.md](driver-analysis.md)).
 - [x] Compare 16 GL.iNet versions (15 published plus 4.7.13).
-- [ ] Report the EN8811H address (5 on GL.iNet's firmware, 13 upstream) to OpenWrt, after checking it on the unit from an initramfs.
+- [ ] Before upstream on the replacement: boot the Airoha profile's initramfs and check that the EN8811H answers at 13 (GL.iNet's firmware shows 5; upstream's 13 works for forum users).
 - [ ] Recreation run 4 (module "not set" lines dropped first) and compare.
 - [ ] Phase C: the same measurements on upstream OpenWrt, with a fast peer (the GMKtec, next week).
 - [ ] Phase D (optional): the closed `mtfwd` / `mtqos` modules in depth.
@@ -527,7 +530,8 @@ What we know so far:
   the chip's internal bus. Neither changes the address.
 - The kernel log line `PHY(0xd) = 3a2 - a411` doesn't match the public vendor
   driver (it prints `PHY = %x - %x`), so GL.iNet 4.7.13 runs another version.
-  0xd = 13 = 5 + 8 fits the internal-bus address (our inference).
+  0xd = 13 = 5 + 8 fits the internal-bus address, or it is the address where
+  the driver found the chip (both our inference; see the update below).
 - Upstream added `reg = <13>` in commit
   [8d30e07180](https://github.com/openwrt/openwrt/commit/8d30e07180367cdeb4affd79adead6e1025355c9)
   (2025-05-14), without saying why. The two PHYs share a reset GPIO (pin 14)
@@ -535,8 +539,10 @@ What we know so far:
 - The address is set by strapping pins on the board; we found no datasheet
   with the default.
 
-So on this unit, upstream's address 13 may well be wrong (the PHY is at 5).
-Check before flashing upstream on the replacement.
+Update (2026-10-25): upstream's 13 is right. Users on GL.iNet's forum got
+WAN working on upstream builds with `reg = <0xd>`, and the official 24.10.3
+works. GL.iNet's firmware most likely moves the PHY to 5 itself (our
+inference); details in [driver-analysis.md](driver-analysis.md).
 
 The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chips from weeks 46–47 of 2022. RAM is one Nanya NT5AD512M16C4-JR, **DDR4** 8 Gbit = 1 GB, which matches the kit's DDR4 BL2. The eMMC is a Samsung KLM8G1GETF-B041, 8 GB eMMC 5.1. The SoC is hidden under a thermal pad.
 

@@ -122,11 +122,19 @@ sets the marks and queue settings is our inference; phase D would tell.
 - GL.iNet's device tree (4.6.2 onward, one for both hardware variants) has
   `phy@5`, compatible `ethernet-phy-ieee802.3-c45`.
 - Upstream `mt7981b-glinet-gl-mt2500-v2.dts` (commit 8d30e07180, 2025-05-14,
-  Matthew Bilker) uses `reg = <13>`. So upstream's address does not match
-  GL.iNet's firmware or this unit; probably wrong at least for units like
-  this. A report upstream is possible.
-- Both drivers use address + 8 for the chip's internal bus (mainline
-  `EN8811H_PBUS_ADDR_OFFS 8`). The log's `0xd` fits 5 + 8 (our inference).
+  Matthew Bilker) uses `reg = <13>`, and **13 works on upstream**: users on
+  [GL.iNet's forum](https://forum.gl-inet.com/t/gl-mt2500a-wan-issues-openwrt/57835)
+  had no WAN on upstream builds with address 5 and got it working by
+  changing the device tree to `reg = <0xd>` (May 2025); a later post reports
+  WAN working on the official 24.10.3 (September 2025).
+- So the same chip answers at 13 on upstream and at 5 on GL.iNet's firmware.
+  Our explanation (an inference, not documented): the board straps the
+  EN8811H to address 13, and GL.iNet's driver, a version newer than the
+  public one, finds it there (its log prints `PHY(0xd)`, the address where it
+  was found) and moves it to 5, so one device tree with `phy@5` serves both
+  hardware variants. The public vendor driver and the mainline driver don't
+  change the address; both use address + 8 for the chip's internal bus
+  (mainline `EN8811H_PBUS_ADDR_OFFS 8`).
 
 Reset timing differs:
 
@@ -142,11 +150,13 @@ GL.iNet's earlier firmware (before 4.6.2) put the reset on the PHY node
 
 1. Have a way back ready: an eMMC backup and the UART. Try upstream on the
    old unit (MaxLinear profile) first; the replacement is the working one.
-2. Boot the Airoha profile's initramfs (nothing written) and see whether the
-   kernel finds the PHY, and at which address.
-3. If the PHY is at 5 and upstream looks at 13, expect no WAN with the stock
-   upstream device tree; a corrected device tree (or an upstream fix) comes
-   first.
+2. Use the Airoha profile (`glinet_gl-mt2500-airoha`), OpenWrt 24.10.3 or
+   newer, with `kmod-phy-airoha-en8811h` and `airoha-en8811h-firmware`
+   (upstream's profile includes both).
+3. Boot its initramfs first (nothing written) and check that the kernel
+   finds the PHY at 13 and WAN gets a link. A warm reboot from GL.iNet's
+   firmware may leave the PHY at 5 until its reset line is pulsed (our
+   inference); a power cycle rules that out.
 
 ## Who maintains what
 
@@ -169,14 +179,23 @@ Linux 5.4.211.
 |---|---|
 | 4.2.0 | Device tree: USB port list and `flash_size`. `mtkhnat`, `mtfwd`, `mtqos` rebuilt |
 | 4.2.1 | Device tree again (USB) |
-| 4.5.0 | Shortcut-FE modules added; `mtkhnat` changed |
+| 4.5.0 | Shortcut-FE and `kmwan` (multi-WAN) modules added; `mtkhnat` changed; `nf_nat` masquerade changed (below) |
 | 4.5.16 | Outlier: kernel built with only 148 modules (`=m`) against about 910 elsewhere; the "923/928 config changes" in the raw table are this artefact |
 | 4.6.2 | **Big one.** EN8811H support (`air_en8811h`, PHY firmware files); PHY node compatible `ethernet-phy-id67c9.de0a` becomes generic `ethernet-phy-ieee802.3-c45`; PHY reset moves from the PHY node (assert 600 us, deassert 20 ms) to the MDIO bus (GPIO 14, 100 ms and 100 ms). `mtkhnat`, `mtfwd`, `mtqos` last changed here |
 | 4.7.0 | eMMC `max-frequency` 52 to 26 MHz; `usb3-bus-dev`; extra conntrack helpers |
 | 4.7.4 | eMMC pin drive strength 12 mA; ramoops at `0x42ff0000` |
-| 4.7.13 | (unpublished) same kernel config and EN8811H driver as 4.7.4; only `kmwan`, `parental_control`, `nf_nat` differ |
+| 4.7.13 | (unpublished) same kernel config and EN8811H driver as 4.7.4; only `kmwan`, `parental_control`, `nf_nat` differ (masquerade back to upstream) |
 | 4.8.2 | More helpers (FTP), `veth` |
 | 4.9.0_beta3 | MediaTek Wi-Fi drivers and firmware shipped (`mt_wifi`, `mtk_warp`) although the MT2500 has no Wi-Fi |
+
+**Masquerade in `nf_nat`.** From 4.5.0 to 4.7.4, GL.iNet's `nf_nat.ko`
+picks the masquerade source address with a route lookup
+(`ip_route_output_flow`, message "No route: Rusty's brain broke!") instead
+of upstream 5.4.211's `inet_select_addr` (message "%s ate my IP address").
+4.1.1 to 4.4.6 and 4.7.13, 4.8.2 and 4.9.0_beta3 have the upstream code
+(checked by symbols and strings in all 16 versions). It arrived together
+with `kmwan`, so it probably served multi-WAN, where policy routing picks
+the WAN (our inference). Upstream OpenWrt uses the normal kernel code.
 
 The package version of the hnat, fwd and qos modules stays `5.4.211-1`
 throughout; only the files change. The EN8811H driver and PHY firmware never
@@ -184,7 +203,7 @@ change between 4.6.2 and 4.9.0_beta3.
 
 ## Open questions
 
-- Does upstream's address 13 work on the replacement unit? Report upstream?
+- Does GL.iNet's driver really move the EN8811H from 13 to 5 (decompile `air_en8811h.ko`, or read address 13 right after a cold boot into U-Boot)?
 - Which vendor/mainline difference matters most for the WAN link on
   upstream (the PCS power cycle on a speed change is our best guess)?
 - Does 52 MHz work reliably on upstream, given the card supports it? Why
