@@ -10,6 +10,9 @@ name: GL.iNet 4.2.0 recreation (MT2500)
 #     configs/config-mt798x-7.6.6.1.yml
 #   * patches-mt798x-7.6.6.1/*.patch applied with "git am -3" by setup.py
 #   * profiles target_mt7981_gl-mt2500 + glinet_mt2500, via gen_config.py
+#   * then every public package that the official image contains is
+#     selected too, and anything it doesn't contain is deselected, so the
+#     package set (and with it the kernel configuration) mirrors GL.iNet's
 #
 # What's not public, and therefore left out (listed in the report):
 #   * GL.iNet's private GitLab feeds (gl-sdk4-collect, mt7981-feeds): the
@@ -18,9 +21,12 @@ name: GL.iNet 4.2.0 recreation (MT2500)
 #   * git01.mediatek.com now needs a login; the same commit (df3fc79) is
 #     taken from GL.iNet's GitHub mirror instead.
 #
+# Cache: downloads (dl/) and ccache are restored before and saved after
+# every run, also failed ones, so iterations only recompile what changed.
+#
 # The official image is downloaded from GL.iNet (SHA256-checked) and used
-# only for the comparison inside the run; it is never stored as an artifact.
-# Takes a few hours (full OpenWrt build, toolchain included).
+# only inside the run (package list, comparison); it is never stored as an
+# artifact.
 
 on:
   workflow_dispatch:
@@ -52,9 +58,27 @@ jobs:
           sudo docker image prune -af > /dev/null
           df -h /
 
+      - name: Restore cache (downloads, ccache)
+        uses: actions/cache/restore@v6
+        with:
+          path: work/cache
+          key: gl-recreate-${{ env.FORK_TAG }}-${{ github.run_id }}
+          restore-keys: gl-recreate-${{ env.FORK_TAG }}-
+
+      - name: Fetch the official 4.2.0 and list its packages
+        run: |
+          sudo apt-get install -y -q squashfs-tools > /dev/null
+          mkdir -p work/out work/cache/dl work/cache/ccache work/cmp
+          cd work/cmp
+          curl -fsSL -o official.bin "$OFFICIAL_URL"
+          echo "${OFFICIAL_SHA256}  official.bin" | sha256sum -c -
+          mkdir official && tar -xf official.bin -C official
+          sudo unsquashfs -q -d off_root official/*/root > /dev/null
+          sed -n 's/^Package: //p' off_root/usr/lib/opkg/status | sort > ../official-packages.txt
+          wc -l ../official-packages.txt
+
       - name: Write build script
         run: |
-          mkdir -p work
           cat > work/build.sh << 'EOF'
           #!/usr/bin/env bash
           # Runs inside ubuntu:20.04 (OpenWrt 21.02 predates newer hosts).
@@ -79,6 +103,9 @@ jobs:
           python3 setup.py -c configs/config-mt798x-7.6.6.1.yml
           cd mt7981
           git log --oneline -3
+
+          # Cached downloads.
+          rm -rf dl && ln -s /work/cache/dl dl
 
           # MediaTek's feed moved behind a login; same commit from GL.iNet's mirror.
           sed -i "s#${MTK_FEED_OLD}#${MTK_FEED_MIRROR}#" feeds.conf.default
@@ -109,14 +136,49 @@ jobs:
           PY
 
           ./scripts/gen_config.py public_target_mt2500 public_glinet_mt2500
+
+          # Mirror the official package set: make every feed package
+          # selectable, select what the official image has (except GL.iNet's
+          # closed/private packages), then deselect whatever we have extra.
+          ./scripts/feeds install -a > /dev/null
+          python3 - << 'PY'
+          import re, subprocess
+          official = {l.strip() for l in open("/work/official-packages.txt") if l.strip()}
+          def private(p):
+              return (p.startswith(("gl-sdk4", "gl-oui", "oui-", "kmod-gl-sdk4", "libgl"))
+                      or p in {"fwdd", "kmod-mtfwd", "kmod-mtqos", "mtk-base-files", "gl-line-graph"})
+          wanted = sorted(p for p in official if not private(p))
+          with open(".config", "a") as f:
+              f.write("CONFIG_CCACHE=y\nCONFIG_CCACHE_DIR=\"/work/cache/ccache\"\n")
+              for p in wanted:
+                  f.write(f"CONFIG_PACKAGE_{p}=y\n")
+          subprocess.run(["make", "defconfig"], check=True)
+          cfg = open(".config").read()
+          selected = set(re.findall(r"^CONFIG_PACKAGE_(\S+)=y$", cfg, re.M))
+          extra = sorted(selected - official)
+          missing = sorted(p for p in wanted if p not in selected)
+          with open(".config", "a") as f:
+              for p in extra:
+                  f.write(f"# CONFIG_PACKAGE_{p} is not set\n")
+          subprocess.run(["make", "defconfig"], check=True)
+          selected = set(re.findall(r"^CONFIG_PACKAGE_(\S+)=y$", open(".config").read(), re.M))
+          open("/work/out/mirror.txt", "w").write(
+              f"official packages: {len(official)}; wanted (public): {len(wanted)}\n"
+              f"not selectable (no such package in the public feeds): {len(missing)}\n  " + " ".join(missing) + "\n"
+              f"extra deselected: {len(extra)}\n  " + " ".join(extra) + "\n"
+              f"still extra after deselect: " + " ".join(sorted(selected - official)) + "\n")
+          print(open("/work/out/mirror.txt").read())
+          PY
+
           cp .config /work/out/config.txt
+          export CCACHE_DIR=/work/cache/ccache CCACHE_MAXSIZE=4G
           make download -j8 || make download -j1 V=s
           make -j"$(nproc)" || make -j1 V=s
           ls -l bin/targets/mediatek/mt7981/
           cp -a bin/targets/mediatek/mt7981 /work/out/images
+          staging_dir/host/bin/ccache -s || true
           EOF
           chmod +x work/build.sh
-          mkdir -p work/out
 
       - name: Build in Ubuntu 20.04
         run: |
@@ -124,16 +186,17 @@ jobs:
             -e FORK -e FORK_TAG -e MTK_FEED_OLD -e MTK_FEED_MIRROR \
             ubuntu:20.04 bash /work/build.sh 2>&1 | tee work/out/build.log | tail -n 400
 
+      - name: Save cache
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: work/cache
+          key: gl-recreate-${{ env.FORK_TAG }}-${{ github.run_id }}
+
       - name: Compare with the official 4.2.0
         if: always()
         run: |
-          sudo apt-get install -y -q squashfs-tools > /dev/null
-          cd work
-          mkdir -p cmp && cd cmp
-          curl -fsSL -o official.bin "$OFFICIAL_URL"
-          echo "${OFFICIAL_SHA256}  official.bin" | sha256sum -c -
-          mkdir official && tar -xf official.bin -C official
-          sudo unsquashfs -q -d off_root official/*/root > /dev/null
+          cd work/cmp
           ours=$(ls ../out/images/*glinet_gl-mt2500*sysupgrade*.bin 2>/dev/null | head -1 || true)
           if [ -n "$ours" ]; then
             mkdir ours && tar -xf "$ours" -C ours
@@ -152,5 +215,6 @@ jobs:
             work/out/report/
             work/out/images/
             work/out/config.txt
+            work/out/mirror.txt
             work/out/removed-packages.txt
             work/out/build.log
