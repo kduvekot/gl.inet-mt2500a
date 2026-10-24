@@ -166,6 +166,12 @@ jobs:
               return (p.startswith(("gl-sdk4", "gl-oui", "oui-", "kmod-gl-sdk4", "libgl"))
                       or p in {"fwdd", "kmod-mtfwd", "kmod-mtqos", "mtk-base-files", "gl-line-graph"})
           wanted = sorted(p for p in official if not private(p))
+          # gen_config.py's defconfig already wrote "# CONFIG_PACKAGE_kmod-x is
+          # not set" lines; Kconfig keeps those explicit values, so
+          # CONFIG_ALL_KMODS=y (a default) would not change them. Drop them.
+          cfg = open(".config").read()
+          cfg = re.sub(r"^# CONFIG_PACKAGE_kmod-\S+ is not set\n", "", cfg, flags=re.M)
+          open(".config", "w").write(cfg)
           with open(".config", "a") as f:
               f.write("CONFIG_DEVEL=y\nCONFIG_CCACHE=y\nCONFIG_CCACHE_DIR=\"/work/cache/ccache\"\n"
                       "CONFIG_ALL_KMODS=y\n")

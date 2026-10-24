@@ -459,15 +459,38 @@ firmware **4.7.4**, reset to factory settings and set up again. Only the
 - [x] Boot from the eMMC without UART; factory-reset 4.7.4 and set it up.
 - [ ] Connect WAN and finish GL.iNet's internet setup; check `dmesg` for the WAN PHY.
 - [ ] Decide: keep stock 4.7.4, or flash our upstream OpenWrt build (`glinet_gl-mt2500`).
-- [ ] Find the WAN PHY variant of **each** unit separately. The replacement
-      may well have a different chip than the broken one. Running unit:
-      `dmesg | grep -iE 'en8811|airoha|gpy|maxlinear'`. Broken unit: chip
-      marking next to the WAN port, then `dmesg` once stock firmware is back.
+- [x] Find the WAN PHY variant of **each** unit separately: the two units
+      have **different** chips (table below).
 
 | Unit | WAN PHY | How determined |
 |---|---|---|
-| Replacement (working) | _unknown_ | |
+| Replacement (working) | **Airoha EN8811H** (PHY ID `03a2:a411`) → `glinet_gl-mt2500-airoha` | Read-only over SSH on GL.iNet 4.7.13 (board name `glinet,mt2500-emmc`), 2026-10-24: Clause 22/45 ID registers, and the kernel log `Airoha EN8811H mdio-bus:05`, which loads the PHY firmware `EthMD32.dm.bin` / `EthMD32.DSP.bin` |
 | Old unit (stuck at U-Boot) | **MaxLinear GPY211C0VC** (marking MxL SLNW8) → `glinet_gl-mt2500` | Chip marking on the opened board, 2026-10-23; OpenWrt kernel log (`Maxlinear Ethernet GPY211C`, firmware 8.111), 2026-10-24 |
+
+Note: on GL.iNet's firmware the replacement's EN8811H answers on MDIO
+address **5** (address 13 reads 0), while upstream OpenWrt's device tree for
+this variant (`mt7981b-glinet-gl-mt2500-v2.dts`) puts it at address **13**.
+Read with `mii_mgr -g -p <addr> -r 2|3` and
+`mii_mgr_cl45 -g -p <addr> -d 0x1 -r 0x2|0x3` for addresses 5 and 13.
+What we know so far:
+
+- Both the vendor driver (MediaTek feed, `air_en8811h_main.c`/`_api.c` in
+  [gl-inet/mtk-openwrt-feeds](https://github.com/gl-inet/mtk-openwrt-feeds/tree/master/21.02/files/target/linux/mediatek/files-5.4/drivers/net/phy))
+  and the mainline driver (`air_en8811h.c`, `EN8811H_PBUS_ADDR_OFFS 8`)
+  use the PHY's own address plus a second MDIO address, **address + 8**, for
+  the chip's internal bus. Neither changes the address.
+- The kernel log line `PHY(0xd) = 3a2 - a411` doesn't match the public vendor
+  driver (it prints `PHY = %x - %x`), so GL.iNet 4.7.13 runs another version.
+  0xd = 13 = 5 + 8 fits the internal-bus address (our inference).
+- Upstream added `reg = <13>` in commit
+  [8d30e07180](https://github.com/openwrt/openwrt/commit/8d30e07180367cdeb4affd79adead6e1025355c9)
+  (2025-05-14), without saying why. The two PHYs share a reset GPIO (pin 14)
+  in the common `.dtsi`.
+- The address is set by strapping pins on the board; we found no datasheet
+  with the default.
+
+So on this unit, upstream's address 13 may well be wrong (the PHY is at 5).
+Check before flashing upstream on the replacement.
 
 The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chips from weeks 46–47 of 2022. RAM is one Nanya NT5AD512M16C4-JR, **DDR4** 8 Gbit = 1 GB, which matches the kit's DDR4 BL2. The eMMC is a Samsung KLM8G1GETF-B041, 8 GB eMMC 5.1. The SoC is hidden under a thermal pad.
 
@@ -498,3 +521,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-24 | Plan B works: GL.iNet's 2025-02-24 U-Boot loaded over UART into RAM reads the eMMC (Samsung 8 GB, eMMC 5.1, 52 MHz 8-bit) and its intact partition table. Nothing written yet. Fixed a port-release race in `uartboot.sh`. |
 | 2026-10-24 | Complete eMMC backup: OpenWrt 25.12.6 initramfs booted over TFTP (packaged `tftpd-hpa`, eth0 only, TFTP root kept empty), boot0, boot1 and the 7.3 GiB user area copied over SSH, all SHA256-verified against the router. MAC and serial live in boot1; `rf` is empty. Backup kept on the Pi, outside the repo. |
 | 2026-10-24 | The old MT2500A boots by itself again: 2025-02-24 U-Boot written to `fip` with `dd` from the initramfs (verified), boots GL.iNet 4.7.4 from the eMMC. That firmware was an untouched official 4.7.4; only its settings (from 26 May 2025) were wiped. Factory reset in failsafe needs `mount_root` first. First-time setup done over the JSON-RPC API. |
+| 2026-10-24 | Replacement unit's WAN PHY identified (read-only over SSH, GL.iNet 4.7.13): **Airoha EN8811H** → `glinet_gl-mt2500-airoha`. The two units have different WAN PHYs. On GL.iNet's firmware it sits at MDIO address 5; upstream's device tree says 13 (open question). |
