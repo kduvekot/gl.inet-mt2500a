@@ -80,4 +80,403 @@ Part	Start LBA	End LBA		Name
 	type:	0fc63daf-8483-4772-8e79-3d69d8477de4
 		(linux)
 	guid:	309a3e76-270b-41b2-b5d5-ed8154e7542b
+MT7981> help
+?         - alias for 'help'
+base      - print or set address offset
+bdinfo    - print Board Info structure
+blkcache  - block cache diagnostics and control
+boot      - boot default, i.e., run 'bootcmd'
+bootd     - boot default, i.e., run 'bootcmd'
+bootelf   - Boot from an ELF image in memory
+bootflow  - Boot flows
+booti     - boot Linux kernel 'Image' format from memory
+bootm     - boot application image from memory
+bootmenu  - ANSI terminal bootmenu
+bootp     - boot image via network using BOOTP/TFTP protocol
+bootvx    - Boot vxWorks from an ELF image
+button    - manage buttons
+cmp       - memory compare
+coninfo   - print console devices and information
+cp        - memory copy
+crc32     - checksum calculation
+echo      - echo args to console
+editenv   - edit environment variable
+env       - environment handling commands
+exit      - exit script
+false     - do nothing, unsuccessfully
+fatinfo   - print information about filesystem
+fatload   - load binary file from a dos filesystem
+fatls     - list files in a directory (default /)
+fatmkdir  - create a directory
+fatrm     - delete a file
+fatsize   - determine a file's size
+fatwrite  - write file into a dos filesystem
+fstype    - Look up a filesystem type
+fstypes   - List supported filesystem types
+glbtn     - GL-iNet button check
+go        - start application at address 'addr'
+gpio      - query and control gpio pins
+gpt       - GUID Partition Table
+help      - print command description/usage
+httpd     - Start failsafe HTTP server
+iminfo    - print header information for application image
+imxtract  - extract a part of a multi-image
+itest     - return true/false on integer compare
+led       - manage LEDs
+ledblink  - led blink
+ln        - Create a symbolic link
+load      - load binary file from a filesystem
+loadb     - load binary file over serial line (kermit mode)
+loads     - load S-Record file over serial line
+loadx     - load binary file over serial line (xmodem mode)
+loady     - load binary file over serial line (ymodem mode)
+loop      - infinite loop on address range
+ls        - list files in a directory (default /)
+lzmadec   - lzma uncompress a memory region
+md        - memory display
+mm        - memory modify (auto-incrementing address)
+mmc       - MMC sub system
+mmcinfo   - display MMC info
+mtkautoboot- Display MediaTek bootmenu
+mtkboardboot- Boot MTK firmware
+mtkload   - MTK image loading utility
+mtkupgrade- MTK firmware/bootloader upgrading utility
+mw        - memory write (fill)
+net       - NET sub-system
+nm        - memory modify (constant address)
+panic     - Panic with optional message
+part      - disk partition related commands
+pci       - list and access PCI Configuration Space
+ping      - send ICMP ECHO_REQUEST to network host
+pinmux    - show pin-controller muxing
+printenv  - print environment variables
+pwm       - control pwm channels
+random    - fill memory with random pattern
+read      - Load binary data from a partition
+reset     - Perform RESET of the CPU
+run       - run commands in an environment variable
+save      - save file to a filesystem
+saveenv   - save environment variables to persistent storage
+setenv    - set environment variables
+setexpr   - set environment variable as the result of eval expression
+showvar   - print local hushshell variables
+size      - determine a file's size
+sleep     - delay execution for some time
+smc       - Issue a Secure Monitor Call
+source    - run script from memory
+test      - minimal test like /bin/sh
+tftpboot  - boot image via network using TFTP protocol
+true      - do nothing, successfully
+version   - print monitor, compiler and linker version
+MT7981> mmc partconf 0
+EXT_CSD[179], PARTITION_CONFIG:
+BOOT_ACK: 0x1
+BOOT_PARTITION_ENABLE: 0x1
+PARTITION_ACCESS: 0x0
 MT7981> 
+MT7981> tftpboot 0x46000000 openwrt-25.12.6-mediatek-filogic-glinet_gl-mt2500-initramfs-kernel/initramfs.bin
+Using ethernet@15100000 device
+TFTP from server 192.168.1.2; our IP address is 192.168.1.1
+Filename 'openwrt-25.12.6-mediatek-filogic-glinet_gl-mt2500-initramfs-kernel/initramfs.bin'.
+Load address: 0x46000000
+Loading: T T T T T T T #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 ########################################################T #########
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 ###########################
+	 1.1 MiB/s
+done
+Bytes transferred = 8017764 (7a5764 hex)
+MT7981> crc32 0x46000000 0x7a5764
+crc32 for 46000000 ... 467a5763 ==> 2065cca1
+MT7981> bootm 0x46000000
+## Loading kernel from FIT Image at 46000000 ...
+   Using 'config-1' configuration
+   Trying 'kernel-1' kernel subimage
+     Description:  ARM64 OpenWrt Linux-6.12.112
+     Type:         Kernel Image
+     Compression:  lzma compressed
+     Data Start:   0x460000ec
+     Data Size:    4322957 Bytes = 4.1 MiB
+     Architecture: AArch64
+     OS:           Linux
+     Load Address: 0x48000000
+     Entry Point:  0x48000000
+     Hash algo:    crc32
+     Hash value:   4f70dd39
+     Hash algo:    sha1
+     Hash value:   83f1af8c46491e5959f6ff2bf3da40a6769ff4a3
+   Verifying Hash Integrity ... crc32+ sha1+ OK
+## Loading ramdisk from FIT Image at 46000000 ...
+   Using 'config-1' configuration
+   Trying 'initrd-1' ramdisk subimage
+     Description:  ARM64 OpenWrt glinet_gl-mt2500 initrd
+     Type:         RAMDisk Image
+     Compression:  Unknown Compression
+     Data Start:   0x4641f8b8
+     Data Size:    3670744 Bytes = 3.5 MiB
+     Architecture: AArch64
+     OS:           Linux
+     Load Address: unavailable
+     Entry Point:  unavailable
+     Hash algo:    crc32
+     Hash value:   278bd4ed
+     Hash algo:    sha1
+     Hash value:   10fa12032673b98ce6196f2808e716428866f7a9
+   Verifying Hash Integrity ... crc32+ sha1+ OK
+WARNING: 'compression' nodes for ramdisks are deprecated, please fix your .its file!
+## Loading fdt from FIT Image at 46000000 ...
+   Using 'config-1' configuration
+   Trying 'fdt-1' fdt subimage
+     Description:  ARM64 OpenWrt glinet_gl-mt2500 device tree blob
+     Type:         Flat Device Tree
+     Compression:  uncompressed
+     Data Start:   0x4679fc9c
+     Data Size:    22144 Bytes = 21.6 KiB
+     Architecture: AArch64
+     Load Address: 0x47000000
+     Hash algo:    crc32
+     Hash value:   0e1adb00
+     Hash algo:    sha1
+     Hash value:   a55c582fca2825616d67ea8a0803491dae02cbc1
+   Verifying Hash Integrity ... crc32+ sha1+ OK
+   Loading fdt from 0x4679fc9c to 0x47000000
+   Booting using the fdt blob at 0x47000000
+   Uncompressing Kernel Image
+   Loading Ramdisk to 7f47b000, end 7f7fb2d8 ... OK
+   Loading Device Tree to 000000007f472000, end 000000007f47a67f ... OK
+
+Starting kernel ...
+
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd034]
+[    0.000000] Linux version 6.12.112 (builder@buildhost) (aarch64-openwrt-linux-musl-gcc (OpenWrt GCC 14.3.0 r33311-981c978eff) 14.3.0, GNU ld (GNU Binutils) 2.44) #0 SMP Sat Oct 17 21:45:38 2026
+[    0.000000] Machine model: GL.iNet GL-MT2500 (MaxLinear PHY)
+[    0.000000] OF: reserved mem: 0x0000000042ff0000..0x0000000042ffffff (64 KiB) map non-reusable ramoops@42ff0000
+[    0.000000] OF: reserved mem: 0x0000000043000000..0x000000004302ffff (192 KiB) nomap non-reusable secmon@43000000
+[    0.000000] OF: reserved mem: 0x0000000047c80000..0x0000000047d7ffff (1024 KiB) nomap non-reusable wmcpu-reserved@47c80000
+[    0.000000] OF: reserved mem: 0x0000000047d80000..0x0000000047dbffff (256 KiB) nomap non-reusable wo-emi@47d80000
+[    0.000000] OF: reserved mem: 0x0000000047dc0000..0x0000000047ffffff (2304 KiB) nomap non-reusable wo-data@47dc0000
+[    0.000000] Zone ranges:
+[    0.000000]   DMA      [mem 0x0000000040000000-0x000000007fffffff]
+[    0.000000]   DMA32    empty
+[    0.000000]   Normal   empty
+[    0.000000] Movable zone start for each node
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000040000000-0x0000000042ffffff]
+[    0.000000]   node   0: [mem 0x0000000043000000-0x000000004302ffff]
+[    0.000000]   node   0: [mem 0x0000000043030000-0x0000000047c7ffff]
+[    0.000000]   node   0: [mem 0x0000000047c80000-0x0000000047ffffff]
+[    0.000000]   node   0: [mem 0x0000000048000000-0x000000007fffffff]
+[    0.000000] Initmem setup node 0 [mem 0x0000000040000000-0x000000007fffffff]
+[    0.000000] psci: probing for conduit method from DT.
+[    0.000000] psci: PSCIv1.1 detected in firmware.
+[    0.000000] psci: Using standard PSCI v0.2 function IDs
+[    0.000000] psci: MIGRATE_INFO_TYPE not supported.
+[    0.000000] psci: SMC Calling Convention v1.2
+[    0.000000] percpu: Embedded 20 pages/cpu s42648 r8192 d31080 u81920
+[    0.000000] pcpu-alloc: s42648 r8192 d31080 u81920 alloc=20*4096
+[    0.000000] pcpu-alloc: [0] 0 [0] 1 
+[    0.000000] Detected VIPT I-cache on CPU0
+[    0.000000] CPU features: detected: GIC system register CPU interface
+[    0.000000] CPU features: kernel page table isolation disabled by kernel configuration
+[    0.000000] alternatives: applying boot alternatives
+[    0.000000] Kernel command line:  root=PARTLABEL=rootfs rootwait
+[    0.000000] Dentry cache hash table entries: 131072 (order: 8, 1048576 bytes, linear)
+[    0.000000] Inode-cache hash table entries: 65536 (order: 7, 524288 bytes, linear)
+[    0.000000] Built 1 zonelists, mobility grouping on.  Total pages: 262144
+[    0.000000] mem auto-init: stack:off, heap alloc:off, heap free:off
+[    0.000000] software IO TLB: SWIOTLB bounce buffer size adjusted to 1MB
+[    0.000000] software IO TLB: area num 2.
+[    0.000000] software IO TLB: mapped [mem 0x000000007fb2b000-0x000000007fc2b000] (1MB)
+[    0.000000] SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=2, Nodes=1
+[    0.000000] rcu: Hierarchical RCU implementation.
+[    0.000000] rcu: 	RCU restricting CPUs from NR_CPUS=4 to nr_cpu_ids=2.
+[    0.000000] 	Tracing variant of Tasks RCU enabled.
+[    0.000000] rcu: RCU calculated value of scheduler-enlistment delay is 10 jiffies.
+[    0.000000] rcu: Adjusting geometry for rcu_fanout_leaf=16, nr_cpu_ids=2
+[    0.000000] RCU Tasks Trace: Setting shift to 1 and lim to 1 rcu_task_cb_adjust=1 rcu_task_cpu_ids=2.
+[    0.000000] NR_IRQS: 64, nr_irqs: 64, preallocated irqs: 0
+[    0.000000] GICv3: GIC: Using split EOI/Deactivate mode
+[    0.000000] GICv3: 640 SPIs implemented
+[    0.000000] GICv3: 0 Extended SPIs implemented
+[    0.000000] Root IRQ handler: 0xffffffc080010080
+[    0.000000] GICv3: GICv3 features: 16 PPIs
+[    0.000000] GICv3: GICD_CTRL.DS=0, SCR_EL3.FIQ=0
+[    0.000000] GICv3: CPU0: found redistributor 0 region 0:0x000000000c080000
+[    0.000000] rcu: srcu_init: Setting srcu_struct sizes based on contention.
+[    0.000000] clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 19112604462750000 ns
+[    0.000000] arch_timer: cp15 timer(s) running at 13.00MHz (phys).
+[    0.000000] clocksource: arch_sys_counter: mask: 0xffffffffffffff max_cycles: 0x2ff89eacb, max_idle_ns: 440795202429 ns
+[    0.000000] sched_clock: 56 bits at 13MHz, resolution 76ns, wraps every 4398046511101ns
+[    0.000083] Calibrating delay loop (skipped), value calculated using timer frequency.. 26.00 BogoMIPS (lpj=130000)
+[    0.000092] pid_max: default: 32768 minimum: 301
+[    0.003035] Mount-cache hash table entries: 2048 (order: 2, 16384 bytes, linear)
+[    0.003047] Mountpoint-cache hash table entries: 2048 (order: 2, 16384 bytes, linear)
+[    0.006089] rcu: Hierarchical SRCU implementation.
+[    0.006098] rcu: 	Max phase no-delay instances is 1000.
+[    0.006276] Timer migration: 1 hierarchy levels; 8 children per group; 1 crossnode level
+[    0.006507] smp: Bringing up secondary CPUs ...
+[    0.006892] Detected VIPT I-cache on CPU1
+[    0.006943] GICv3: CPU1: found redistributor 1 region 0:0x000000000c0a0000
+[    0.006974] CPU1: Booted secondary processor 0x0000000001 [0x410fd034]
+[    0.007067] smp: Brought up 1 node, 2 CPUs
+[    0.007073] SMP: Total of 2 processors activated.
+[    0.007075] CPU: All CPU(s) started at EL2
+[    0.007079] CPU features: detected: 32-bit EL0 Support
+[    0.007082] CPU features: detected: CRC32 instructions
+[    0.007107] alternatives: applying system-wide alternatives
+[    0.007239] CPU features: emulated: Privileged Access Never (PAN) using TTBR0_EL1 switching
+[    0.007378] Memory: 1003020K/1048576K available (9536K kernel code, 992K rwdata, 1836K rodata, 512K init, 313K bss, 42168K reserved, 0K cma-reserved)
+[    0.010664] futex hash table entries: 512 (order: 3, 32768 bytes, linear)
+[    0.010733] 29424 pages in range for non-PLT usage
+[    0.010736] 520944 pages in range for PLT usage
+[    0.012235] pinctrl core: initialized pinctrl subsystem
+[    0.014655] NET: Registered PF_NETLINK/PF_ROUTE protocol family
+[    0.015012] DMA: preallocated 128 KiB GFP_KERNEL pool for atomic allocations
+[    0.015041] DMA: preallocated 128 KiB GFP_KERNEL|GFP_DMA pool for atomic allocations
+[    0.015063] DMA: preallocated 128 KiB GFP_KERNEL|GFP_DMA32 pool for atomic allocations
+[    0.015503] thermal_sys: Registered thermal governor 'fair_share'
+[    0.015507] thermal_sys: Registered thermal governor 'bang_bang'
+[    0.015511] thermal_sys: Registered thermal governor 'step_wise'
+[    0.015513] thermal_sys: Registered thermal governor 'user_space'
+[    0.015594] ASID allocator initialised with 65536 entries
+[    0.016512] pstore: Using crash dump compression: deflate
+[    0.016516] pstore: Registered ramoops as persistent store backend
+[    0.016519] ramoops: using 0x10000@0x42ff0000, ecc: 0
+[    0.017995] /soc/interrupt-controller@c000000: Fixed dependency cycle(s) with /soc/interrupt-controller@c000000
+[    0.035180] cryptd: max_cpu_qlen set to 1000
+[    0.036980] SCSI subsystem initialized
+[    0.037159] libata version 3.00 loaded.
+[    0.039070] clocksource: Switched to clocksource arch_sys_counter
+[    0.040985] NET: Registered PF_INET protocol family
+[    0.041120] IP idents hash table entries: 16384 (order: 5, 131072 bytes, linear)
+[    0.042871] tcp_listen_portaddr_hash hash table entries: 512 (order: 1, 8192 bytes, linear)
+[    0.042891] Table-perturb hash table entries: 65536 (order: 6, 262144 bytes, linear)
+[    0.042902] TCP established hash table entries: 8192 (order: 4, 65536 bytes, linear)
+[    0.042956] TCP bind hash table entries: 8192 (order: 6, 262144 bytes, linear)
+[    0.043154] TCP: Hash tables configured (established 8192 bind 8192)
+[    0.043430] MPTCP token hash table entries: 1024 (order: 3, 24576 bytes, linear)
+[    0.043561] UDP hash table entries: 512 (order: 2, 16384 bytes, linear)
+[    0.043587] UDP-Lite hash table entries: 512 (order: 2, 16384 bytes, linear)
+[    0.043836] NET: Registered PF_UNIX/PF_LOCAL protocol family
+[    0.043864] PCI: CLS 0 bytes, default 64
+[    0.044060] Unpacking initramfs...
+[    0.045545] workingset: timestamp_bits=46 max_order=18 bucket_order=0
+[    0.050879] squashfs: version 4.0 (2009/01/31) Phillip Lougher
+[    0.050892] jffs2: version 2.2 (NAND) (SUMMARY) (LZMA) (RTIME) (CMODE_PRIORITY) (c) 2001-2006 Red Hat, Inc.
+[    0.107173] Block layer SCSI generic (bsg) driver version 0.4 loaded (major 251)
+[    0.119748] Serial: 8250/16550 driver, 16 ports, IRQ sharing enabled
+[    0.122895] printk: legacy console [ttyS0] disabled
+[    0.143263] 11002000.serial: ttyS0 at MMIO 0x11002000 (irq = 72, base_baud = 2500000) is a ST16650V2
+[    0.143313] printk: legacy console [ttyS0] enabled
+[    0.912357] random: crng init done
+[    0.919321] loop: module loaded
+[    0.926034] mtk_soc_eth 15100000.ethernet: legacy DT: missing interrupt-names.
+[    1.059681] i2c_dev: i2c /dev entries driver
+[    1.065950] mtk-wdt 1001c000.watchdog: Watchdog enabled (timeout=31 sec, nowayout=0)
+[    1.073209] Freeing initrd memory: 3584K
+[    1.074777] NET: Registered PF_INET6 protocol family
+[    1.085671] Segment Routing with IPv6
+[    1.089401] In-situ OAM (IOAM) with IPv6
+[    1.093389] NET: Registered PF_PACKET protocol family
+[    1.098468] bridge: filtering via arp/ip/ip6tables is no longer available by default. Update your scripts to load br_netfilter if you need this.
+[    1.112316] 8021q: 802.1Q VLAN Support v1.8
+[    1.112962] mtk-msdc 11230000.mmc: msdc_track_cmd_data: cmd=52 arg=00000C00; host->error=0x00000002
+[    1.127428] mtk-msdc 11230000.mmc: msdc_track_cmd_data: cmd=52 arg=80000C08; host->error=0x00000002
+[    1.141169] phy phy-soc:usb-phy@11e10000.1: type_sw - reg 0x218, index 0
+[    1.147999] mtk-msdc 11230000.mmc: msdc_track_cmd_data: cmd=8 arg=000001AA; host->error=0x00000002
+[    1.157195] mtk-msdc 11230000.mmc: msdc_track_cmd_data: cmd=5 arg=00000000; host->error=0x00000002
+[    1.166425] mtk-msdc 11230000.mmc: msdc_track_cmd_data: cmd=5 arg=00000000; host->error=0x00000002
+[    1.175624] mtk-msdc 11230000.mmc: msdc_track_cmd_data: cmd=5 arg=00000000; host->error=0x00000002
+[    1.184836] mtk-msdc 11230000.mmc: msdc_track_cmd_data: cmd=5 arg=00000000; host->error=0x00000002
+[    1.194021] mtk-msdc 11230000.mmc: msdc_track_cmd_data: cmd=55 arg=00000000; host->error=0x00000002
+[    1.203307] mtk-msdc 11230000.mmc: msdc_track_cmd_data: cmd=55 arg=00000000; host->error=0x00000002
+[    1.212579] mtk-msdc 11230000.mmc: msdc_track_cmd_data: cmd=55 arg=00000000; host->error=0x00000002
+[    1.221850] mtk-msdc 11230000.mmc: msdc_track_cmd_data: cmd=55 arg=00000000; host->error=0x00000002
+[    1.231934] mtk_soc_eth 15100000.ethernet: legacy DT: missing interrupt-names.
+[    1.292337] mmc0: new high speed MMC card at address 0001
+[    1.298986] mmcblk0: mmc0:0001 8GTF4R 7.28 GiB
+[    1.306407] GPT:Primary header thinks Alt. header is not at the end of the disk.
+[    1.313835] GPT:1 != 15269887
+[    1.316795] GPT:Alternate GPT header not at the end of the disk.
+[    1.322793] GPT:1 != 15269887
+[    1.325750] GPT: Use GNU Parted to correct GPT errors.
+[    1.330905]  mmcblk0: p1 p2 p3 p4 p5 p6
+[    1.336175] mmcblk0boot0: mmc0:0001 8GTF4R 4.00 MiB
+[    1.342349] mmcblk0boot1: mmc0:0001 8GTF4R 4.00 MiB
+[    1.347624] mmcblk0rpmb: mmc0:0001 8GTF4R 512 KiB, chardev (250:0)
+[    1.371004] mtk_soc_eth 15100000.ethernet: legacy DT: missing interrupt-names.
+[    1.490948] mtk_soc_eth 15100000.ethernet: legacy DT: missing interrupt-names.
+[    1.610689] clk: Disabling unused clocks
+[    1.614921] PM: genpd: Disabling unused power domains
+[    1.620359] Freeing unused kernel memory: 512K
+[    1.624842] Run /init as init process
+[    1.628493]   with arguments:
+[    1.631457]     /init
+[    1.633720]   with environment:
+[    1.636848]     HOME=/
+[    1.639201]     TERM=linux
+[    1.785772] init: Console is alive
+[    1.789331] init: - watchdog -
+[    1.796882] kmodloader: loading kernel modules from /etc/modules-boot.d/*
+[    1.810068] usbcore: registered new interface driver usbfs
+[    1.815605] usbcore: registered new interface driver hub
+[    1.821056] usbcore: registered new device driver usb
+[    1.826688] gpio_button_hotplug: loading out-of-tree module taints kernel.
+[    1.834826] mtk_soc_eth 15100000.ethernet: legacy DT: missing interrupt-names.
+[    1.845123] xhci-mtk 11200000.usb: xHCI Host Controller
+[    1.850436] xhci-mtk 11200000.usb: new USB bus registered, assigned bus number 1
+[    1.860846] xhci-mtk 11200000.usb: hcc params 0x01403f99 hci version 0x110 quirks 0x0000000000200010
+[    1.870067] xhci-mtk 11200000.usb: irq 79, io mem 0x11200000
+[    1.875825] xhci-mtk 11200000.usb: xHCI Host Controller
+[    1.881069] xhci-mtk 11200000.usb: new USB bus registered, assigned bus number 2
+[    1.888461] xhci-mtk 11200000.usb: Host supports USB 3.2 Enhanced SuperSpeed
+[    1.896037] hub 1-0:1.0: USB hub found
+[    1.899945] hub 1-0:1.0: 1 port detected
+[    1.904267] usb usb2: We don't know the algorithms for LPM for this host, disabling LPM.
+[    1.912854] hub 2-0:1.0: USB hub found
+[    1.916700] hub 2-0:1.0: 1 port detected
+[    1.925917] kmodloader: done loading kernel modules from /etc/modules-boot.d/*
+[    1.940369] init: - preinit -
+[    1.998610] u-boot-env-layout 11230000.mmc:card@0:block:partitions:block-partition-u-boot-env:nvmem-layout: Invalid calculated CRC32: 0xc09e9b4c (expected: 0x00000000)
+[    2.013666] u-boot-env-layout 11230000.mmc:card@0:block:partitions:block-partition-u-boot-env:nvmem-layout: probe with driver u-boot-env-layout failed with error -22
+ip: SIOCGIFFLAGS: No such device
+Press the [f] key and hit [enter] to enter failsafe mode
+Press the [1], [2], [3] or [4] key and hit [enter] to select the debug level
+[    2.219339] Maxlinear Ethernet GPY211C mdio-bus:05: Firmware Version: 8.111 (0x886F)
+[    2.231795] mtk_soc_eth 15100000.ethernet eth0: mediatek frame engine at 0xffffffc081780000, irq 74
+[    2.241966] mtk_soc_eth 15100000.ethernet eth1: mediatek frame engine at 0xffffffc081780000, irq 74
+sendto(): Network unreachable
+sendto(): Network unreachable
+sendto(): Network unreachable
+cfg016cb7
+grep: /etc/fw_env.config: No such file or directory
+- generating board file -
+Warning: Bad CRC, using default environment
+[    6.692204] procd: - early -
+[    6.695153] procd: - watchdog -
+[    7.226065] procd: - watchdog -
+[    7.229389] procd: - ubus -
+[    7.283795] procd: - init -
+Please press Enter to activate this console.
+[    7.483251] kmodloader: loading kernel modules from /etc/modules.d/*
+[    7.499973] crypto-safexcel 10320000.crypto: EIP97:230(0,1,4,4)-HIA:270(0,5,5),PE:150/433(alg:7fcdfc00)/0/0/0
+[    7.560932] PPP generic driver version 2.4.2
+[    7.566271] NET: Registered PF_PPPOX protocol family
+[    7.574673] kmodloader: done loading kernel modules from /etc/modules.d/*
+[    7.706538] urngd: v1.0.2 started.
+[   12.015168] mtk_soc_eth 15100000.ethernet eth1: PHY [mdio-bus:00] driver [MediaTek MT7981 PHY] (irq=POLL)
+[   12.029055] mtk_soc_eth 15100000.ethernet eth1: configuring for phy/gmii link mode
+[   12.048698] br-lan: port 1(eth1) entered blocking state
+[   12.054041] br-lan: port 1(eth1) entered disabled state
+[   12.059375] mtk_soc_eth 15100000.ethernet eth1: entered allmulticast mode
+[   12.066394] mtk_soc_eth 15100000.ethernet eth1: entered promiscuous mode
+[   12.091346] mtk_soc_eth 15100000.ethernet eth0: PHY [mdio-bus:05] driver [Maxlinear Ethernet GPY211C] (irq=POLL)
+[   12.101624] mtk_soc_eth 15100000.ethernet eth0: configuring for phy/2500base-x link mode
+[   17.209751] mtk_soc_eth 15100000.ethernet eth1: Link is Up - 1Gbps/Full - flow control rx/tx
+[   17.209783] br-lan: port 1(eth1) entered blocking state
+[   17.223424] br-lan: port 1(eth1) entered forwarding state

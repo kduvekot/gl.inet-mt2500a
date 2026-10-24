@@ -79,8 +79,12 @@ Result: _not tried yet_. If it reports "UPDATE FAILED", go to Plan B.
   becomes the Pi's route to the internet. The cable can stay connected the
   whole time. WAN stays unplugged until the OpenWrt tests.
 * **UART:** the serial console, and loading U-Boot into RAM.
-* **Limit:** the Pi 3's Ethernet is 100 Mbit. That's fine for uploading
-  firmware, but not for measuring the router's throughput.
+* **Limit:** the Pi 3 B+'s Ethernet links at 1000 Mb/s, but its chip sits on
+  USB 2.0, so expect about 300 Mbit/s at most (the Pi 3 Model B without the
+  plus has 100 Mbit). That's fine for uploading firmware and copying
+  backups, but not for measuring the router's throughput. In practice the
+  SD card is slower still: a full eMMC backup was written at about
+  4.5 MB/s.
 
 ### 1. Prepare the Pi
 
@@ -168,14 +172,84 @@ cd ~/mt2500-recovery-kit
 4. The script starts the console in tmux and types `gl` for a few seconds
    to stop autoboot (`-n` skips that). Check with `./console.sh show`.
 
-- [ ] At the `MT7981>` prompt, `./console.sh send "mmc info"` shows the eMMC
+- [x] At the `MT7981>` prompt, `./console.sh send "mmc info"` shows the eMMC
       (about 7.3 GiB). **This is the decisive test.** If the new U-Boot
       can't see the eMMC either, stop: the eMMC may really be faulty.
-- [ ] `./console.sh send "mmc part"` lists the partitions, including `fip`.
+      *(2026-10-24: passed, 52 MHz High Speed, 8-bit.)*
+- [x] `./console.sh send "mmc part"` lists the partitions, including `fip`.
 
 If the handshake never completes, check the wiring and that nothing else
 holds the serial port. The loader keeps retrying, so the moment you power
 the router on doesn't matter. Logs are in `~/mt2500-recovery-kit/logs/`.
+
+Running Claude Code or another tmux user on the Pi? Start the kit's scripts
+with `env -u TMUX`, so `console.sh` uses the default tmux server and you
+can follow along with `tmux attach -t mt2500`.
+
+### 3b. Back up the whole eMMC before writing anything
+
+The RAM U-Boot can read the eMMC but can't send files out (no `tftpput`,
+no USB). So boot an OpenWrt **initramfs** (a Linux that runs entirely from
+RAM and writes nothing) over TFTP, and copy the eMMC over SSH.
+
+**TFTP server on the Pi** (one-time setup, needs `sudo`):
+
+```sh
+sudo apt-get install -y tftpd-hpa
+sudo cp -a /etc/default/tftpd-hpa /etc/default/tftpd-hpa.orig
+sudo sed -i 's/^TFTP_ADDRESS=.*/TFTP_ADDRESS="192.168.1.2:69"/' /etc/default/tftpd-hpa
+sudo systemctl disable --now tftpd-hpa      # only run it when needed
+```
+
+> **Warning: keep the root of `/srv/tftp` empty.** GL.iNet's U-Boot fetches
+> `openwrt-gl-mt2500.bin` and `uboot-gl-mt2500.bin` from 192.168.1.2 **by
+> itself** at boot (its `lf` / `lu` helpers, `mtkupgrade`) and writes them
+> to the eMMC. A file with one of those names in the TFTP root would be
+> flashed without asking. Put every image in a subfolder, and stop the
+> server as soon as the transfer is done.
+
+**The initramfs** (official OpenWrt 25.12.6 for the MaxLinear variant):
+
+```sh
+N=openwrt-25.12.6-mediatek-filogic-glinet_gl-mt2500-initramfs-kernel
+B=https://downloads.openwrt.org/releases/25.12.6/targets/mediatek/filogic
+mkdir -p ~/dl && cd ~/dl && curl -fLO $B/$N.bin
+curl -fL $B/sha256sums | grep " \*$N.bin\$" > sha256sum.txt
+sed 's/ \*/  /' sha256sum.txt | sha256sum -c
+sudo install -d /srv/tftp/$N
+sudo install -m 644 $N.bin /srv/tftp/$N/initramfs.bin
+sudo install -m 644 sha256sum.txt /srv/tftp/$N/
+```
+
+**Boot it from the RAM U-Boot** (step 3 done, at `MT7981>`):
+
+- [x] `sudo systemctl start tftpd-hpa`
+- [x] `tftpboot 0x46000000 openwrt-25.12.6-mediatek-filogic-glinet_gl-mt2500-initramfs-kernel/initramfs.bin`
+      → `Bytes transferred = 8017764`. Then `sudo systemctl stop tftpd-hpa`.
+- [x] Optional check: `crc32 0x46000000 0x7a5764` must equal the CRC32 of
+      the file on the Pi (`2065cca1` for this image).
+- [x] `bootm 0x46000000`. OpenWrt comes up at 192.168.1.1, SSH as `root`
+      without a password.
+
+**Copy** (into a folder outside any public repo: boot1 holds the unit's MAC
+address and serial number):
+
+```sh
+S="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@192.168.1.1"
+mkdir -p -m 700 ~/mt2500-backup/$(date +%F) && cd ~/mt2500-backup/$(date +%F)
+for p in boot0 boot1; do $S "cat /dev/mmcblk0$p" > mmcblk0$p.bin; done
+$S 'cat /dev/mmcblk0' > mmcblk0.img        # 7.3 GiB; the Pi's SD card is the bottleneck
+$S 'sha256sum /dev/mmcblk0boot0 /dev/mmcblk0boot1 /dev/mmcblk0'   # compare with sha256sum here
+```
+
+- [x] All three SHA256 values computed on the router match the copies.
+      *(2026-10-24: about 25 min for the copy, 11 min for the router's hash.)*
+- [ ] Keep a second copy somewhere private, off the Pi.
+
+What's where: **boot0** holds BL2; **boot1** holds the MAC address, serial
+number, DDNS ID and country code (OpenWrt reads the MAC from offset `0xa`);
+the user area holds the GPT and `log`, `u-boot-env`, `rf`, `fip`, `kernel`,
+`rootfs`. On this unit `log`, `u-boot-env` and `rf` were empty.
 
 ### 4. Write the fixed U-Boot permanently
 

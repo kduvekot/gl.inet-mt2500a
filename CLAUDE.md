@@ -54,8 +54,16 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   written yet; a power cycle brings back the old U-Boot. The published kit's
   `uartboot.sh` lacks the port-release fix: stop the console a few seconds
   before running it.
-- **Next:** back up the eMMC partitions (at least `rf`), then decide how to
-  write the new U-Boot permanently (`fip`). Ask the owner before any write.
+- **Full eMMC backup done** (2026-10-24), SHA256-verified against the
+  router: `~/mt2500-backup/2026-10-24/` on the Pi (boot0, boot1, full image
+  + `.zst`, `parts/`). boot1 holds the unit's MAC and serial number: **never
+  put backup contents or their hashes in this public repo.** Method: OpenWrt
+  initramfs over TFTP (`tftpd-hpa`, eth0 only, autostart off, TFTP root
+  kept empty because GL's U-Boot auto-flashes `openwrt-gl-mt2500.bin` /
+  `uboot-gl-mt2500.bin` from it), then `cat` over SSH. See the checklist,
+  step 3b.
+- **Next:** decide how to write the 2025 U-Boot permanently (`fip`
+  partition) and its fallback. Ask the owner before any write.
 - WAN PHY: old unit MaxLinear GPY211C0VC (`glinet_gl-mt2500`; board
   MT2500-V1.1, DDR4 1 GB, Samsung 8 GB eMMC); replacement unknown (table in docs/journey.md). The old unit's UART is
   J13: 3.3V (square pad), RX, TX, GND, open through-holes.
