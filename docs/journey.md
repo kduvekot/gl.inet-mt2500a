@@ -252,6 +252,21 @@ switches the router's power adapter with a smart plug.
     `printenv` at the prompt will show where it comes from.
 * **Ethernet:** the Pi's eth0 has a 1000 Mb/s link to the port next to J13,
   so that's the LAN port, and a straight cable works.
+* **Read-only checks at the `MT7981>` prompt:**
+  * `version`: the same Sep 12 2022 build, compiled with Ubuntu 20.04's
+    GCC 9.4.
+  * `printenv` (the default environment, since it can't read the saved one
+    from the eMMC): no `bootcmd`, but two helpers, `lf=mtkupgrade fw
+    openwrt-gl-mt2500.bin` and `lu=mtkupgrade fip uboot-gl-mt2500.bin`,
+    with `ipaddr=192.168.1.1` and `serverip=192.168.1.2`. The TFTP
+    "Upgrading Firmware" at boot is `mtkupgrade fw`, so `lf`. Neither helper
+    can help: both write to the eMMC that this U-Boot can't open.
+  * `mmc list` shows `mmc@11230000: 0`; `mmc info` and `mmc rescan` give the
+    same `-110` / `-524` every time, so the failure is reproducible, not a
+    one-off.
+  * `help` lists, among others, `loadx`/`loady` (serial download to RAM),
+    `go`, `bootm`, `httpd` (the recovery page), `mtkupgrade`, `gpt` and
+    `mmc`.
 * **Raw logs** stay on the Pi in `~/mt2500-recovery-kit/logs/` (one file per
   console session).
 
