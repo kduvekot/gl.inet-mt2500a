@@ -76,6 +76,24 @@ def main():
         d = Path(root, "lib/modules")
         return ", ".join(sorted(x.name for x in d.iterdir())) if d.is_dir() else "-"
 
+    def pkg_reason(p):
+        if p.startswith(("gl-sdk4", "gl-", "oui-", "kmod-gl-sdk4", "libgl")):
+            return "GL.iNet closed (UI/apps/modules)"
+        if any(p == x.split(": ")[-1].strip() for x in removed if x):
+            return "private GL.iNet feed"
+        return "public, but not in our build"
+
+    def file_reason(f):
+        if f.startswith("lib/modules/"):
+            return "kernel modules"
+        if f.startswith(("etc/opkg", "usr/lib/opkg/")):
+            return "opkg metadata"
+        if f.startswith("etc/"):
+            return "files in /etc"
+        if f.startswith(("bin/", "sbin/", "usr/bin/", "usr/sbin/")):
+            return "programs"
+        return "libraries/other"
+
     r = ["# GL.iNet MT2500 4.2.0: official vs. rebuilt from public sources", ""]
     if not have_ours:
         r += ["**Our build produced no sysupgrade image**; see `build.log`. Only the official side is listed.", ""]
@@ -85,6 +103,17 @@ def main():
           f"| Kernel modules dir | {mods(off)} | {mods(ours) if have_ours else '-'} |",
           f"| Packages | {len(po)} | {len(pu)} |",
           f"| Files | {len(fo)} | {len(fu)} |", "",
+          "## What's still different, and why", "",
+          f"* Kernel package: official `{po.get('kernel', '-')}`, ours `{pu.get('kernel', '-')}`"
+          + (" (**same kernel configuration**)" if po.get("kernel") == pu.get("kernel") else " (kernel configuration differs)"),
+          "* Packages only in the official image: " + ", ".join(
+              f"{v} {k}" for k, v in Counter(pkg_reason(p) for p in only_off).most_common()),
+          "* Files that differ: " + ", ".join(
+              f"{v} {k}" for k, v in Counter(file_reason(f) for f in files_diff).most_common()),
+          "* Programs and libraries that differ: " + (", ".join(
+              f"`{f}`" for f in files_diff if file_reason(f) in ("programs", "libraries/other")) or "none"),
+          "* Public packages not in our build: " + (", ".join(
+              f"`{p}`" for p in only_off if pkg_reason(p) == "public, but not in our build") or "none"), "",
           "## Packages", "",
           f"* In both: **{len(both)}**, same version **{len(same_ver)}**, different version **{len(diff_ver)}**",
           f"* Only in the official image: **{len(only_off)}**",
