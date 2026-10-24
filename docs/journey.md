@@ -127,8 +127,10 @@ a Mac with a CP2102 adapter.
 
 * **Is a Pi 3 enough?** Yes, for the recovery. It's small, light work. The
   Pi's PL011 UART handles the loader's 921,600 baud once Bluetooth is moved
-  off it, and WiFi is unaffected. Its 100 Mbit Ethernet is fine for uploads
-  but useless for router speed tests.
+  off it, and WiFi is unaffected. Its Ethernet is gigabit (LAN7515) but sits
+  on USB 2.0, so about 300 Mbit/s in practice: fine for uploads and backups,
+  useless for router speed tests. (Corrected 2026-10-24: earlier versions said
+  100 Mbit, which is the Pi 3 Model B without the plus.)
 * **Three connections:** WiFi goes to the home network, for internet and the
   phone. Ethernet goes to the router's LAN port, with fixed 192.168.1.2 and
   192.168.8.2 and no gateway, so it can stay plugged in permanently. The
@@ -310,6 +312,66 @@ eMMC without any problem.** Nothing was written to the router.
 * **Logs:** [loader](logs/2026-10-24-plan-b-uartboot.log) and
   [console](logs/2026-10-24-plan-b-console.log) (cleaned copies).
 
+## Chapter 9: A complete backup of the eMMC (2026-10-24)
+
+**Result: a byte-for-byte copy of the whole eMMC (boot0, boot1 and the
+7.3 GiB user area), each checked against a SHA256 that the router computed
+itself.** Still nothing written to the router.
+
+* **Can we always get back in?** Yes, as far as we can tell: the UART
+  download lives in the MT7981's BootROM, so it works whatever is on the
+  eMMC, as long as the chip has no secure boot fused (it accepted our
+  unsigned BL2, so it hasn't) and the eMMC is physically intact. What you
+  need: a 3.3 V UART (the Pi and 3 wires to J13), `mtk_uartboot`, the RAM
+  BL2 (MT7981 + DDR4), a working FIP (all in the recovery kit), and the
+  backup images.
+* **Why an initramfs:** the RAM U-Boot can read the eMMC but can't send
+  files out (its `help` lists no `tftpput` and no USB; only `md` hex dumps
+  over serial, far too slow for 7.3 GiB). Loading into the router is easy
+  (`tftpboot`, `loady`, the recovery page). So: boot the official **OpenWrt
+  25.12.6 initramfs** (8.0 MB, runs from RAM) over TFTP and copy over SSH.
+* **TFTP on the Pi:** the packaged `tftpd-hpa`, so others can do the same.
+  It listens only on `192.168.1.2:69`, read-only (`--secure`), autostart
+  off, started only for the transfer. Images go in a subfolder with a short
+  name (`<original name>/initramfs.bin` plus `sha256sum.txt`) and the TFTP
+  root stays empty: GL.iNet's U-Boot fetches `openwrt-gl-mt2500.bin` and
+  `uboot-gl-mt2500.bin` from the root by itself and would flash them.
+* **Boot:** `tftpboot` transferred 8,017,764 bytes (a few timeouts while the
+  link came up), U-Boot's `crc32` over RAM matched the file's CRC32
+  (`2065cca1`), then `bootm`. The kernel log shows `Machine model: GL.iNet
+  GL-MT2500 (MaxLinear PHY)` and `Maxlinear Ethernet GPY211C ... Firmware
+  Version: 8.111`, so the WAN PHY is now confirmed in software too.
+  `mmcblk0` 7.28 GiB with p1–p6, plus `mmcblk0boot0`/`boot1` (4 MiB) and
+  RPMB.
+* **GPT quirk:** `GPT:Primary header thinks Alt. header is not at the end
+  of the disk` (`1 != 15269887`): GL.iNet's table points to sector 1 for
+  its backup copy instead of the last sector. A factory quirk, not damage;
+  all partitions are found. Left as is: correcting it would mean writing.
+* **Copy:** `cat /dev/mmcblk0bootN` and `cat /dev/mmcblk0` over SSH into
+  `~/mt2500-backup/2026-10-24/` on the Pi (mode 700, files read-only).
+  7,818,182,656 bytes (15,269,888 sectors) in about 25 minutes. The Pi's SD
+  card was the bottleneck at 4.5–9 MB/s; both CPUs and the network were
+  mostly idle. The router's `sha256sum /dev/mmcblk0` took 11 minutes and
+  matched the copy, as did boot0 and boot1. The full image is then
+  compressed with `zstd`.
+* **What's where on this unit:**
+  * **boot0:** BL2, the first-stage loader the chip boots from
+    (`mmc partconf`: `BOOT_PARTITION_ENABLE: 0x1`).
+  * **boot1:** this unit's own data: MAC address (from GL.iNet's
+    `94:83:c4` block, at offset `0xa`, where OpenWrt reads it), serial
+    number and a backup copy, DDNS ID, country code. **This is the
+    irreplaceable part**, so it never goes into this public repo.
+  * `rf`, `log` and `u-boot-env` are empty. I had guessed `rf` held the MAC
+    addresses; it doesn't (probably WiFi calibration, and the MT2500 has no
+    WiFi).
+  * `fip` holds the old 2022 U-Boot (its hash differs from the 2025 FIP).
+* **Correction:** the Pi 3 B+'s Ethernet is gigabit over USB 2.0 (about
+  300 Mbit/s), not 100 Mbit as chapter 5 said; fixed there and in the
+  checklist.
+* **The checklist** (`recovery-uart-raspberry-pi.md`) has a new step 3b with
+  the exact TFTP setup, the warning about the TFTP root, and the backup
+  commands, for anyone repeating this.
+
 ---
 
 ## Next steps
@@ -322,7 +384,8 @@ eMMC without any problem.** Nothing was written to the router.
       (`claude --teleport`), with `/remote-control`.
 - [x] Run `pi-setup.sh --download` on the Pi; join WiFi; cable eth0 to the router's LAN port.
 - [x] Plan B: load the 2025-02-24 U-Boot into RAM over UART; it reads the eMMC.
-- [ ] Back up the eMMC partitions (at least `rf`) before writing anything.
+- [x] Back up the whole eMMC (boot0, boot1, user area) before writing anything; verified by SHA256.
+- [ ] Keep a second copy of the backup somewhere private, off the Pi.
 - [ ] Decide how to write the new U-Boot permanently (`fip` partition).
 - [ ] Find the WAN PHY variant of **each** unit separately. The replacement
       may well have a different chip than the broken one. Running unit:
@@ -332,7 +395,7 @@ eMMC without any problem.** Nothing was written to the router.
 | Unit | WAN PHY | How determined |
 |---|---|---|
 | Replacement (working) | _unknown_ | |
-| Old unit (stuck at U-Boot) | **MaxLinear GPY211C0VC** (marking MxL SLNW8) → `glinet_gl-mt2500` | Chip marking on the opened board, 2026-10-23 |
+| Old unit (stuck at U-Boot) | **MaxLinear GPY211C0VC** (marking MxL SLNW8) → `glinet_gl-mt2500` | Chip marking on the opened board, 2026-10-23; OpenWrt kernel log (`Maxlinear Ethernet GPY211C`, firmware 8.111), 2026-10-24 |
 
 The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chips from weeks 46–47 of 2022. RAM is one Nanya NT5AD512M16C4-JR, **DDR4** 8 Gbit = 1 GB, which matches the kit's DDR4 BL2. The eMMC is a Samsung KLM8G1GETF-B041, 8 GB eMMC 5.1. The SoC is hidden under a thermal pad.
 
@@ -361,3 +424,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-23 | Old unit's chips read from photos: WAN PHY MaxLinear GPY211C0VC (`glinet_gl-mt2500` confirmed), RAM Nanya DDR4 1 GB (matches the kit's DDR4 BL2), eMMC Samsung KLM8G1GETF 8 GB. Board MT2500-V1.1, 2022/11/1. |
 | 2026-10-24 | `pi-setup.sh` done; first UART contact. The old U-Boot (Sep 12 2022) fails the eMMC with `unable to select a mode : -110` / `mmc_init: -524`, matching Irakli's log line for line. Ethernet link 1000 Mb/s on the LAN port. Raw log kept on the Pi. |
 | 2026-10-24 | Plan B works: GL.iNet's 2025-02-24 U-Boot loaded over UART into RAM reads the eMMC (Samsung 8 GB, eMMC 5.1, 52 MHz 8-bit) and its intact partition table. Nothing written yet. Fixed a port-release race in `uartboot.sh`. |
+| 2026-10-24 | Complete eMMC backup: OpenWrt 25.12.6 initramfs booted over TFTP (packaged `tftpd-hpa`, eth0 only, TFTP root kept empty), boot0, boot1 and the 7.3 GiB user area copied over SSH, all SHA256-verified against the router. MAC and serial live in boot1; `rf` is empty. Backup kept on the Pi, outside the repo. |
