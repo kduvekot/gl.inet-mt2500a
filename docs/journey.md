@@ -206,6 +206,73 @@ switches the router's power adapter with a smart plug.
   anyway, and the tokens are cheap to replace. Home-specific details (hub
   name, IDs, addresses) stay in local files on the Pi.
 
+## Chapter 7: First contact over the UART (2026-10-24)
+
+* **Wiring:** Pi pin 6 (GND) to J13 GND, pin 10 (RXD) to J13 TX, and pin 8
+  (TXD) through three 4.7 kΩ resistors in parallel (about 1.57 kΩ, on a
+  breadboard) to J13 RX. The 3.3V hole is taped over. The bought resistors
+  turned out to be 4.7 kΩ (yellow-violet-red-gold), not 1 kΩ. The board
+  lies on cardboard; black conductive foam is only for storing it unpowered.
+* **`pi-setup.sh --download`** ran cleanly: the PL011 UART is on GPIO14/15
+  (`/dev/serial0 → ttyAMA0`), Bluetooth is off, the serial console is
+  removed, and the `mt2500-lan` profile and the kit are in place. Side effect:
+  `apt-get install curl` also upgraded curl to the latest Debian security
+  release.
+* **First boot log** (console started, then the router switched on with
+  `pi/plug.sh on`): BootROM, BL2 and DDR calibration all fine, 1 GiB DRAM,
+  then the **old U-Boot**:
+  ```
+  U-Boot 2022.07-rc3 (Sep 12 2022 - 19:58:08 -0700)
+  Loading Environment from MMC... unable to select a mode : -110
+  mmc_init: -524, time 73
+  *** Warning - No block device, using default environment
+  ```
+  `-110` is ETIMEDOUT (selecting a bus mode timed out), `-524` is ENOTSUPP
+  (no usable mode). It then tried a TFTP "Upgrading Firmware" from
+  192.168.1.2 for `openwrt-gl-mt2500.bin`, which timed out (no TFTP server),
+  printed `*** Failed to initialize MMC device 0! ***` twice, and stopped at
+  the `MT7981>` prompt. The router draws about 1 W there.
+* **It matches Irakli's log line for line:** same U-Boot build, same `-110`
+  and `-524` (his `time 74`, ours `73`), same "No block device". In his case
+  the 2025-02-24 U-Boot loaded over UART then saw the eMMC at "Bus Speed:
+  52000000, MMC High Speed (52MHz)" with an EFI partition map. That is the
+  strongest sign yet that our plan applies to this unit.
+* **Checked against GL.iNet's public source** (`gl-inet/mt798x-boot`, init
+  commit of 2024-11):
+  * `Model: mt7981-rfb` is the model string in GL's own `gl-mt2500.dtsi`,
+    so it's normal.
+  * `gpio: pin 12 (gpio 12) value is 0` is the output of `gpio clear 12`
+    (`gpio_power_clr` in `cmd/glbtn.c`). The reset button is GPIO 1, and it
+    wasn't pressed.
+  * The eMMC node: 8-bit bus, `max-frequency` 52 MHz, `cap-mmc-highspeed`,
+    HS200 support enabled in the defconfig.
+  * The TFTP "Upgrading Firmware" step and the file name
+    `openwrt-gl-mt2500.bin` are **not** in that source, nor in Irakli's log,
+    so the 2022 binary on this unit differs from the published source.
+    `printenv` at the prompt will show where it comes from.
+* **Ethernet:** the Pi's eth0 has a 1000 Mb/s link to the port next to J13,
+  so that's the LAN port, and a straight cable works.
+* **Read-only checks at the `MT7981>` prompt:**
+  * `version`: the same Sep 12 2022 build, compiled with Ubuntu 20.04's
+    GCC 9.4.
+  * `printenv` (the default environment, since it can't read the saved one
+    from the eMMC): no `bootcmd`, but two helpers, `lf=mtkupgrade fw
+    openwrt-gl-mt2500.bin` and `lu=mtkupgrade fip uboot-gl-mt2500.bin`,
+    with `ipaddr=192.168.1.1` and `serverip=192.168.1.2`. The TFTP
+    "Upgrading Firmware" at boot is `mtkupgrade fw`, so `lf`. Neither helper
+    can help: both write to the eMMC that this U-Boot can't open.
+  * `mmc list` shows `mmc@11230000: 0`; `mmc info` and `mmc rescan` give the
+    same `-110` / `-524` every time, so the failure is reproducible, not a
+    one-off.
+  * `help` lists, among others, `loadx`/`loady` (serial download to RAM),
+    `go`, `bootm`, `httpd` (the recovery page), `mtkupgrade`, `gpt` and
+    `mmc`.
+* **Raw logs:** a cleaned copy of this session is in
+  [logs/2026-10-24-old-uboot-first-boot.log](logs/2026-10-24-old-uboot-first-boot.log)
+  (terminal colour codes removed). The originals stay on the Pi in
+  `~/mt2500-recovery-kit/logs/` (one file per
+  console session).
+
 ---
 
 ## Next steps
@@ -250,3 +317,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-23 | Opened the old unit. Its UART is **J13**: four open through-holes next to the RJ45 port, labelled 3.3V (square pad), RX, TX, GND, so no soldering needed (angled header, male jumpers or a pogo clip). Its external Ethernet PHY carries the MaxLinear logo, so it's very likely the original `glinet_gl-mt2500` variant. |
 | 2026-10-23 | Power switching for the router: the IKEA DIRIGERA hub (back online after a dead wall socket) and a second INSPELNING plug named `MT2500A`, switched from the Pi through the hub's undocumented local API. Added `pi/dirigera-token.py` and `pi/plug.sh`; tokens stay on the Pi, out of the public repo. |
 | 2026-10-23 | Old unit's chips read from photos: WAN PHY MaxLinear GPY211C0VC (`glinet_gl-mt2500` confirmed), RAM Nanya DDR4 1 GB (matches the kit's DDR4 BL2), eMMC Samsung KLM8G1GETF 8 GB. Board MT2500-V1.1, 2022/11/1. |
+| 2026-10-24 | `pi-setup.sh` done; first UART contact. The old U-Boot (Sep 12 2022) fails the eMMC with `unable to select a mode : -110` / `mmc_init: -524`, matching Irakli's log line for line. Ethernet link 1000 Mb/s on the LAN port. Raw log kept on the Pi. |
