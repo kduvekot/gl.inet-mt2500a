@@ -74,7 +74,7 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   `dmesg`, then decide between stock 4.7.4 and our OpenWrt build. Ask the
   owner before any write.
 - WAN PHY: old unit MaxLinear GPY211C0VC (`glinet_gl-mt2500`; board
-  MT2500-V1.1, DDR4 1 GB, Samsung 8 GB eMMC); replacement unknown (table in docs/journey.md). The old unit's UART is
+  MT2500-V1.1, DDR4 1 GB, Samsung 8 GB eMMC); replacement Airoha EN8811H (`glinet_gl-mt2500-airoha`; GL.iNet 4.7.13; table in docs/journey.md). The old unit's UART is
   J13: 3.3V (square pad), RX, TX, GND, open through-holes.
 
 ## Hardware
