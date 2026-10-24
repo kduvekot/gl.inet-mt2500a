@@ -62,8 +62,17 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   kept empty because GL's U-Boot auto-flashes `openwrt-gl-mt2500.bin` /
   `uboot-gl-mt2500.bin` from it), then `cat` over SSH. See the checklist,
   step 3b.
-- **Next:** decide how to write the 2025 U-Boot permanently (`fip`
-  partition) and its fallback. Ask the owner before any write.
+- **The old unit boots by itself again** (2026-10-24): the 2025-02-24 U-Boot
+  is on the eMMC (`fip`, written with `dd` from the initramfs, verified),
+  booting GL.iNet 4.7.4 (official, untouched), factory-reset and set up:
+  English, Europe/Amsterdam, `root` password in
+  `~/.config/mt2500/admin-password` on the Pi (never in the repo). Web UI
+  and JSON-RPC at 192.168.8.1 from the Pi. Factory reset from failsafe:
+  `mount_root; firstboot -y; sync; reboot -f` (without `mount_root` it does
+  nothing on this firmware).
+- **Next:** connect WAN and finish the internet setup, check the WAN PHY in
+  `dmesg`, then decide between stock 4.7.4 and our OpenWrt build. Ask the
+  owner before any write.
 - WAN PHY: old unit MaxLinear GPY211C0VC (`glinet_gl-mt2500`; board
   MT2500-V1.1, DDR4 1 GB, Samsung 8 GB eMMC); replacement unknown (table in docs/journey.md). The old unit's UART is
   J13: 3.3V (square pad), RX, TX, GND, open through-holes.
