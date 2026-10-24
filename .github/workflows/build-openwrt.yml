@@ -6,14 +6,25 @@ name: Build OpenWrt
 #   glinet_gl-mt2500         - MaxLinear GPY211C 2.5G WAN PHY (original)
 #   glinet_gl-mt2500-airoha  - Airoha EN8811H 2.5G WAN PHY (newer units)
 # Flashing the wrong one leaves the 2.5G WAN port without a working PHY.
+#
+# Manual runs take any OpenWrt release (e.g. 25.12.6, 24.10.4) or
+# "snapshot" (today's build of OpenWrt main; OpenWrt keeps only the latest
+# snapshot, so its revision is recorded with the images). Everything is
+# assembled from OpenWrt's own prebuilt packages; nothing is compiled.
+# With "publish", the images become a release: a dated pre-release for a
+# snapshot, a normal release for a version.
 
 on:
   workflow_dispatch:
     inputs:
       openwrt_version:
-        description: OpenWrt release to build from
+        description: OpenWrt release (e.g. 25.12.6, 24.10.4) or "snapshot"
         default: "25.12.6"
         required: true
+      publish:
+        description: Publish the images as a release (pre-release for a snapshot)
+        type: boolean
+        default: false
   push:
     branches: ["**"]
     tags: ["v*"]
@@ -37,6 +48,8 @@ jobs:
   build:
     name: Build ${{ matrix.profile }}
     runs-on: ubuntu-24.04
+    outputs:
+      revision: ${{ steps.download.outputs.revision }}
     strategy:
       fail-fast: false
       matrix:
@@ -54,16 +67,26 @@ jobs:
 
       - name: Restore ImageBuilder from cache
         id: cache
+        if: env.OPENWRT_VERSION != 'snapshot'
         uses: actions/cache@v6
         with:
           path: imagebuilder.tar.zst
           key: imagebuilder-${{ env.OPENWRT_VERSION }}-${{ env.TARGET }}-${{ env.SUBTARGET }}
 
       - name: Download and verify ImageBuilder
+        id: download
         run: |
-          base="https://downloads.openwrt.org/releases/${OPENWRT_VERSION}/targets/${TARGET}/${SUBTARGET}"
-          name="openwrt-imagebuilder-${OPENWRT_VERSION}-${TARGET}-${SUBTARGET}.Linux-x86_64.tar.zst"
+          if [ "$OPENWRT_VERSION" = snapshot ]; then
+            base="https://downloads.openwrt.org/snapshots/targets/${TARGET}/${SUBTARGET}"
+            name="openwrt-imagebuilder-${TARGET}-${SUBTARGET}.Linux-x86_64.tar.zst"
+          else
+            base="https://downloads.openwrt.org/releases/${OPENWRT_VERSION}/targets/${TARGET}/${SUBTARGET}"
+            name="openwrt-imagebuilder-${OPENWRT_VERSION}-${TARGET}-${SUBTARGET}.Linux-x86_64.tar.zst"
+          fi
           wget -q -O sha256sums "${base}/sha256sums"
+          wget -q -O version.buildinfo "${base}/version.buildinfo" || echo unknown > version.buildinfo
+          echo "revision=$(head -1 version.buildinfo)" >> "$GITHUB_OUTPUT"
+          echo "OpenWrt ${OPENWRT_VERSION}, revision $(head -1 version.buildinfo)"
           if [ ! -f imagebuilder.tar.zst ]; then
             wget -q -O imagebuilder.tar.zst "${base}/${name}"
           fi
@@ -89,6 +112,7 @@ jobs:
           out="imagebuilder/bin/targets/${TARGET}/${SUBTARGET}"
           mkdir dist
           cp "${out}"/openwrt-* dist/
+          echo "OpenWrt ${OPENWRT_VERSION} $(head -1 version.buildinfo), built $(date -u +%F)" > "dist/version-${{ matrix.profile }}.txt"
           (cd dist && sha256sum openwrt-* > "sha256sums-${{ matrix.profile }}")
           ls -la dist
           cat dist/sha256sums-*
@@ -101,7 +125,7 @@ jobs:
 
   release:
     name: Publish release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || inputs.publish
     needs: build
     runs-on: ubuntu-24.04
     permissions:
@@ -112,11 +136,28 @@ jobs:
           path: dist
           merge-multiple: true
 
+      - name: Name the release
+        id: name
+        run: |
+          if [ "${GITHUB_REF#refs/tags/}" != "$GITHUB_REF" ]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          elif [ "$OPENWRT_VERSION" = snapshot ]; then
+            echo "tag=openwrt-snapshot-$(date -u +%F)-${REVISION}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=openwrt-${OPENWRT_VERSION}-$(date -u +%F)" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          REVISION: ${{ needs.build.outputs.revision }}
+
       - uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ steps.name.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          prerelease: ${{ env.OPENWRT_VERSION == 'snapshot' }}
+          make_latest: ${{ env.OPENWRT_VERSION != 'snapshot' }}
           files: dist/*
           body: |
-            Upstream OpenWrt ${{ env.OPENWRT_VERSION }} for the GL.iNet GL-MT2500 / GL-MT2500A,
+            Upstream OpenWrt ${{ env.OPENWRT_VERSION }} (revision ${{ needs.build.outputs.revision }}) for the GL.iNet GL-MT2500 / GL-MT2500A,
             built with the official ImageBuilder plus the packages in `openwrt/packages.txt`.
 
             * `glinet_gl-mt2500` images: MaxLinear WAN PHY (original hardware revision)
