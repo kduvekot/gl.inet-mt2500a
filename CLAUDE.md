@@ -35,19 +35,23 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   addresses, home domain). Those stay in local files on the Pi, such as
   `~/.config/dirigera/`.
 
-## Where things stand (2026-10-23)
+## Where things stand (2026-10-24)
 
 - Workflows on `main`: **Build OpenWrt**, **Recovery kit**, **Raspberry Pi
   OS image** (all Node 24 actions). The `recovery-kit` release is
   published (2026-10-23).
 - Raspberry Pi set up and running Claude Code (below).
-- **Waiting on parts:** a 1 kΩ resistor and male-female jumpers (shopping
-  trip to Fakkert, Zwolle). The old unit's UART holes are open, so no
-  soldering.
+- **UART works** (2026-10-24): wired via a breadboard with 3 × 4.7 kΩ in
+  parallel in Pi TX → J13 RX; `pi-setup.sh` done. The old U-Boot (Sep 12
+  2022) fails the eMMC (`-110` / `-524`), as in Irakli's log. Console:
+  `env -u TMUX ~/mt2500-recovery-kit/console.sh start|show|send|stop`
+  (`env -u TMUX` because Claude itself runs inside the claude-rc tmux
+  server); raw logs in `~/mt2500-recovery-kit/logs/`, on the Pi only.
 - **Router power** is switchable from the Pi: `pi/plug.sh` (below).
-- **Next:** run `recovery/pi-setup.sh --download` on the Pi (needs `sudo`
-  and a reboot; ask first) → open the old router and wire the UART → follow
-  [docs/recovery-uart-raspberry-pi.md](docs/recovery-uart-raspberry-pi.md).
+- **Next:** read-only checks at the `MT7981>` prompt (`version`,
+  `printenv`, `mmc info`), then Plan B: router off, `uartboot.sh` loads the
+  2025-02-24 U-Boot into RAM only, and see whether it finds the eMMC
+  ([docs/recovery-uart-raspberry-pi.md](docs/recovery-uart-raspberry-pi.md)).
 - WAN PHY: old unit MaxLinear GPY211C0VC (`glinet_gl-mt2500`; board
   MT2500-V1.1, DDR4 1 GB, Samsung 8 GB eMMC); replacement unknown (table in docs/journey.md). The old unit's UART is
   J13: 3.3V (square pad), RX, TX, GND, open through-holes.
@@ -58,10 +62,11 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   Raspberry Pi OS Lite 64-bit (Trixie, 2026-10-06), WiFi only so far
   (DHCP). 905 MiB RAM; swap is rpi-swap (zram), not
   dphys-swapfile. Configured by cloud-init.
-- **Planned wiring** (not done yet): Pi eth0 → router LAN port (eth0 gets
-  192.168.1.2 + 192.168.8.2, no gateway, via `pi-setup.sh`); Pi pins 6/8/10
-  (GND/TX/RX) → router UART GND/RX/TX, never 3V3, ideally 1 kΩ in series on
-  Pi TX. `/dev/serial0` only exists after `pi-setup.sh` and a reboot.
+- **Wiring (done 2026-10-24):** Pi eth0 → router LAN port (the one next
+  to J13; eth0 has 192.168.1.2 + 192.168.8.2, no gateway); Pi pins 6/8/10
+  (GND/TXD/RXD; outer row, 3rd–5th from the end away from the USB ports) →
+  J13 GND/RX/TX, 3.3V taped over, ~1.57 kΩ in the Pi TX line.
+  `/dev/serial0 → ttyAMA0`.
 - **Routers:** the old MT2500A (stuck at U-Boot) and a working replacement.
 - **Router power:** an IKEA INSPELNING smart plug named **`MT2500A`**, via
   the house's IKEA DIRIGERA hub (found by mDNS). `pi/plug.sh status|on|off|
