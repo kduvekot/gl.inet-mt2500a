@@ -67,6 +67,60 @@ The GL.iNet download centre names `gl-image` as the GPLv2 corresponding
 source for its firmware. Nothing has been published there for the MT2500 so
 far; a request to support@gl-inet.com is the formal route.
 
+### What the firmware is built from
+
+Checked 2026-10-24/25 by unpacking the firmware images and by recreating
+4.2.0 from public sources (see
+[journey.md](journey.md), Chapter 11).
+
+* **Base:** OpenWrt `openwrt-21.02` at commit `bcaabe6d` (r16649,
+  2022-09-04, "kernel: bump 5.4 to 5.4.211") plus GL.iNet patches. All MT2500
+  firmwares from 4.1.1 to 4.9.0_beta3 run Linux 5.4.211.
+* **Version string:** `r15812+878` (4.2.0) and `r15812+912` (4.7.4).
+  `r15812` is the merge base with master (`46b6ee7ffc`, the 21.02 branch
+  point); `+N` counts the commits on top: 837 upstream 21.02 commits plus
+  GL.iNet's patches (41 patches in the 4.2.0 recipe).
+* **Recipe:** GL.iNet's `gl-infra-builder` (removed by GL.iNet; the fork
+  [spmadden/gl-infra-builder](https://github.com/spmadden/gl-infra-builder)
+  survives) with `configs/config-mt798x-7.6.6.1.yml`,
+  `patches-mt798x-7.6.6.1/` and per-version tags such as
+  `v4.2.0_mt2500_release4`.
+* **MediaTek feed:** `git01.mediatek.com`, which now needs a login. The same
+  commit (`df3fc79`) is on GL.iNet's mirror
+  [gl-inet/mtk-openwrt-feeds](https://github.com/gl-inet/mtk-openwrt-feeds).
+* **Private feeds:** GL.iNet's GitLab feeds (`gl-sdk4-collect`,
+  `mt7981-feeds`) are not public.
+
+### Closed kernel modules
+
+Their declared licenses come from `modinfo`. Most claim a GPL license, yet
+only some have public source.
+
+| Module | Declared license | Public source |
+|---|---|---|
+| `gl-sdk4-hw-info` | GPL | yes: `gl-inet/gl-feeds`, branch `v4.7` |
+| `gl-sdk4-tertf` | GPL | yes: `gl-inet/gl-feeds`, branch `fix-nginx` |
+| `parental_control` | GPL | yes: [gl-inet/parental-control](https://github.com/gl-inet/parental-control) (2023) |
+| `mtkhnat` | GPL v2 | partly: MediaTek's source is in the feed mirror, GL.iNet's patches `3004`/`3009`/`3010` are in the 4.2.0 recipe; the later builds (changed up to 4.6.2) are not published |
+| `kmwan`, `black_white_list`, `gl-mpflow` | GPL | not found |
+| `mtfwd`, `mtqos` | Dual BSD/GPL | not found |
+
+Also not found: the `fwdd` daemon and the `mtk-base-files` package. What
+these modules do is in [driver-analysis.md](driver-analysis.md).
+
+### 4.7.13 (unpublished)
+
+GL.iNet's API lists 4.7.4 as the latest release and 4.8.2 / 4.9.0 as
+testing, but the replacement unit runs **4.7.13**, which is not offered
+anywhere. We read its kernel and read-only squashfs from the unit (no
+settings, no MAC address, no serial number), verified the copy by SHA256 and
+keep it private; it is not in this repo. Against 4.7.4: identical kernel
+config, identical EN8811H driver and PHY firmware; among the modules only
+`kmwan`, `parental_control` and `nf_nat` differ (`nf_nat` changed without a
+config change, so the kernel source changed). Updated packages include curl
+7.83 to 8.12, dropbear 2020.81 to 2024.86 and samba 4.14 to 4.18. LuCI is
+removed (19 `luci*` packages) and the OpenWrt revision string is empty.
+
 ### The fixed U-Boot (FIP)
 
 `uboot-mt2500-20250224-md5-74286e770cfb041b611d80d4adaef189.bin` in
