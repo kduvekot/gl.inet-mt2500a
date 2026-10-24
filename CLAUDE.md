@@ -155,7 +155,9 @@ for line in open(sys.argv[1]):
 - `.github/workflows/`: `build-openwrt.yml`, `recovery-kit.yml`,
   `raspios-image.yml`
 - `openwrt/packages.txt`: extra packages for the OpenWrt images
-- `recovery/`: `pi-setup.sh`, `uartboot.sh`, `console.sh`, `web-flash.sh`
+- `recovery/`: `pi-setup.sh`, `uartboot.sh`, `console.sh`, `web-flash.sh`,
+  `get-stock-firmware.sh` (GL.iNet's firmware is fetched from GL.iNet, never
+  bundled or stored in this public repo; private copies go on the NAS)
 - `pi/`: `claude-rc.sh`, `claude-rc.service`, `dirigera-token.py`,
   `plug.sh`
 - `docs/`: `journey.md`, `firmware-sources.md`,

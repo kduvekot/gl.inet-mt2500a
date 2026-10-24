@@ -36,7 +36,8 @@ eth0 cabled to the router's **LAN** port. Nothing goes in WAN or USB.
       from [gl-inet/mt798x-boot](https://github.com/gl-inet/mt798x-boot/tree/main/bin)).
       With a PC instead: give it a static `192.168.1.2/24`, then open
       `http://192.168.1.1/uboot.html` in Chrome or Edge (not Firefox).
-- [ ] If it succeeds:
+- [ ] If it succeeds: `./get-stock-firmware.sh` (downloads GL.iNet's 4.7.4
+      from GL.iNet and checks its SHA256; the kit doesn't bundle it), then
       `./web-flash.sh firmware openwrt-mt2500-4.7.4-0328-1743128340.bin`.
 
 Result: _not tried yet_. If it reports "UPDATE FAILED", go to Plan B.
@@ -334,8 +335,10 @@ settings needed wiping:
 
 If the firmware is damaged instead:
 
-- [ ] Enter the recovery page again (reset-button sequence) and flash
-      **stock 4.7.4** from the kit:
+- [ ] Fetch **stock 4.7.4** from GL.iNet with `./get-stock-firmware.sh`
+      (checked against a pinned SHA256; the kit doesn't bundle GL.iNet's
+      firmware, which contains closed-source parts).
+- [ ] Enter the recovery page again (reset-button sequence) and flash it:
       `./web-flash.sh firmware openwrt-mt2500-4.7.4-0328-1743128340.bin`.
       This proves the eMMC can be written and gives a known-good baseline.
       The stock web UI is then at `http://192.168.8.1/`, reachable from the
