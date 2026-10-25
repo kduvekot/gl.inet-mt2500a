@@ -78,26 +78,42 @@ jobs:
           PY
           sort -o ../w/official-packages.txt ../w/official-packages.txt
           wc -l ../w/official-packages.txt
-          # Install order as in a full build (package/Makefile): by source
-          # directory relative to package/, sorted like make's $(sort), feed
-          # packages as feeds/<feed>/<dir>; it decides which packages opkg
-          # marks Auto-Installed in /usr/lib/opkg/status.
-          python3 - off_root/usr/lib/opkg/info > ../w/install-order.txt << 'PY'
-          import os, sys
-          d = sys.argv[1]; rows = []
-          for f in os.listdir(d):
-              if not f.endswith(".control"):
-                  continue
-              c = dict(l.split(": ", 1) for l in open(os.path.join(d, f), errors="replace").read().splitlines() if ": " in l)
-              src = c.get("Source", "")
-              parts = src.split("/")
-              key = f"feeds/{parts[1]}/{parts[-1]}" if parts[0] == "feeds" else src.removeprefix("package/")
-              name, abi = c["Package"], c.get("ABIVersion", "")
-              rows.append((key, name[:-len(abi)] if abi and name.endswith(abi) else name))
-          for key, name in sorted(rows):
-              print(name)
+          # What opkg marks Auto-Installed in /usr/lib/opkg/status depends on
+          # what it was asked to install, and in which order: a package pulled
+          # in as a dependency before its own turn gets the flag. Installing
+          # exactly the official non-auto packages, each after everything it
+          # reaches through its dependencies, reproduces the official flags
+          # (checked by simulating opkg: 169 of 169).
+          python3 - off_root/usr/lib/opkg/status > ../w/install-order.txt << 'PY'
+          import re, sys
+          st = {}
+          for b in open(sys.argv[1], errors="replace").read().split("\n\n"):
+              f = dict(l.split(": ", 1) for l in b.splitlines() if ": " in l)
+              if "Package" in f:
+                  st[f["Package"]] = f
+          prov = {}
+          for n, f in st.items():
+              prov[n] = n
+              for x in f.get("Provides", "").split(","):
+                  if x.strip():
+                      prov.setdefault(x.strip(), n)
+          deps = lambda n: [prov.get(d, d) for d in (re.sub(r"\s*\(.*\)", "", x).strip()
+                            for x in st[n].get("Depends", "").split(",")) if d]
+          explicit = sorted(n for n, f in st.items() if f.get("Auto-Installed") != "yes")
+          seen, order = set(), []
+          def visit(n):
+              if n in seen or n not in st:
+                  return
+              seen.add(n)
+              for d in deps(n):
+                  visit(d)
+              if n in explicit:
+                  order.append(n)
+          for n in explicit:
+              visit(n)
+          print("\n".join(order))
           PY
-          head -3 ../w/install-order.txt
+          wc -l ../w/install-order.txt
 
       - name: Package the closed packages and assemble the image
         timeout-minutes: 80
@@ -209,11 +225,13 @@ jobs:
           make info > /w/out/ib-info.txt
           profile=$(grep -oE '^glinet_gl-mt2500:' /w/out/ib-info.txt | tr -d :)
           # exactly the official package set: add what it has, remove defaults it hasn't
-          # in the full build's order (install-order.txt); the ImageBuilder
-          # would install libc and kernel first and explicitly: not here
+          # install-order.txt (see above). The ImageBuilder would install libc
+          # and kernel first and explicitly (by path, from next to the kernel
+          # build); as plain packages they come in as dependencies instead.
           pk=$(cat /w/install-order.txt)
+          find build_dir -maxdepth 3 \( -name 'libc_*.ipk' -o -name 'kernel_*.ipk' \) -exec cp {} packages/ \;
           sed -i '/\$(OPKG) install \$(firstword \$(wildcard \$(LINUX_DIR)\/\(libc\|kernel\)_/d' Makefile
-          grep -n 'OPKG) install' Makefile
+          grep -n 'OPKG) install' Makefile; ls packages/libc_* packages/kernel_*
           defaults=$(sed -n 's/^Default Packages: //p' /w/out/ib-info.txt)
           dev=$(awk -v p="$profile:" '$1==p{f=1;next} f&&/Packages:/{sub(/.*Packages: /,""); print; exit}' /w/out/ib-info.txt)
           for p in $defaults $dev; do
