@@ -127,12 +127,14 @@ def main():
             elif s.is_file():
                 shutil.copy2(s, t)
 
-        # GL.iNet's web-interface packages also contain an empty
-        # www/views/img/ (empty in the image too, owned by no package): with
-        # it, 31 of 41 such packages get GL.iNet's exact Installed-Size, the
-        # size of their compressed data.tar.gz
+        # GL.iNet's web-interface packages always contain www/views/img/,
+        # www/i18n/ and usr/share/oui/menu.d/, empty when they have nothing
+        # there (www/views/img is empty in the image, owned by no package).
+        # With them all 40 such packages get GL.iNet's exact Installed-Size,
+        # the size of their compressed data.tar.gz.
         if (d / "files/www/views").is_dir():
-            (d / "files/www/views/img").mkdir(exist_ok=True)
+            for e in ("www/views/img", "www/i18n", "usr/share/oui/menu.d"):
+                (d / "files" / e).mkdir(parents=True, exist_ok=True)
         (d / "version.date").write_text(c.get("SourceDateEpoch", "") + "\n")
         pkg = name[5:] if kmod else name
         lines = ["include $(TOPDIR)/rules.mk", ""]
