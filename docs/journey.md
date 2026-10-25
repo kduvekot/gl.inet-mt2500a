@@ -840,6 +840,41 @@ full build installs by sorted source directory (feeds first, then
 in is marked `Auto-Installed`; the ImageBuilder installs `libc` and `kernel`
 first.
 
+**Complete full builds on the public runner (#15, #16).** With the closed
+part generated in the run, the full build (`closed` mode) gives the same
+result as the assembly. #15 had two extra packages and one missing:
+GL.iNet's `gl-ui4.0/module/adguardhome` clashes with the packages feed's
+`adguardhome` (OpenWrt names a source package after its folder, and only
+the first gets installed), `SAMBA4_SERVER_WSDD2` defaults to `y` (no
+`wsdd2` in the official image), and `LUCI_LANG_en` is only needed without
+the closed packages (with them, a closed package pulls in
+`luci-i18n-base-en`; the language option adds English translations of
+every LuCI app). #16: 466 packages and 6,071 files like the official
+image, no file missing or extra, 403 differing files, and
+`/usr/lib/opkg/status` identical apart from the accepted fields (vermagic
+hash, `python3`'s `Depends` order), including the entry order and all 169
+`Auto-Installed` flags.
+
+**`Auto-Installed`, worked out.** opkg marks a package `Auto-Installed`
+when an earlier package pulls it in as a dependency before its own turn.
+A small simulation of that rule predicts exactly the ImageBuilder's
+result (277 flagged), and shows what reproduces the official 169: name
+the 297 unflagged packages, each after everything it reaches through its
+dependencies, then all others except the six held toolchain packages
+(`libc`, `libgcc1`, …), which a full build flags `hold` afterwards
+(`opkg flag hold`, replacing `user`). The assembly does that now; only
+the entry order of `status` (opkg's hash table, within a bucket the
+loading order) still differs there, while the full build gets it right by
+itself.
+
+**`Installed-Size`, nearly all explained.** All 40 web-interface packages
+match once they carry `www/views/img/`, `www/i18n/` and
+`usr/share/oui/menu.d/`, empty where unused (GL.iNet's build creates them
+always), and `gl-sdk4-ddns` matches with an empty `etc/ddns/`. Left:
+`gl-sdk4-plugins` and `gl-oui-rpc` (several unrelated empty folders fit
+the size equally, so size alone can't tell), `gl-sdk4-clients`,
+`gl-sdk4-base-files` and `base-files`.
+
 **Moved to the public runners.** The closed part doesn't need to be stored
 anywhere: like the comparison, the run downloads the official image from
 GL.iNet and generates the closed packages from it
@@ -997,3 +1032,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-25 | Recreation run #12: built as a normal user, `libdevmapper` now identical; outside Samba 161 differing files left. The four "build-ID-only" programs were mislabelled: real differences, found as BusyBox options, net-tools, `git describe` hash (accepted) and `ip-full` symbol order (open). |
 | 2026-10-25 | Recreation run #13: `busybox`, `openvpn`, `ip-full` identical (BusyBox options from GL.iNet's profiles, net-tools, iproute2 directory order); Python bytecode shown to vary by nature, also in GL.iNet's own releases. SDK + ImageBuilder published for the private assembly. |
 | 2026-10-25 | Complete 4.2.0 image assembled from the published SDK and ImageBuilder plus the closed packages (assembly runs #1 to #9): rootfs-overlay scripts, the ddns move, unstripped modules, Installed-Size (= size of data.tar.gz; owner names and folder modes), GL.iNet's build key. Complete builds moved to the public runners (closed part generated in the run, reports only). |
+| 2026-10-25 | Complete full build on the public runner (#16): 466 packages, 6,071 files, `status` identical apart from accepted fields (order and Auto-Installed included). Fixes: adguardhome folder clash, no wsdd2, LUCI_LANG_en only public-only; empty folders in web-interface packages (Installed-Size). |
