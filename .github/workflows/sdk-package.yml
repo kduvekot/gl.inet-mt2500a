@@ -137,6 +137,11 @@ jobs:
           print("\n".join(out))
           PY
           cp sdk/config-used.txt sdk/build-*.log results/sdk-package/ 2>/dev/null || true
+          # our own builds of the requested packages (open source), for a
+          # closer look at differences
+          mkdir -p results/sdk-package/ipk
+          for p in $PKGS; do find sdk/bin -name "${p}_*.ipk" -exec cp {} results/sdk-package/ipk/ \; ; done
+          find sdk/build_dir -name static-syms.h 2>/dev/null | while read -r f; do cp "$f" "results/sdk-package/$(echo "$f" | tr / _)"; done
           cat results/sdk-package/report.md >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7
         if: always()
