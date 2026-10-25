@@ -642,6 +642,28 @@ OpenSSL, PCRE, Lua, ncurses, libubox, json-c, ca-certificates, `attr`,
 public `gl-feeds` (`gl_feed_common`), which takes priority over OpenWrt's. ccache is now a run option: on while iterating, off
 for the final validation run.
 
+More pieces settled by isolated tests and comparisons:
+
+- **nginx** comes out identical with GL.iNet's own recipe (public
+  `gl_feed_common`), its build options and GL.iNet's build path.
+- **libxml2** is identical in the full build (an earlier SDK difference was
+  only the build path).
+- **Python bytecode:** OpenWrt compiles `.pyc` files with
+  `PYTHONHASHSEED=$SOURCE_DATE_EPOCH`, and frozenset constants are written in
+  hash order, so the seed shows up in the bytes. Ours (1678760204) gives a
+  different order than GL.iNet's; a search for GL.iNet's seed is running.
+- **GL.iNet's web interface** is generated, not source: a webpack build of a
+  Vue.js application (`app.<hash>.js`, minified, 40 per-feature views), with
+  no source maps. Its original sources are not public, so it can only be
+  copied, like GL.iNet's own compiled programs.
+
+**Where 4.2.0 stands** (5,451 regular files, 219 MB unpacked, after run #9):
+61.6 % of the files and 43 % of the bytes are byte-identical from public
+sources, plus the whole kernel layer. Run #10 targets most of the rest
+(Samba alone is about 700 files and 66 MB). GL.iNet's closed packages (about
+1,100 files, 40.6 MB) come from the private recipe: as originals, except
+AdGuardHome, `sipcalc` and the exFAT tools, which are built from source.
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
