@@ -43,7 +43,7 @@ on:
         type: boolean
         default: true
       publish_sdk:
-        description: "Build and publish the OpenWrt SDK (takes several minutes; only needed when toolchain or kernel change)"
+        description: "Build and publish the OpenWrt SDK and ImageBuilder (takes several minutes; only needed when toolchain, kernel or packages change)"
         type: boolean
         default: false
 
@@ -236,7 +236,8 @@ jobs:
               # sysconfig). ccache, when wanted, is wrapped in invisibly below.
               f.write("CONFIG_DEVEL=y\n# CONFIG_CCACHE is not set\n"
                       "CONFIG_ALL_KMODS=y\n"
-                      + ("CONFIG_SDK=y\n" if os.environ.get("PUBLISH_SDK") == "true" else "# CONFIG_SDK is not set\n") +
+                      + ("CONFIG_SDK=y\nCONFIG_IB=y\n" if os.environ.get("PUBLISH_SDK") == "true"
+                         else "# CONFIG_SDK is not set\n# CONFIG_IB is not set\n") +
                       # GL.iNet's kernel banner: "5.4.211 (glinet@glinet)"; the
                       # string length shifts all later read-only data.
                       "CONFIG_KERNEL_BUILD_USER=\"glinet\"\nCONFIG_KERNEL_BUILD_DOMAIN=\"glinet\"\n"
@@ -335,6 +336,11 @@ jobs:
           ls -l bin/targets/mediatek/mt7981/
           mkdir -p /work/out/sdk
           mv bin/targets/mediatek/mt7981/openwrt-sdk-*.tar.* /work/out/sdk/ || true
+          # The ImageBuilder (with all packages of this build, IB_STANDALONE) and
+          # the generated files/ (version stamps): the private repo assembles
+          # the complete image from these plus GL.iNet's closed packages.
+          mv bin/targets/mediatek/mt7981/openwrt-imagebuilder-*.tar.* /work/out/sdk/ || true
+          [ "${PUBLISH_SDK:-}" = true ] && tar -czf /work/out/sdk/gl-files.tar.gz files
           # The SDK leaves out driver-private headers; the Ethernet/PPE driver
           # folder as compiled (all patches applied) lets out-of-tree builds
           # of mtk_hnat find "../mtk_eth_soc.h" etc.
