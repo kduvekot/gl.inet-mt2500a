@@ -301,7 +301,9 @@ jobs:
             # becomes a wrapper with its own name that runs ccache on the real
             # binary (.<name>.real), so recorded compiler names stay as GL.iNet's.
             # A separate cache, filled only at GL.iNet's build path.
-            export CCACHE_DIR=/work/cache/ccache-glpath CCACHE_MAXSIZE=5G
+            # The toolchain is rebuilt every run, so its mtime changes; compare
+            # the compiler by content instead, or every run misses the cache.
+            export CCACHE_DIR=/work/cache/ccache-glpath CCACHE_MAXSIZE=5G CCACHE_COMPILERCHECK=content
             rm -rf /work/cache/ccache
             make -j"$(nproc)" BUILD_LOG=1 tools/install toolchain/install
             for c in staging_dir/toolchain-*/bin/aarch64-openwrt-linux-musl-{gcc,g++,c++,cpp} \
