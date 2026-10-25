@@ -1,0 +1,22 @@
+--- a/ip/Makefile
++++ b/ip/Makefile
+@@ -22,7 +22,18 @@
+   STATIC_SYM_FILTER:=iplink_can.c iplink_ipoib.c iplink_vxlan.c
+   CFLAGS += -DIPROUTE2_TINY
+ endif
+-STATIC_SYM_SOURCES:=$(filter-out $(STATIC_SYM_FILTER),$(wildcard *.c))
++# GNU make 4.2 doesn't sort $(wildcard), so the order of the generated
++# static-syms.h followed the build machine's directory order. Fix it to the
++# order found in GL.iNet's 4.2.0 ip-full; other files sorted after.
++GL_STATIC_SYM_ORDER:=iplink_hsr.c iplink_macvlan.c link_vti.c iplink_vcan.c iplink_ifb.c \
++	iplink_bond_slave.c iplink_vxlan.c link_gre6.c iptuntap.c iplink_nlmon.c \
++	link_ip6tnl.c iplink_geneve.c iplink_team.c iplink_vlan.c iplink_rmnet.c \
++	link_xfrm.c ipmacsec.c iplink_ipoib.c link_vti6.c iplink_bareudp.c \
++	link_gre.c iplink_dummy.c link_iptnl.c link_veth.c iplink_bond.c \
++	iplink_vrf.c iplink_bridge.c iplink_netdevsim.c iplink_vxcan.c \
++	iplink_bridge_slave.c iplink_ipvlan.c iplink_can.c
++STATIC_SYM_SOURCES:=$(filter-out $(STATIC_SYM_FILTER),$(GL_STATIC_SYM_ORDER) \
++	$(sort $(filter-out $(GL_STATIC_SYM_ORDER),$(wildcard *.c))))
+ 
+ ALLOBJ=$(IPOBJ) $(RTMONOBJ)
+ SCRIPTS=ifcfg rtpr routel routef

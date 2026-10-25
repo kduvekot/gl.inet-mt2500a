@@ -50,11 +50,12 @@ jobs:
           PKGS: ${{ inputs.packages }}
           CFG: ${{ inputs.config }}
         run: |
+          cp -r openwrt/gl-4.2.0-patches sdk/
           cat > sdk/build.sh << 'SH'
           set -x
           export DEBIAN_FRONTEND=noninteractive
           apt-get update -q && apt-get install -y -q build-essential gawk gettext git libncurses5-dev \
-            python3 python3-distutils rsync unzip wget curl file zlib1g-dev ca-certificates xz-utils zstd \
+            python3 python3-distutils rsync unzip wget curl file zlib1g-dev ca-certificates xz-utils zstd net-tools \
             swig libssl-dev cmake > /dev/null
           git config --global --add safe.directory '*'
           cd /home/glinet/work/_github/mt7981
@@ -70,6 +71,10 @@ jobs:
             > feeds.conf
           ./scripts/feeds update -a > /dev/null
           ./scripts/feeds install -a > /dev/null
+          for d in /home/glinet/work/_github/mt7981/gl-4.2.0-patches/*/; do
+            t="$(dirname "$(find feeds/base/package -path "*/$(basename "$d")/Makefile" | head -1)")/patches"
+            mkdir -p "$t" && cp "$d"*.patch "$t/" && echo "patches for $(basename "$d") -> $t"
+          done
           echo "$CFG" | tr ';' '\n' | sed 's/^ *//' >> .config
           for p in $PKGS; do echo "CONFIG_PACKAGE_$p=m" >> .config; done
           make defconfig > /dev/null
@@ -85,7 +90,10 @@ jobs:
             case "$done_dirs" in *" $dir "*) echo "=== $p: built with $dir already" >&2; continue;; esac
             done_dirs="$done_dirs$dir "
             echo "=== $(date -u +%H:%M) building $p" >&2
-            make package/$dir/compile -j"$(nproc)" > /home/glinet/work/_github/mt7981/build-$p.log 2>&1 || make package/$dir/compile -j1 V=s > /home/glinet/work/_github/mt7981/build-$p.log 2>&1
+            # TAR=/bin/tar: the SDK's bundled tar can't look up owner names
+            # (packages got none instead of root/root, changing Installed-Size);
+            # on the command line because rules.mk sets TAR:=tar
+            make package/$dir/compile TAR=/bin/tar -j"$(nproc)" > /home/glinet/work/_github/mt7981/build-$p.log 2>&1 || make package/$dir/compile -j1 V=s > /home/glinet/work/_github/mt7981/build-$p.log 2>&1
             rc=$?
             echo "=== $(date -u +%H:%M) $p: exit $rc" >&2
           done
@@ -132,6 +140,11 @@ jobs:
           print("\n".join(out))
           PY
           cp sdk/config-used.txt sdk/build-*.log results/sdk-package/ 2>/dev/null || true
+          # our own builds of the requested packages (open source), for a
+          # closer look at differences
+          mkdir -p results/sdk-package/ipk
+          for p in $PKGS; do find sdk/bin -name "${p}_*.ipk" -exec cp {} results/sdk-package/ipk/ \; ; done
+          find sdk/build_dir -name static-syms.h 2>/dev/null | while read -r f; do cp "$f" "results/sdk-package/$(echo "$f" | tr / _)"; done
           cat results/sdk-package/report.md >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7
         if: always()

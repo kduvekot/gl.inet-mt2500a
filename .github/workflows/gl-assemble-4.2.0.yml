@@ -1,0 +1,241 @@
+name: GL.iNet 4.2.0 assembly (SDK + ImageBuilder + closed packages)
+
+# The quick way to the complete image: the recreation (gl-recreate-4.2.0.yml,
+# publish_sdk) publishes its SDK, its ImageBuilder (all public packages
+# included) and its generated files/. Here we only
+#   1. generate GL.iNet's closed packages from the official image, inside
+#      the run (.github/scripts/gen-closed-feed.py, openwrt/gl-4.2.0-closed/),
+#      and package them with that SDK at GL.iNet's build path, as a normal
+#      user. Each package's own Makefile is called directly, so their public
+#      dependencies (Go and LuCI among them) aren't compiled; they are only
+#      needed at run time, and the ImageBuilder has them;
+#   2. assemble the image with the ImageBuilder from the public and closed
+#      packages plus GL.iNet's image-level files, with exactly the official
+#      package set;
+#   3. compare it with the official 4.2.0.
+# The image and the closed packages contain GL.iNet's files: only the report
+# is kept.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PUB: ${{ github.repository }}
+  SDK_TAG: gl-4.2.0-sdk
+  OFFICIAL_URL: https://fw.gl-inet.com/firmware/mt2500/release/openwrt-mt2500-4.2.0-0314-1678763050.bin
+  OFFICIAL_SHA256: 3c13b26fbfe9fe1710b42f90c80a47fe000dd98d899fec2d0ed3b8053ac69348
+  SOURCE_DATE_EPOCH: "1678760204"
+
+jobs:
+  assemble:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: SDK, ImageBuilder and the official 4.2.0
+        timeout-minutes: 20
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$SDK_TAG" -R "$PUB" -p 'openwrt-sdk-*' -p 'openwrt-imagebuilder-*' -p 'gl-files.tar.gz' -D dl
+          ls -l dl
+          mkdir -p w/sdk w/ib w/out cmp
+          tar -xf dl/openwrt-sdk-* -C w/sdk --strip-components=1
+          tar -xf dl/openwrt-imagebuilder-* -C w/ib --strip-components=1
+          cp dl/gl-files.tar.gz w/
+          sudo apt-get install -y -q squashfs-tools > /dev/null
+          cd cmp
+          curl -fSL --connect-timeout 30 --max-time 600 --retry 5 --retry-all-errors -o official.bin "$OFFICIAL_URL"
+          echo "${OFFICIAL_SHA256}  official.bin" | sha256sum -c -
+          mkdir official && tar -xf official.bin -C official
+          sudo unsquashfs -q -d off_root official/*/root > /dev/null
+          # GL.iNet's closed packages and image-level files, from the official
+          # image (stay inside the run)
+          C="$GITHUB_WORKSPACE/openwrt/gl-4.2.0-closed"
+          sudo python3 -I "$GITHUB_WORKSPACE/.github/scripts/gen-closed-feed.py" off_root ../w/closed "$C" > ../w/out/closed-feed.txt
+          sudo python3 -I - off_root ../w/closed-image "$C/image-files.txt" << 'PY'
+          import os, shutil, sys
+          root, out, lst = sys.argv[1:4]
+          for rel in open(lst).read().split():
+              s, t = os.path.join(root, rel), os.path.join(out, rel)
+              os.makedirs(os.path.dirname(t), exist_ok=True)
+              os.symlink(os.readlink(s), t) if os.path.islink(s) else shutil.copy2(s, t)
+          PY
+          sudo chown -R "$(id -u):$(id -g)" ../w/closed ../w/closed-image
+          # Package names without ABI suffix (libjson-c5 -> libjson-c), as the
+          # full build selects them.
+          python3 - off_root/usr/lib/opkg/status > ../w/official-packages.txt << 'PY'
+          import sys
+          for block in open(sys.argv[1], errors="replace").read().split("\n\n"):
+              f = dict(l.split(": ", 1) for l in block.splitlines() if ": " in l)
+              if "Package" in f:
+                  name, abi = f["Package"], f.get("ABIVersion", "")
+                  print(name[:-len(abi)] if abi and name.endswith(abi) else name)
+          PY
+          sort -o ../w/official-packages.txt ../w/official-packages.txt
+          wc -l ../w/official-packages.txt
+
+      - name: Package the closed packages and assemble the image
+        timeout-minutes: 80
+        run: |
+          cat > w/build.sh << 'EOF'
+          #!/usr/bin/env bash
+          set -euxo pipefail
+          if [ "$(id -u)" = 0 ]; then
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update -q
+            apt-get install -y -q build-essential gawk gettext git libncurses5-dev \
+              python3 python3-distutils rsync unzip wget curl file zlib1g-dev \
+              ca-certificates xz-utils zstd swig libssl-dev > /dev/null
+            # GL.iNet built as a normal user (strip can't write read-only files)
+            useradd -m -u "$(stat -c %u /w)" -s /bin/bash glinet
+            chown -R glinet: /home/glinet
+            exec runuser -u glinet -- bash "$0"
+          fi
+          git config --global --add safe.directory '*'
+          # As in a normal build environment: with the container user's umask
+          # 002, copied package folders got mode 775 and the packages' tar
+          # archives (and Installed-Size) differed from GL.iNet's.
+          umask 022
+          save() { mkdir -p /w/out/logs; cp -a /home/glinet/work/_github/mt7981/logs-closed/. /w/out/logs/ 2>/dev/null || true; }
+          trap save EXIT
+
+          # 1. closed packages with the SDK at GL.iNet's path
+          cd /home/glinet/work/_github/mt7981
+          printf '%s\n' \
+            'src-cpy glinet /w/closed/glinet' \
+            'src-cpy mt7981 /w/closed/mt7981' \
+            'src-git base https://github.com/openwrt/openwrt.git^bcaabe6d' \
+            'src-git gl_feed_common https://github.com/gl-inet/gl-feeds.git^16d4e89' \
+            'src-git gl_feed_21_02 https://github.com/gl-inet/gl-feeds.git^581563a' \
+            'src-git-full packages https://git.openwrt.org/feed/packages.git^e86c4376d' \
+            'src-git-full luci https://git.openwrt.org/project/luci.git^63bfee6c8d' \
+            'src-git-full routing https://git.openwrt.org/feed/routing.git^25e7648' \
+            'src-git-full telephony https://git.openwrt.org/feed/telephony.git^920fbc5' \
+            'src-git mtk_openwrt_feed https://github.com/gl-inet/mtk-openwrt-feeds.git^df3fc792' \
+            > feeds.conf
+          ./scripts/feeds update -a > /dev/null
+          ./scripts/feeds install -a > /dev/null
+          # every output package of the closed feeds as a module
+          awk '/^Source-Makefile: feeds\/(glinet|mt7981)\//{c=1; next} /^Source-Makefile:/{c=0} c && /^Package: /{print "CONFIG_PACKAGE_"$2"=m"}' \
+            tmp/.packageinfo >> .config
+          make defconfig > /dev/null
+          # Called directly, a package Makefile misses what OpenWrt's top level
+          # sets (Makefile, include/toplevel.mk): same environment here.
+          export TOPDIR="$PWD" LC_ALL=C LANG=C TZ=UTC IS_TTY=0 OPENWRT_BUILD=1 \
+            GIT_ASKPASS=/bin/true CFLAGS= LDFLAGS= \
+            GNU_HOST_NAME="$(scripts/config.guess)" HOST_OS="$(uname)" HOST_ARCH="$(uname -m)"
+          export PATH="$PWD/staging_dir/host/bin:$PATH"
+          # The SDK's tar is a portable bundle (own glibc loader) that can't
+          # look up user names, so packages got empty owner names instead of
+          # root/root and a different data.tar.gz (whose size is the control's
+          # Installed-Size). The system's GNU tar gives GL.iNet's bytes. On the
+          # make command line, because rules.mk sets TAR:=tar.
+          # OpenWrt checks that every library a package needs is provided by a
+          # dependency, from files the dependencies leave when they are built;
+          # they aren't built here (the ImageBuilder has them). Only a check:
+          # it doesn't change the package.
+          sed -i '/missing dependencies for the following libraries/,/false;/ s/false;/true;/' include/package-ipkg.mk
+          grep -n -A2 'missing dependencies for the following' include/package-ipkg.mk
+          # Depends get ABI suffixes (jansson -> jansson4) from
+          # pkginfo/<dep>.version, which a dependency writes when it's built:
+          # write them from the ImageBuilder's packages instead.
+          python3 - << 'PY'
+          import glob, os, tarfile
+          st = glob.glob("staging_dir/target-*")[0] + "/pkginfo"
+          os.makedirs(st, exist_ok=True)
+          n = 0
+          for ipk in glob.glob("/w/ib/packages/*.ipk"):
+              try:
+                  outer = tarfile.open(ipk)
+                  ctl = tarfile.open(fileobj=outer.extractfile("./control.tar.gz")).extractfile("./control").read().decode()
+              except Exception:
+                  continue
+              f = dict(l.split(": ", 1) for l in ctl.splitlines() if ": " in l)
+              a, name = f.get("ABIVersion"), f.get("Package", "")
+              if a and name.endswith(a):
+                  # the control holds the formatted suffix (-0 after a name
+                  # ending in a digit), pkginfo the raw ABI version (0)
+                  open(f"{st}/{name[:-len(a)]}.version", "w").write(a.lstrip("-") + "\n")
+                  n += 1
+          print(f"ABI versions written: {n}")
+          PY
+          mkdir -p logs-closed
+          touch /tmp/marker
+          fail=0
+          for d in package/feeds/glinet/* package/feeds/mt7981/*; do
+            [ -f "$d/Makefile" ] || continue
+            n=$(basename "$d")
+            if make -C "$d" TOPDIR="$PWD" TAR=/bin/tar compile > "logs-closed/$n.txt" 2>&1; then
+              echo "closed: $n ok"
+            else
+              echo "closed: $n FAILED"; tail -n 20 "logs-closed/$n.txt"; fail=1
+            fi
+          done
+          find bin -name '*.ipk' -newer /tmp/marker | sort > /w/out/closed-ipks.txt
+          wc -l /w/out/closed-ipks.txt
+          [ "$fail" = 0 ]
+
+          # 2. the image with the ImageBuilder
+          cd /w/ib
+          xargs -a /w/out/closed-ipks.txt -I{} cp /home/glinet/work/_github/mt7981/{} packages/
+          sed -i '/check_signature/d' repositories.conf
+          tar -xzf /w/gl-files.tar.gz -C /w        # /w/files: version stamps
+          cp -a /w/closed-image/. /w/files/         # GL.iNet's image-level files
+          make info > /w/out/ib-info.txt
+          profile=$(grep -oE '^glinet_gl-mt2500:' /w/out/ib-info.txt | tr -d :)
+          # exactly the official package set: add what it has, remove defaults it hasn't
+          pk=$(cat /w/official-packages.txt)
+          defaults=$(sed -n 's/^Default Packages: //p' /w/out/ib-info.txt)
+          dev=$(awk -v p="$profile:" '$1==p{f=1;next} f&&/Packages:/{sub(/.*Packages: /,""); print; exit}' /w/out/ib-info.txt)
+          for p in $defaults $dev; do
+            case "$p" in -*) continue;; esac
+            grep -qx "$p" /w/official-packages.txt || pk="$pk -$p"
+          done
+          echo $pk | tr ' ' '\n' > /w/out/ib-packages.txt
+          make image PROFILE="$profile" PACKAGES="$(echo $pk)" FILES=/w/files BIN_DIR=/w/out/images \
+            > /w/out/ib-image.log 2>&1 || { tail -n 60 /w/out/ib-image.log; exit 1; }
+          ls -l /w/out/images
+          EOF
+          timeout 75m docker run --rm -v "$PWD/w:/w" -v "$PWD/w/sdk:/home/glinet/work/_github/mt7981" \
+            -e SOURCE_DATE_EPOCH ubuntu:20.04 bash /w/build.sh 2>&1 \
+            | tee w/out/build.log | grep --line-buffered -E "^(closed: |ABI versions|\\+ make image|.*FAILED|[0-9]+ /w/out)|ERROR" || true
+          ls w/out/images/*sysupgrade* > /dev/null
+
+      - name: Compare with the official 4.2.0
+        if: always()
+        run: |
+          cd cmp
+          touch ../w/out/removed-packages.txt
+          ours=$(ls ../w/out/images/*glinet_gl-mt2500*sysupgrade*.bin 2>/dev/null | head -1 || true)
+          S="$GITHUB_WORKSPACE/.github/scripts"
+          python3 "$S/fit-ikconfig.py" official/*/kernel kconfig-official.txt || true
+          if [ -n "$ours" ]; then
+            mkdir ours && tar -xf "$ours" -C ours
+            sudo unsquashfs -q -d our_root ours/*/root > /dev/null
+            python3 "$S/fit-ikconfig.py" ours/*/kernel kconfig-ours.txt || true
+          fi
+          sudo python3 "$S/compare-firmware.py" off_root our_root \
+            ../w/out/removed-packages.txt ../w/out/report kconfig-official.txt kconfig-ours.txt
+          if [ -d our_root ]; then
+            sudo python3 "$S/classify-diffs.py" off_root our_root ../w/out/report/files-different.txt \
+              ../w/out/report/files-different-classes.tsv >> ../w/out/report/report.md || true
+          fi
+          sudo chown -R "$(id -u)" ../w/out
+          cat ../w/out/report/report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: gl-4.2.0-assembled
+          # reports only: the image, the closed packages and their build logs
+          # contain or name GL.iNet's files
+          path: |
+            w/out/report/
+            w/out/ib-info.txt
+            w/out/ib-packages.txt
+            w/out/closed-ipks.txt

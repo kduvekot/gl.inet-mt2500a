@@ -1,0 +1,4 @@
+# Closed-looking packages that are built from public source instead
+# (verified identical with the official image); gen-closed-feed.py skips them.
+kmod-gl-sdk4-tertf
+kmod-gl-sdk4-hw-info
