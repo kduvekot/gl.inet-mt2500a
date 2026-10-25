@@ -522,8 +522,18 @@ binaries already answered the main question
 - GL.iNet's own modules (`kmwan`, `gl-mpflow`, `black_white_list`, `tertf`,
   `parental_control`, `hw-info`) are app logic without hardware access.
 
-So the only unpublished hardware knowledge is in those 4 `mtkhnat`
-functions, the next target.
+So the only unpublished hardware knowledge could be in those 4 `mtkhnat`
+functions. It isn't: their assembly diff showed one change, a removed
+warning message, and once the published SDK's toolchain compiled the
+public source the way OpenWrt does (with OpenWrt's `-fno-caller-saves`,
+and stripped like `strip-kmod.sh`), all 76 functions came out
+byte-identical to GL.iNet's 4.7.4, and the unmodified source to 4.2.0.
+**GL.iNet's hardware NAT is MediaTek's public code.**
+
+On the way, run 5 made the kernel configuration fully identical (0 of 2090
+options differ) and run 6 published the Ethernet driver sources next to the
+SDK. The matching loop itself was tried on `mtfwd` (7 of 28 functions in 12
+rounds) and then parked: it is a Wi-Fi leftover.
 
 ## Next steps
 
@@ -545,10 +555,10 @@ functions, the next target.
 - [x] Compare 16 GL.iNet versions (15 published plus 4.7.13).
 - [ ] Before upstream on the replacement: boot the Airoha profile's initramfs and check that the EN8811H answers at 13 (GL.iNet's firmware shows 5; upstream's 13 works for forum users).
 - [x] Recreation run 4: all kernel modules identical to GL.iNet's 4.2.0.
-- [ ] Recreation run 5: kernel configuration fully identical, SDK published.
+- [x] Recreation runs 5 and 6: kernel configuration fully identical, SDK and driver sources published.
 - [ ] Phase C: the same measurements on upstream OpenWrt, with a fast peer (the GMKtec, next week).
 - [x] Phase D, triage: what each closed module does (Chapter 12).
-- [ ] Phase D: match `mtkhnat`'s 4 changed functions against GL.iNet's 4.7.4 (and `mtfwd` as the first test of the loop).
+- [x] Phase D: `mtkhnat` 4.7.4 rebuilt byte-identical from public source (one warning removed).
 - [x] Find the WAN PHY variant of **each** unit separately: the two units
       have **different** chips (table below).
 
@@ -621,3 +631,5 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-25 | Obtained GL.iNet 4.7.13 (not published) by reading the replacement unit; kept private, summary in `docs/firmware-sources.md`. |
 | 2026-10-25 | Recreation run 4: every kernel module byte-identical to GL.iNet's 4.2.0; 17 kernel options left, all from feeds GL.iNet didn't have. |
 | 2026-10-25 | Phase D started: private decompilation repo with Ghidra and build-and-compare workflows. Only `mtkhnat` touches hardware (public source plus 4 changed functions); `mtfwd` and `mtqos` are Wi-Fi features. |
+| 2026-10-25 | Recreation run 5: kernel configuration identical to GL.iNet's (0 of 2090 options differ), SDK published; build time 57 minutes. |
+| 2026-10-25 | Phase D result: GL.iNet's 4.7.4 `mtkhnat` rebuilt byte-identical (76/76 functions) from MediaTek's public source minus one warning; GL.iNet's firmware holds no unpublished hardware code. |
