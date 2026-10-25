@@ -583,6 +583,48 @@ them. Both live in the private repository: the result contains GL.iNet's
 files and is never built in this public repo. Decompiling the 46 programs
 fully is not realistic; behaviour notes, and matching only where it matters.
 
+**Run 8 (GL.iNet's build path and patch commit date): 479 → 404 files.** The
+commit date fixed `SourceDateEpoch` for all packages. The rest turned out to
+have other causes, found by comparing package records and configure flags:
+
+- 101 kernel module records differ only in the kernel's vermagic hash.
+- GL.iNet built **without ccache**: programs that record their compiler,
+  such as nginx (`--with-cc=aarch64-openwrt-linux-musl-gcc`), differ when
+  ccache is on.
+- GL.iNet's **package build options** differ from OpenWrt's defaults: Samba
+  with AD DC support (that explains Samba's code differences and its extra
+  dependencies), nginx with Lua and ubus but 22 modules off, no naxsi or
+  headers-more.
+- Our own workflow had a bug: its "deselect what the official image lacks"
+  step also switched off build options such as `dnsmasq_full_ipset`, as if
+  they were packages.
+
+All four are fixed on the branch for run 9 (which waits for the owner's go),
+together with GL.iNet's version files, the LuCI languages en and zh-cn, and
+building `kmod-gl-sdk4-tertf` and `-hw-info` from their public source.
+
+**What GL.iNet's 46 compiled programs are** (behaviour notes in the private
+repository, read from imports and strings): management logic for the web
+interface, VPN, NAS, cloud and modems, none of it in the data path. The one
+hardware-related piece is `libgl-utils`, which reads the device's identity
+and capabilities from `/proc/gl-hw-info`, provided by the public
+`gl-sdk4-hw-info` module. Several are open-source projects, which a recipe
+can build from source instead of copying:
+
+| GL.iNet's file | Project, version | Source |
+|---|---|---|
+| AdGuardHome | AdGuardHome v0.107.8 | AdGuard's release binary, unchanged except OpenWrt's `sstrip` (verified: code and data identical) |
+| `sipcalc` | sipcalc 1.1.6 | release (GL.iNet's own build, not OpenWrt's package) |
+| `mkfs.exfat`, `fsck.exfat`, `libexfat.so` | relan/exfat 1.2.7 | release, with `libexfat` built as a shared library |
+| `fcgiwrap` | gnosek/fcgiwrap | 1.1.0 or git (no version in the binary) |
+| `gl_modem` | GL.iNet's `gl-modem-at` | public on GitHub (2023) |
+| `webdav_ser`, `gl_nas_sys` | lighttpd 1.4.48/1.4.49 plus GL.iNet's own modules | partly public |
+| `qcm`, `QFirehose` | Quectel QConnectManager V1.6.3.1, QFirehose V1.4 | exact versions not found in public mirrors (V1.6.2/V1.6.4, V1.2.4/V1.4.9 exist) |
+
+Rebuilding the first five from source is under way in the private
+repository (recipes in an `oss` feed, built with the SDK and compared byte for
+byte).
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
