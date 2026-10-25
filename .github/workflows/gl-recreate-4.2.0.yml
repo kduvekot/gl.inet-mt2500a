@@ -201,7 +201,10 @@ jobs:
                       "CONFIG_ALL_KMODS=y\nCONFIG_SDK=y\n"
                       # GL.iNet's kernel banner: "5.4.211 (glinet@glinet)"; the
                       # string length shifts all later read-only data.
-                      "CONFIG_KERNEL_BUILD_USER=\"glinet\"\nCONFIG_KERNEL_BUILD_DOMAIN=\"glinet\"\n")
+                      "CONFIG_KERNEL_BUILD_USER=\"glinet\"\nCONFIG_KERNEL_BUILD_DOMAIN=\"glinet\"\n"
+                      # LuCI builds translation packages only for enabled
+                      # languages; the official image has en and zh-cn ones.
+                      "CONFIG_LUCI_LANG_en=y\nCONFIG_LUCI_LANG_zh_Hans=y\n")
               # Kernel module packages from feeds GL.iNet's build didn't have
               # (run 4: the only 17 kernel options left that differ).
               for k in ("dm-raid", "usb-test", "sound-soc-core", "sound-soc-ac97",
