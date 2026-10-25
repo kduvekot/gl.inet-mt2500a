@@ -116,13 +116,20 @@ jobs:
           git config --global user.name ci
           git config --global --add safe.directory '*'
 
-          cd /work
-          git clone "$FORK" gl-infra-builder
-          cd gl-infra-builder
+          # GL.iNet's build path, as embedded in the official binaries
+          # (/home/glinet/work/_github/mt7981/{build_dir,staging_dir}): paths end
+          # up in binaries, Python bytecode and build IDs.
+          mkdir -p /home/glinet/work
+          git clone "$FORK" /home/glinet/work/_github
+          cd /home/glinet/work/_github
           git checkout "$FORK_TAG"
 
           # GL.iNet's own step: clone OpenWrt, reset to bcaabe6d, git am the patches.
+          # Commit date of the applied patches = GL.iNet's (opkg SourceDateEpoch
+          # of the OpenWrt-tree packages in the official image).
+          export GIT_COMMITTER_DATE="1678760203 +0000"
           python3 setup.py -c configs/config-mt798x-7.6.6.1.yml
+          unset GIT_COMMITTER_DATE
           cd mt7981
           git log --oneline -3
 
