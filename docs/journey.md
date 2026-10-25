@@ -657,6 +657,19 @@ More pieces settled by isolated tests and comparisons:
   no source maps. Its original sources are not public, so it can only be
   copied, like GL.iNet's own compiled programs.
 
+**Side question: why Linux 5.4.211 in every release?** All 16 versions
+(2022–2026) run the same kernel on OpenWrt 21.02. Not a hardware limit:
+upstream OpenWrt supports the MT2500 since November 2023 (first stable in
+24.10, kernel 6.6), and MediaTek's own feed has had a kernel 6.6 branch
+(`24.10`, `files-6.6`) since at least November 2024, yet its README still
+calls 21.02 "the current in-use branch". GL.iNet's whole firmware line is
+built on that MediaTek SDK, whose proprietary Wi-Fi driver (`mt_wifi`, not
+in the public feed) GL.iNet's firmware uses; GL.iNet's way out for the
+MT3000 and MT6000 is separate "op24" firmware on plain OpenWrt 24.10, none
+for the MT2500 (as far as found). The MT2500 has no Wi-Fi, so the likely
+reason is one shared firmware base for all models (our inference). To be
+explored further after the release-by-release comparison.
+
 **Where 4.2.0 stands** (5,451 regular files, 219 MB unpacked, after run #9):
 61.6 % of the files and 43 % of the bytes are byte-identical from public
 sources, plus the whole kernel layer. Run #10 targets most of the rest
@@ -690,6 +703,7 @@ AdGuardHome, `sipcalc` and the exFAT tools, which are built from source.
 - [x] Phase D: `mtkhnat` 4.7.4 rebuilt byte-identical from public source (one warning removed).
 - [x] Kernel image compared (run #8): identical apart from the GNU build IDs; no extra GL.iNet kernel patches.
 - [ ] Find out why about 300 libraries and programs still differ in the recreation (Samba, Python, busybox and others).
+- [ ] After the release-by-release comparison (4.2.0 → 4.9): why GL.iNet stayed on Linux 5.4 / OpenWrt 21.02 (MediaTek SDK, shared firmware base, op24 builds).
 - [x] Find the WAN PHY variant of **each** unit separately: the two units
       have **different** chips (table below).
 
