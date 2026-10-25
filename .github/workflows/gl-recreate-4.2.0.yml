@@ -218,7 +218,11 @@ jobs:
                       # Samba as GL.iNet built it: AD DC support (its samba4-libs
                       # depends on acl, jansson, libarchive, libopenldap,
                       # python3-cryptodome).
-                      "CONFIG_SAMBA4_SERVER_AD_DC=y\n")
+                      "CONFIG_SAMBA4_SERVER_AD_DC=y\n"
+                      # ... and the extended VFS modules (commit, dirsort, fileid,
+                      # shell_snap, virusfilter, worm in the official image), which
+                      # also changes how smbd and the libraries are linked.
+                      "CONFIG_SAMBA4_SERVER_VFSX=y\n")
               # nginx as GL.iNet built it (configure arguments in the official
               # binary): Lua and ubus, no naxsi/headers-more, 22 modules off.
               f.write("CONFIG_NGINX_LUA=y\n# CONFIG_NGINX_NAXSI is not set\n"
