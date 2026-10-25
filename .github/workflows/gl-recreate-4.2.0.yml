@@ -34,6 +34,12 @@ name: GL.iNet 4.2.0 recreation (MT2500)
 # The official image is downloaded from GL.iNet (SHA256-checked) and used
 # only inside the run (package list, comparison); it is never stored as an
 # artifact.
+#
+# With "closed", GL.iNet's closed packages and image-level files are added,
+# generated inside the run from the official image
+# (.github/scripts/gen-closed-feed.py, openwrt/gl-4.2.0-closed/), so the
+# complete image is built. Such a run publishes no image, no SDK or
+# ImageBuilder and no logs of the closed packages: only the reports.
 
 on:
   workflow_dispatch:
@@ -44,6 +50,10 @@ on:
         default: true
       publish_sdk:
         description: "Build and publish the OpenWrt SDK and ImageBuilder (takes several minutes; only needed when toolchain, kernel or packages change)"
+        type: boolean
+        default: false
+      closed:
+        description: "Complete image: add GL.iNet's closed packages, generated in the run from the official image (publishes only reports)"
         type: boolean
         default: false
 
@@ -87,6 +97,8 @@ jobs:
 
       - name: Fetch the official 4.2.0 and list its packages
         timeout-minutes: 20
+        env:
+          CLOSED: ${{ inputs.closed }}
         run: |
           sudo apt-get install -y -q squashfs-tools > /dev/null
           mkdir -p work/out work/cache/dl work/cache/ccache work/cmp
@@ -96,6 +108,22 @@ jobs:
           echo "${OFFICIAL_SHA256}  official.bin" | sha256sum -c -
           mkdir official && tar -xf official.bin -C official
           sudo unsquashfs -q -d off_root official/*/root > /dev/null
+          if [ "$CLOSED" = true ]; then
+            # GL.iNet's closed packages and image-level files, from the official
+            # image (stays inside the run)
+            C="$GITHUB_WORKSPACE/openwrt/gl-4.2.0-closed"
+            sudo python3 -I "$GITHUB_WORKSPACE/.github/scripts/gen-closed-feed.py" off_root ../closed "$C" > ../out/closed-feed.txt
+            sudo python3 -I - off_root ../closed-image "$C/image-files.txt" << 'PY'
+          import os, shutil, sys
+          root, out, lst = sys.argv[1:4]
+          for rel in open(lst).read().split():
+              s, t = os.path.join(root, rel), os.path.join(out, rel)
+              os.makedirs(os.path.dirname(t), exist_ok=True)
+              os.symlink(os.readlink(s), t) if os.path.islink(s) else shutil.copy2(s, t)
+          PY
+            sudo chown -R "$(id -u):$(id -g)" ../closed ../closed-image
+            wc -l ../out/closed-feed.txt
+          fi
           # GL.iNet's public build key (base-files installs it as
           # /etc/opkg/keys/<fingerprint>), taken from the official image at run time
           k=$(grep '^/etc/opkg/keys/' off_root/usr/lib/opkg/info/base-files.list | grep -v 2f8b0b98e08306bf | head -1)
@@ -224,10 +252,21 @@ jobs:
             t="$(dirname "$(find package -path "*/$(basename "$d")/Makefile" | head -1)")/patches"
             mkdir -p "$t" && cp "$d"*.patch "$t/" && echo "patches for $(basename "$d") -> $t"
           done
+          if [ "${CLOSED:-}" = true ]; then
+            # GL.iNet's closed packages (generated in the run), copied into the
+            # tree (src-cpy) so their Source: reads feeds/...; umask 022 as in
+            # a normal build environment (folder modes end up in the packages)
+            F=feeds.conf; [ -f "$F" ] || F=feeds.conf.default
+            printf 'src-cpy glinet /work/closed/glinet\nsrc-cpy mt7981 /work/closed/mt7981\n' >> "$F"
+            ( umask 022; ./scripts/feeds update glinet mt7981 > /dev/null )
+            ./scripts/feeds install -a > /dev/null
+          fi
           python3 - << 'PY'
           import os, re, subprocess
           official = {l.strip() for l in open("/work/official-packages.txt") if l.strip()}
           def private(p):
+              if os.environ.get("CLOSED") == "true":   # closed packages generated in the run
+                  return False
               if p in {"kmod-gl-sdk4-tertf", "kmod-gl-sdk4-hw-info"}:   # public source
                   return False
               return (p.startswith(("gl-sdk4", "gl-oui", "oui-", "kmod-gl-sdk4", "libgl"))
@@ -245,7 +284,7 @@ jobs:
               # sysconfig). ccache, when wanted, is wrapped in invisibly below.
               f.write("CONFIG_DEVEL=y\n# CONFIG_CCACHE is not set\n"
                       "CONFIG_ALL_KMODS=y\n"
-                      + ("CONFIG_SDK=y\nCONFIG_IB=y\n" if os.environ.get("PUBLISH_SDK") == "true"
+                      + ("CONFIG_SDK=y\nCONFIG_IB=y\n" if os.environ.get("PUBLISH_SDK") == "true" and os.environ.get("CLOSED") != "true"
                          else "# CONFIG_SDK is not set\n# CONFIG_IB is not set\n") +
                       # GL.iNet's kernel banner: "5.4.211 (glinet@glinet)"; the
                       # string length shifts all later read-only data.
@@ -309,13 +348,19 @@ jobs:
           print(open("/work/out/mirror.txt").read())
           PY
 
+          if [ "${CLOSED:-}" = true ]; then
+            # GL.iNet's image-level files (owned by no package): files/ overlay
+            cp -a /work/closed-image/. files/
+          fi
           cp .config /work/out/config.txt
           grep -E "^CONFIG_(DEVEL|CCACHE|ALL_KMODS)=" .config
           # Logs per package (BUILD_LOG) and a summary of failed packages are
           # saved even when the build fails.
           save_logs() {
             mkdir -p /work/out
-            [ -d logs ] && tar -czf /work/out/build-logs.tar.gz logs || true
+            # (not the closed packages' logs: they name GL.iNet's files)
+            [ -d logs ] && tar -czf /work/out/build-logs.tar.gz \
+              --exclude=logs/package/feeds/glinet --exclude=logs/package/feeds/mt7981 logs || true
             { grep -h "ERROR: " /work/out/progress.log 2>/dev/null | sort -u
               for f in $(grep -rl -E "Error [0-9]|error:" logs 2>/dev/null | head -20); do
                 echo "== $f"; grep -E -B3 "Error [0-9]|error:" "$f" | tail -12; done
@@ -351,7 +396,7 @@ jobs:
           mv bin/targets/mediatek/mt7981/openwrt-imagebuilder-*.tar.* /work/out/sdk/ || true
           # plus /init, which the full build copies in during the kernel build
           # (include/kernel-defaults.mk) and the ImageBuilder doesn't
-          if [ "${PUBLISH_SDK:-}" = true ]; then
+          if [ "${PUBLISH_SDK:-}" = true ] && [ "${CLOSED:-}" != true ]; then
             rm -rf /tmp/glf && mkdir -p /tmp/glf && cp -a files /tmp/glf/
             install -m 0755 target/linux/generic/other-files/init /tmp/glf/files/init
             tar -C /tmp/glf -czf /work/out/sdk/gl-files.tar.gz files
@@ -379,13 +424,14 @@ jobs:
         env:
           USE_CCACHE: ${{ inputs.ccache }}
           PUBLISH_SDK: ${{ inputs.publish_sdk }}
+          CLOSED: ${{ inputs.closed }}
         run: |
           # Full output to build.log; package-level progress and errors to the
           # live log (and progress.log). The time limit leaves room for the
           # steps that save cache, report and logs.
           set -o pipefail
           timeout 320m docker run --rm -v "$PWD/work:/work" \
-            -e FORK -e FORK_TAG -e MTK_FEED_OLD -e MTK_FEED_MIRROR -e SOURCE_DATE_EPOCH -e USE_CCACHE -e PUBLISH_SDK \
+            -e FORK -e FORK_TAG -e MTK_FEED_OLD -e MTK_FEED_MIRROR -e SOURCE_DATE_EPOCH -e USE_CCACHE -e PUBLISH_SDK -e CLOSED \
             ubuntu:20.04 bash /work/build.sh 2>&1 | tee work/out/build.log \
             | grep --line-buffered -E "^ make\[[0-9]+\] |ERROR: |ccache wrapper|^\+ make |Collected errors" \
             | tee work/out/progress.log
@@ -423,7 +469,7 @@ jobs:
       # It contains only open-source code: OpenWrt, the kernel and
       # GL.iNet's public patches.
       - name: Publish the SDK
-        if: success() && inputs.publish_sdk
+        if: success() && inputs.publish_sdk && !inputs.closed
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -433,6 +479,11 @@ jobs:
             --title "GL.iNet 4.2.0 recreation: OpenWrt SDK" --prerelease \
             --notes "OpenWrt SDK from the GL.iNet 4.2.0 recreation (OpenWrt 21.02 at bcaabe6d plus GL.iNet's public patches; CONFIG_ALL_KMODS). For building kernel modules like GL.iNet's. Updated by every successful run."
           gh release upload "$tag" work/out/sdk/* --clobber
+
+      # A complete image contains GL.iNet's closed files: never published.
+      - name: Remove the complete image (closed run)
+        if: always() && inputs.closed
+        run: rm -rf work/out/images work/out/sdk
 
       - uses: actions/upload-artifact@v7
         if: always()
