@@ -1,0 +1,135 @@
+name: SDK package test
+
+# Build a few OpenWrt packages with the recreation's SDK (GL.iNet's toolchain,
+# no ccache, at GL.iNet's build path, feeds at the recreation's revisions,
+# GL.iNet's public feeds first) and given build options, then compare every
+# file of the built packages, and their control fields, with GL.iNet's
+# official 4.2.0 image. Minutes instead of a full build.
+#
+# The official image is downloaded from GL.iNet (SHA256-checked) and used only
+# inside the run; only the report and build logs are kept (artifact), never
+# GL.iNet's files.
+
+on:
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: "Packages to build (space separated)"
+        default: "nginx-ssl dnsmasq-full"
+      config:
+        description: "Extra .config lines, separated by ';'"
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  SDK_REPO: ${{ github.repository }}
+  SDK_TAG: gl-4.2.0-sdk
+  OFFICIAL_URL: https://fw.gl-inet.com/firmware/mt2500/release/openwrt-mt2500-4.2.0-0314-1678763050.bin
+  OFFICIAL_SHA256: 3c13b26fbfe9fe1710b42f90c80a47fe000dd98d899fec2d0ed3b8053ac69348
+
+jobs:
+  pkg:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v7
+      - name: SDK and official image
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$SDK_TAG" -R "$SDK_REPO" -p 'openwrt-sdk-*' -D dl
+          mkdir sdk && tar -xf dl/openwrt-sdk-* -C sdk --strip-components=1
+          sudo apt-get install -y -q squashfs-tools > /dev/null
+          curl -fsSL --retry 5 -o official.bin "$OFFICIAL_URL"
+          echo "${OFFICIAL_SHA256}  official.bin" | sha256sum -c -
+          mkdir o && tar -xf official.bin -C o && sudo unsquashfs -q -d off_root o/*/root > /dev/null
+      - name: Build in Ubuntu 20.04
+        env:
+          PKGS: ${{ inputs.packages }}
+          CFG: ${{ inputs.config }}
+        run: |
+          cat > sdk/build.sh << 'SH'
+          set -x
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -q && apt-get install -y -q build-essential gawk gettext git libncurses5-dev \
+            python3 python3-distutils rsync unzip wget curl file zlib1g-dev ca-certificates xz-utils zstd \
+            swig libssl-dev cmake > /dev/null
+          git config --global --add safe.directory '*'
+          cd /home/glinet/work/_github/mt7981
+          printf '%s\n' \
+            'src-git base https://github.com/openwrt/openwrt.git^bcaabe6d' \
+            'src-git gl_feed_common https://github.com/gl-inet/gl-feeds.git^16d4e89' \
+            'src-git gl_feed_21_02 https://github.com/gl-inet/gl-feeds.git^581563a' \
+            'src-git-full packages https://git.openwrt.org/feed/packages.git^e86c4376d' \
+            'src-git-full luci https://git.openwrt.org/project/luci.git^63bfee6c8d' \
+            'src-git-full routing https://git.openwrt.org/feed/routing.git^25e7648' \
+            'src-git-full telephony https://git.openwrt.org/feed/telephony.git^920fbc5' \
+            'src-git mtk_openwrt_feed https://github.com/gl-inet/mtk-openwrt-feeds.git^df3fc792' \
+            > feeds.conf
+          ./scripts/feeds update -a > /dev/null
+          ./scripts/feeds install -a > /dev/null
+          echo "$CFG" | tr ';' '\n' | sed 's/^ *//' >> .config
+          for p in $PKGS; do echo "CONFIG_PACKAGE_$p=m" >> .config; done
+          make defconfig > /dev/null
+          grep -E "$(echo $PKGS | tr ' ' '|')" .config | head -40 > /home/glinet/work/_github/mt7981/config-used.txt
+          # build by source package: dnsmasq-full comes from package/.../dnsmasq
+          for p in $PKGS; do
+            src=$(awk -v p="$p" '/^Source-Makefile:/{m=$2} $0=="Package: "p{print m; exit}' tmp/.packageinfo)
+            dir=$(basename "$(dirname "$src")")
+            echo "$p -> $src ($dir)"
+            echo "=== $(date -u +%H:%M) building $p" >&2
+            make package/$dir/compile -j"$(nproc)" > /home/glinet/work/_github/mt7981/build-$p.log 2>&1 || make package/$dir/compile -j1 V=s > /home/glinet/work/_github/mt7981/build-$p.log 2>&1
+            rc=$?
+            echo "=== $(date -u +%H:%M) $p: exit $rc" >&2
+          done
+          find bin/packages -name '*.ipk' > /home/glinet/work/_github/mt7981/ipks.txt
+          SH
+          # GL.iNet's build path (embedded in binaries and build IDs)
+          timeout 300m docker run --rm -v "$PWD/sdk:/home/glinet/work/_github/mt7981" -e PKGS="$PKGS" -e CFG="$CFG" ubuntu:20.04 bash /home/glinet/work/_github/mt7981/build.sh 2>&1 | grep -E "^(=== |\\+ echo|[a-z0-9_-]+: exit|[a-z0-9_-]+ ->)" || true
+      - name: Compare with GL.iNet's files
+        if: always()
+        env:
+          PKGS: ${{ inputs.packages }}
+        run: |
+          mkdir -p results/sdk-package
+          python3 - << 'PY'
+          import os, subprocess, tarfile, io, hashlib, glob
+          off = "off_root"
+          out = ["# SDK package test", "", "Packages: " + os.environ["PKGS"], ""]
+          ipks = open("sdk/ipks.txt").read().split() if os.path.exists("sdk/ipks.txt") else []
+          if not ipks: out.append("**No packages built** (see build-*.log)")
+          for ipk in sorted(ipks):
+              ipk = os.path.join("sdk", ipk)
+              name = os.path.basename(ipk).split("_")[0]
+              if not os.path.exists(f"{off}/usr/lib/opkg/info/{name}.control"):
+                  continue   # dependency not in the official image
+              outer = tarfile.open(ipk)
+              data = tarfile.open(fileobj=outer.extractfile("./data.tar.gz"))
+              ctrl = tarfile.open(fileobj=outer.extractfile("./control.tar.gz")).extractfile("./control").read().decode()
+              offc = open(f"{off}/usr/lib/opkg/info/{name}.control").read()
+              same = diff = 0; dl = []
+              for m in data.getmembers():
+                  if not m.isfile(): continue
+                  p = m.name.lstrip("./")
+                  a = data.extractfile(m).read()
+                  try: b = open(os.path.join(off, p), "rb").read()
+                  except OSError: dl.append(f"{p} (not in official)"); continue
+                  if a == b: same += 1
+                  else: diff += 1; dl.append(f"{p} ({len(b)} official vs {len(a)} built)")
+              fields = [k for k in ("Version", "Depends", "Installed-Size")
+                        if [l for l in ctrl.splitlines() if l.startswith(k + ":")] != [l for l in offc.splitlines() if l.startswith(k + ":")]]
+              out += [f"## {name}: {same} files identical, {diff} different" + (f"; control differs in {', '.join(fields)}" if fields else "; control fields identical")]
+              out += [f"- {x}" for x in dl[:15]]
+              out.append("")
+          open("results/sdk-package/report.md", "w").write("\n".join(out) + "\n")
+          print("\n".join(out))
+          PY
+          cp sdk/config-used.txt sdk/build-*.log results/sdk-package/ 2>/dev/null || true
+          cat results/sdk-package/report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: sdk-package-test
+          path: results/sdk-package/

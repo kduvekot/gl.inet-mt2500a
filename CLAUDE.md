@@ -77,7 +77,7 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   compared, GL.iNet 4.2.0 recreated (kernel config and all modules
   identical; SDK published as release `gl-4.2.0-sdk`), phase D (closed
   modules: only `mtkhnat` touches hardware and it is public code), kernel
-  image identical apart from its build IDs (run 7). The
+  image identical apart from its build IDs (run #8). The
   decompiled code lives in a private repo on the owner's account (name in
   Claude's memory), never in this one.
 - **Next:** the ~300 differing files in the recreation (optional); phase C (upstream OpenWrt on
