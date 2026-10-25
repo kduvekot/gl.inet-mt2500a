@@ -705,6 +705,35 @@ And anything that only builds open source belongs in the public repository,
 where GitHub Actions minutes are free; the private repository (2,000
 minutes a month per account) is only for what contains GL.iNet's files.
 
+**Built as a normal user.** GL.iNet's `libdevmapper.so` is the only
+read-only program file in the official image (installed `0555` by lvm2) and
+the only one left unstripped, with debug info. OpenWrt's strip step doesn't
+make files writable first: as a normal user it fails on that file, as root
+(our container) it succeeds. So GL.iNet built as a normal user, which fits
+their `/home/glinet` build path; the recreation now installs its tools as
+root and then builds as user `glinet`.
+
+**What "validated" means for 4.2.0.** The base counts as validated, and the
+release-by-release comparison can start, when a run without ccache shows:
+
+1. every public file byte-identical, or its difference explained and
+   recorded below;
+2. the private full build reproducing GL.iNet's closed packages and image
+   files, so the complete image matches;
+3. the remaining differences documented as known and accepted.
+
+Known, accepted differences so far (cosmetic or not reproducible from
+public sources):
+
+| Difference | Why |
+|---|---|
+| kernel vermagic hash (kernel version text, kernel modules' `Depends`) | most likely kernel options from GL.iNet's private kernel module recipes; not searchable |
+| two GNU build IDs in the kernel image | hash over build details of never-loaded parts |
+| order of `python3`'s `Depends`, a few bytes of `Installed-Size` | GNU make 4.2 doesn't sort file lists; size rounding |
+| Python bytecode (frozenset order) | needs OpenWrt's own host Python to find the seed; later optimization |
+| GL.iNet's web interface and own programs | generated or closed; taken from the official image in the private recipe |
+| `fcgiwrap`, `gl_modem` | GL.iNet's patch / internal version, not public |
+
 **Where 4.2.0 stands** (5,451 regular files, 219 MB unpacked, after run #9):
 61.6 % of the files and 43 % of the bytes are byte-identical from public
 sources, plus the whole kernel layer. Run #10 targets most of the rest
@@ -816,3 +845,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-25 | Phase D result: GL.iNet's 4.7.4 `mtkhnat` rebuilt byte-identical (76/76 functions) from MediaTek's public source minus one warning; GL.iNet's firmware holds no unpublished hardware code. |
 | 2026-10-25 | Recreation run #8 (GL.iNet's build user, host and time): kernel image byte-identical to GL.iNet's 4.2.0 apart from the two GNU build IDs; device tree identical. The whole 4.2.0 hardware layer is reproduced from public sources. |
 | 2026-10-25 | Recreation run #10: public part 86.9 % of files identical; Samba records match (AD DC), VFSX found missing; build-ID differences traced to ccache (`libsasl2`, `getdns` identical without it). Workflow: invisible ccache, per-package logs, live progress; SDK package test moved to the public repo. |
+| 2026-10-25 | GL.iNet built as a normal user (the read-only `libdevmapper` stays unstripped); recreation builds as `glinet` from now on. Validation criteria for the 4.2.0 base written down; `kmod-gl-sdk4-tertf`/`-hw-info` confirmed identical from public source. |
