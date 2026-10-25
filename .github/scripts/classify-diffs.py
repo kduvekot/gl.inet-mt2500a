@@ -4,6 +4,7 @@
     classify.py <off_root> <our_root> <list> <out.tsv>
 
 Per file: elf-buildid-only (identical after dropping build-id notes),
+elf-sstripped (no section table to compare),
 elf-code (.text differs), elf-data (code same, other sections differ),
 pyc-mtime-only, text (shows first differing line), binary, size.
 Prints a Markdown section: counts per class and per package (via opkg
@@ -36,6 +37,9 @@ def classify(a, b):
     A, B = open(a, "rb").read(), open(b, "rb").read()
     if A[:4] == b"\x7fELF" and B[:4] == b"\x7fELF":
         sa, sb = sections(a), sections(b)
+        if not sa or not sb:
+            # sstripped (no section table): nothing to tell code from metadata
+            return "elf-sstripped", "size" if len(A) != len(B) else "same-size"
         diff = [n for n in set(sa) | set(sb)
                 if n not in sa or n not in sb or sec_bytes(a, sa[n]) != sec_bytes(b, sb[n])]
         diff = [n for n in diff if n not in (".shstrtab",)]

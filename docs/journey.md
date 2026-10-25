@@ -715,7 +715,8 @@ root and then builds as user `glinet`.
 
 **Run #11 (VFSX, invisible ccache): 89.7 % of the public part identical**
 (72.6 % of all files). The ccache wrapper works: files differing only in
-their build ID went from 86 to 4. What remains is mostly Samba, and Samba
+their build ID went from 82 to none (four more carried that label by
+mistake, see run #12). What remains is mostly Samba, and Samba
 turns out not to be reproducible by nature: its build system (waf) collects
 libraries in Python sets, whose order depends on Python's random hash seed,
 which waf doesn't fix. 243 of the 252 differing Samba files differ only in
@@ -741,9 +742,34 @@ The total went from 419 to 498 differing files, all of it Samba reshuffling
 its library order again (#12 still ran without the fixed hash seed); outside
 Samba the count went from 165 to 161. What is left outside Samba: 15
 start-up and network scripts that GL.iNet overwrites (they come from the
-private recipe), four programs differing only in their build ID (`busybox`,
-`wg`, `ip-full`, `openvpn`, from ccache), package records carrying the
-vermagic hash, and Python bytecode. The cache helped less than it could: the
+private recipe), package records carrying the vermagic hash, Python
+bytecode, and four programs.
+
+Those four (`busybox`, `wg`, `ip-full`, `openvpn`) had been labelled
+"build ID only" since run #8, and blamed on ccache. Both were wrong: the
+binaries are sstripped, so the comparison found no section table and an
+empty list of differing sections passed as "build ID only" (fixed in
+`classify-diffs.py`), and an SDK build without ccache differs the same way.
+Our runs #11 and #12 produce them byte-identical, so our build is
+repeatable; the differences from GL.iNet's are real:
+
+- `busybox`: GL.iNet's has five more applets (`addgroup`, `adduser`,
+  `chpasswd`, `delgroup`, `deluser`), exactly the seven options in GL.iNet's
+  own profiles `glinet_nas.yml` and `glinet_depends.yml`, though not in the
+  public MT2500 profile. Added to the recreation.
+- `openvpn`: its configure records the build host's `ifconfig`; GL.iNet's
+  binary says `/usr/sbin/ifconfig` (net-tools installed), ours plain
+  `ifconfig`. net-tools added to the build container.
+- `wg`: embeds `git describe` of the OpenWrt tree: GL.iNet's
+  `21.02.3-135-gb77ee244f5`, ours `…-g20ebd753f9-dirty`. That hash is the
+  tree's top commit after the builder applies GL.iNet's patches with
+  `git am`, so it depends on their committer name, e-mail and timestamps,
+  which aren't public. (`DISTRIB_REVISION` matches because OpenWrt prints
+  the upstream base commit there, not the top.) Accepted.
+- `ip-full`: same code and strings; only the order of the dynamic symbol
+  names (`*_link_util`, looked up at run time) differs, which shifts string
+  addresses. GL.iNet's own builds keep it identical from 4.2.0 to 4.2.3, so
+  something in their build environment fixes that order. Not found yet. The cache helped less than it could: the
 toolchain is rebuilt every run, so ccache saw a "new" compiler each time;
 it now compares the compiler by content.
 
@@ -777,6 +803,7 @@ public sources):
 | GL.iNet's web interface and own programs | generated or closed; taken from the official image in the private recipe |
 | `fcgiwrap`, `gl_modem` | GL.iNet's patch / internal version, not public |
 | Samba: library and object order in about 250 files (content identical) | waf orders libraries via Python sets with a random hash seed; GL.iNet's own 4.2.0 and 4.7.4 builds of the same Samba differ in 140 of 213 libraries |
+| `wg` version string (`git describe` hash) | hash of GL.iNet's tree after their `git am`, depends on their committer identity and timestamps |
 
 **Where 4.2.0 stands** (5,451 regular files, 219 MB unpacked, after run #9):
 61.6 % of the files and 43 % of the bytes are byte-identical from public
@@ -890,5 +917,5 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-25 | Recreation run #8 (GL.iNet's build user, host and time): kernel image byte-identical to GL.iNet's 4.2.0 apart from the two GNU build IDs; device tree identical. The whole 4.2.0 hardware layer is reproduced from public sources. |
 | 2026-10-25 | Recreation run #10: public part 86.9 % of files identical; Samba records match (AD DC), VFSX found missing; build-ID differences traced to ccache (`libsasl2`, `getdns` identical without it). Workflow: invisible ccache, per-package logs, live progress; SDK package test moved to the public repo. |
 | 2026-10-25 | GL.iNet built as a normal user (the read-only `libdevmapper` stays unstripped); recreation builds as `glinet` from now on. Validation criteria for the 4.2.0 base written down; `kmod-gl-sdk4-tertf`/`-hw-info` confirmed identical from public source. |
-| 2026-10-25 | Recreation run #11: public part 89.7 % identical; ccache wrapper works (build-ID differences 86 → 4); Samba shown to be non-reproducible (random library order, also between GL.iNet's own releases). Version-by-version comparison of all 15 releases done. |
-| 2026-10-25 | Recreation run #12: built as a normal user, `libdevmapper` now identical; outside Samba 161 differing files left (private-recipe scripts, four build-ID-only programs, vermagic records, bytecode). |
+| 2026-10-25 | Recreation run #11: public part 89.7 % identical; ccache wrapper works (build-ID-only differences 82 → 0); Samba shown to be non-reproducible (random library order, also between GL.iNet's own releases). Version-by-version comparison of all 15 releases done. |
+| 2026-10-25 | Recreation run #12: built as a normal user, `libdevmapper` now identical; outside Samba 161 differing files left. The four "build-ID-only" programs were mislabelled: real differences, found as BusyBox options, net-tools, `git describe` hash (accepted) and `ip-full` symbol order (open). |
