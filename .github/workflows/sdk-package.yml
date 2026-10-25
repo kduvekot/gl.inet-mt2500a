@@ -50,6 +50,7 @@ jobs:
           PKGS: ${{ inputs.packages }}
           CFG: ${{ inputs.config }}
         run: |
+          cp -r openwrt/gl-4.2.0-patches sdk/
           cat > sdk/build.sh << 'SH'
           set -x
           export DEBIAN_FRONTEND=noninteractive
@@ -70,6 +71,10 @@ jobs:
             > feeds.conf
           ./scripts/feeds update -a > /dev/null
           ./scripts/feeds install -a > /dev/null
+          for d in /home/glinet/work/_github/mt7981/gl-4.2.0-patches/*/; do
+            t="$(dirname "$(find feeds/base/package -path "*/$(basename "$d")/Makefile" | head -1)")/patches"
+            mkdir -p "$t" && cp "$d"*.patch "$t/" && echo "patches for $(basename "$d") -> $t"
+          done
           echo "$CFG" | tr ';' '\n' | sed 's/^ *//' >> .config
           for p in $PKGS; do echo "CONFIG_PACKAGE_$p=m" >> .config; done
           make defconfig > /dev/null

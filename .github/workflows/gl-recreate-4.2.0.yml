@@ -110,6 +110,7 @@ jobs:
 
       - name: Write build script
         run: |
+          cp -r openwrt/gl-4.2.0-patches work/
           cat > work/build.sh << 'EOF'
           #!/usr/bin/env bash
           # Runs inside ubuntu:20.04 (OpenWrt 21.02 predates newer hosts).
@@ -208,6 +209,12 @@ jobs:
           # selectable, select what the official image has (except GL.iNet's
           # closed/private packages), then deselect whatever we have extra.
           ./scripts/feeds install -a > /dev/null
+          # Our own patches for build-machine effects GL.iNet's build had
+          # (openwrt/gl-4.2.0-patches/<package>/), e.g. iproute2's directory order.
+          for d in /work/gl-4.2.0-patches/*/; do
+            t="$(dirname "$(find package -path "*/$(basename "$d")/Makefile" | head -1)")/patches"
+            mkdir -p "$t" && cp "$d"*.patch "$t/" && echo "patches for $(basename "$d") -> $t"
+          done
           python3 - << 'PY'
           import os, re, subprocess
           official = {l.strip() for l in open("/work/official-packages.txt") if l.strip()}
