@@ -131,6 +131,13 @@ jobs:
             mkdir -p /home/glinet/work && chown -R glinet: /home/glinet /work
             exec runuser -u glinet -- bash "$0"
           fi
+          # Samba's build system (waf) orders libraries via Python sets, so the
+          # link order follows Python's hash seed, random by default (GL.iNet's
+          # 4.2.0 and 4.7.4 builds of the same Samba differ in 140 of 213
+          # libraries). A fixed seed makes our own builds repeatable; GL.iNet's
+          # random order itself can't be reproduced. (OpenWrt's .pyc
+          # compilation sets its own seed and is unaffected.)
+          export PYTHONHASHSEED=0
           git config --global user.email ci@invalid.invalid
           git config --global user.name ci
           git config --global --add safe.directory '*'
@@ -294,7 +301,9 @@ jobs:
             # becomes a wrapper with its own name that runs ccache on the real
             # binary (.<name>.real), so recorded compiler names stay as GL.iNet's.
             # A separate cache, filled only at GL.iNet's build path.
-            export CCACHE_DIR=/work/cache/ccache-glpath CCACHE_MAXSIZE=5G
+            # The toolchain is rebuilt every run, so its mtime changes; compare
+            # the compiler by content instead, or every run misses the cache.
+            export CCACHE_DIR=/work/cache/ccache-glpath CCACHE_MAXSIZE=5G CCACHE_COMPILERCHECK=content
             rm -rf /work/cache/ccache
             make -j"$(nproc)" BUILD_LOG=1 tools/install toolchain/install
             for c in staging_dir/toolchain-*/bin/aarch64-openwrt-linux-musl-{gcc,g++,c++,cpp} \
