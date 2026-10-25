@@ -149,8 +149,9 @@ jobs:
           python3 - << 'PY'
           import yaml
           private_feeds = {"glinet", "mt7981"}
+          # kmod-gl-sdk4-tertf and -hw-info are public (gl_feed_common at the
+          # recipe's commit), so they are built from source.
           private_pkgs = {"fwdd", "kmod-mtfwd", "kmod-mtqos", "mtk-base-files",
-                          "kmod-gl-sdk4-tertf", "kmod-gl-sdk4-hw-info",
                           "kmod-gl-sdk4-parental-control"}
           def private(p):
               name = p.split(":")[0]
@@ -184,6 +185,8 @@ jobs:
           import re, subprocess
           official = {l.strip() for l in open("/work/official-packages.txt") if l.strip()}
           def private(p):
+              if p in {"kmod-gl-sdk4-tertf", "kmod-gl-sdk4-hw-info"}:   # public source
+                  return False
               return (p.startswith(("gl-sdk4", "gl-oui", "oui-", "kmod-gl-sdk4", "libgl"))
                       or p in {"fwdd", "kmod-mtfwd", "kmod-mtqos", "mtk-base-files", "gl-line-graph"})
           wanted = sorted(p for p in official if not private(p))
@@ -240,6 +243,10 @@ jobs:
           # folder as compiled (all patches applied) lets out-of-tree builds
           # of mtk_hnat find "../mtk_eth_soc.h" etc.
           K=$(ls -d build_dir/target-*/linux-*/linux-5.4.* | head -1)
+          # The kernel package's vermagic hash is md5 over the =y/=m lines of
+          # .config.set (before oldconfig); kept to find why it differs.
+          cp "$K/.config.set" /work/out/kernel-config.set || true
+          cp "$K/.vermagic" /work/out/kernel-vermagic.txt || true
           tar -C "$K" -czf /work/out/sdk/mtk-eth-driver-src.tar.gz \
             --exclude='*.o' --exclude='*.ko' --exclude='*.cmd' --exclude='*.mod*' \
             drivers/net/ethernet/mediatek
@@ -306,6 +313,8 @@ jobs:
             work/out/report/
             work/out/images/
             work/out/config.txt
+            work/out/kernel-config.set
+            work/out/kernel-vermagic.txt
             work/out/mirror.txt
             work/out/removed-packages.txt
             work/out/build.log
