@@ -1,0 +1,92 @@
+name: GL.iNet versions, step by step (MT2500)
+
+# Downloads every published GL.iNet MT2500 firmware (list and SHA256 from
+# GL.iNet's own firmware API), unpacks them and compares each version with
+# the previous one a level deeper than checksums (.github/scripts/
+# version-diff.py): new, gone, identical, metadata-only (same code/data/
+# content) and really changed files, per package, plus kernel code, kernel
+# configuration and device tree.
+#
+# Only the reports are kept (artifact and run summary); GL.iNet's files are
+# used inside the run only.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  versions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download and unpack all published firmwares
+        run: |
+          sudo apt-get install -y -q squashfs-tools > /dev/null
+          mkdir -p fw roots kernels reports
+          curl -fsSL --retry 5 "https://firmware-api.gl-inet.com/cloud-api/model/info?model=mt2500" -o api.json
+          python3 - << 'PY' > list.tsv
+          import json, re
+          d = json.load(open("api.json"))
+          key = lambda v: [int(x) if x.isdigit() else x for x in re.split(r"[._-]", v)]
+          rows = []
+          for i in d["info"]:
+              for f in i["download"]:
+                  rows.append((i["version"], f["link"], f["sha256"]))
+          for v, link, sha in sorted(rows, key=lambda r: key(r[0])):
+              print(f"{v}\t{link}\t{sha}")
+          PY
+          cat list.tsv | cut -f1 | tr '\n' ' '; echo
+          while IFS=$'\t' read -r v link sha; do
+            curl -fsSL --connect-timeout 30 --max-time 900 --retry 5 --retry-all-errors -o "fw/$v.bin" "$link"
+            echo "$sha  fw/$v.bin" | sha256sum -c - || { echo "checksum mismatch: $v"; rm -f "fw/$v.bin"; continue; }
+            mkdir -p "t/$v" && tar -xf "fw/$v.bin" -C "t/$v"
+            sudo unsquashfs -q -d "roots/$v" t/$v/*/root > /dev/null
+            cp t/$v/*/kernel "kernels/$v.itb"
+            rm -rf "t/$v" "fw/$v.bin"
+            echo "unpacked $v"
+          done < list.tsv
+          df -h . | tail -1
+
+      - name: Compare each version with the previous one
+        run: |
+          prev=""
+          for v in $(cut -f1 list.tsv); do
+            [ -d "roots/$v" ] || continue
+            if [ -n "$prev" ]; then
+              sudo python3 .github/scripts/version-diff.py "roots/$prev" "roots/$v" \
+                "kernels/$prev.itb" "kernels/$v.itb" "$prev → $v" \
+                "reports/$prev-to-$v.md" "reports/$prev-to-$v.tsv" | head -3
+            fi
+            prev=$v
+          done
+          sudo chown -R "$(id -u)" reports
+          {
+            echo "# GL.iNet MT2500 firmware, version by version"; echo
+            echo "| Step | identical | meta-only | changed | new | gone | kernel code | kernel config | device tree |"
+            echo "|---|---|---|---|---|---|---|---|---|"
+            for f in $(ls reports/*.md | sort -V); do
+              python3 - "$f" << 'PY'
+          import re, sys
+          t = open(sys.argv[1]).read()
+          step = t.splitlines()[0][3:]
+          n = lambda k: (re.search(rf"{k} \*\*(\d+)\*\*", t) or [0, "?"])[1]
+          kc = "same" if "Kernel code: **same**" in t else "changed"
+          cfg = re.search(r"kernel config: ([^;(]+)", t).group(1).strip()
+          dt = "same" if "device tree: same" in t else "changed"
+          print(f"| {step} | {n('identical')} | {n('meta-only')} | {n('changed')} | {n('new')} | {n('gone')} | {kc} | {cfg} | {dt} |")
+          PY
+            done
+            echo
+            for f in $(ls reports/*.md | sort -V); do cat "$f"; echo; done
+          } > reports/summary.md
+          cat reports/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: gl-versions-report
+          path: reports/
