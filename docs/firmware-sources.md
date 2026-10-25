@@ -94,7 +94,7 @@ Checked 2026-10-24/25 by unpacking the firmware images and by recreating
 ### Rebuilding it ourselves
 
 The workflow `gl-recreate-4.2.0.yml` rebuilds 4.2.0 from these public
-sources and compares it with GL.iNet's image. State after six runs
+sources and compares it with GL.iNet's image. State after seven runs
 (2026-10-25):
 
 | | Result |
@@ -102,7 +102,8 @@ sources and compares it with GL.iNet's image. State after six runs
 | OpenWrt version string | identical (`r15812+878-46b6ee7ffc`) |
 | Kernel configuration | identical (0 of 2090 options differ) |
 | Kernel modules | all byte-identical |
-| Kernel image | not compared yet (package checksum differs) |
+| Kernel image | identical apart from the two GNU build IDs (needs GL.iNet's build user/host `glinet` and time `SOURCE_DATE_EPOCH=1678760204`) |
+| Device tree | identical |
 | Packages | 363 of 466 (GL.iNet's closed and private packages can't be built) |
 | Other files | about 300 libraries and programs differ, not investigated yet |
 

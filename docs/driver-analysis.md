@@ -122,12 +122,17 @@ the hardware NAT would be missing from their statistics (our inference).
 modules (up to 4.7.4) contain no unpublished hardware code. Its hardware
 NAT and QoS driver is MediaTek's public `mtk_hnat` code; everything closed
 is either a Wi-Fi feature (irrelevant on the MT2500) or GL.iNet's
-application logic. Not yet checked byte for byte: the kernel image itself,
-which holds the built-in drivers (Ethernet, GPY211 PHY, eMMC). Its
-configuration is identical to GL.iNet's, but its package checksum still
-differs, and `parental_control` needs two functions that only GL.iNet's
-patched kernel exports, so GL.iNet may carry kernel patches beyond the
-public recipe (about filtering, not hardware, as far as we can tell). What
+application logic. **The kernel image is public code too:** with GL.iNet's
+build user, host and time (`glinet@glinet`, Tue Mar 14 02:16:44 2023), our
+4.2.0 kernel image is byte-identical to GL.iNet's except for its two
+20-byte GNU build IDs (hashes the linker computes over the whole ELF,
+including build paths in parts that are never loaded). So the built-in
+drivers (Ethernet, SGMII, GPY211 PHY, eMMC) are identical as well, and the
+device tree is identical. The two functions `parental_control` needs from
+the kernel (`gl_parental_control_handle`, `athrs_fast_nat_recv`) are
+exported by our build too: they come from a patch in the public recipe.
+**GL.iNet's 4.2.0 hardware layer is fully reproduced from public
+sources.** What
 upstream OpenWrt lacks (hardware QoS, tunnel offload; see above) is
 therefore a matter of porting MediaTek's public SDK features to mainline,
 not of secret code. How we checked: the recreation's toolchain (published
@@ -249,7 +254,6 @@ change between 4.6.2 and 4.9.0_beta3.
   upstream (the PCS power cycle on a speed change is our best guess)?
 - Does 52 MHz work reliably on upstream, given the card supports it? Why
   did GL.iNet lower it in 4.7.0?
-- Is GL.iNet's kernel image (with the built-in drivers) identical to ours, apart from build timestamps? Which kernel patches provide `gl_parental_control_handle` and `athrs_fast_nat_recv`?
 - Does `mtkhnat` change after 4.7.4 (4.7.13, 4.8.2, 4.9.0)? The files' hashes say it doesn't after 4.6.2.
 - Does mainline `mxl-gpy` from OpenWrt main (kernel 6.18) fix the WAN link on
   the old unit (phase C)?

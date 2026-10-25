@@ -535,6 +535,17 @@ options differ) and run 6 published the Ethernet driver sources next to the
 SDK. The matching loop itself was tried on `mtfwd` (7 of 28 functions in 12
 rounds) and then parked: it is a Wi-Fi leftover.
 
+**The kernel image as well.** That left the kernel image, with the built-in
+drivers. Our run 6 image had exactly GL.iNet's size and differed in 8551 of
+10.5 million bytes, all for one reason: the kernel banner said
+`root@<container>` instead of `glinet@glinet`, 4 characters longer, which
+moved all later read-only data by 16 bytes and with it every instruction
+pointing there. Run 7 used GL.iNet's build user, host and time (from the
+official banner): 40 bytes left, the two GNU build IDs, which hash build
+paths in parts of the kernel that are never loaded. The device tree is
+identical too. **GL.iNet's 4.2.0 hardware layer (kernel, built-in drivers,
+modules, device tree) is reproduced byte for byte from public sources.**
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -559,7 +570,7 @@ rounds) and then parked: it is a Wi-Fi leftover.
 - [ ] Phase C: the same measurements on upstream OpenWrt, with a fast peer (the GMKtec, next week).
 - [x] Phase D, triage: what each closed module does (Chapter 12).
 - [x] Phase D: `mtkhnat` 4.7.4 rebuilt byte-identical from public source (one warning removed).
-- [ ] Compare GL.iNet's kernel image with ours byte for byte (ignoring build timestamps): are the built-in drivers identical, and does GL.iNet carry extra kernel patches (`parental_control` needs `gl_parental_control_handle` and `athrs_fast_nat_recv`)?
+- [x] Kernel image compared (run 7): identical apart from the GNU build IDs; no extra GL.iNet kernel patches.
 - [ ] Find out why about 300 libraries and programs still differ in the recreation (Samba, Python, busybox and others).
 - [x] Find the WAN PHY variant of **each** unit separately: the two units
       have **different** chips (table below).
@@ -635,3 +646,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-25 | Phase D started: private decompilation repo with Ghidra and build-and-compare workflows. Only `mtkhnat` touches hardware (public source plus 4 changed functions); `mtfwd` and `mtqos` are Wi-Fi features. |
 | 2026-10-25 | Recreation run 5: kernel configuration identical to GL.iNet's (0 of 2090 options differ), SDK published; build time 57 minutes. |
 | 2026-10-25 | Phase D result: GL.iNet's 4.7.4 `mtkhnat` rebuilt byte-identical (76/76 functions) from MediaTek's public source minus one warning; GL.iNet's firmware holds no unpublished hardware code. |
+| 2026-10-25 | Recreation run 7 (GL.iNet's build user, host and time): kernel image byte-identical to GL.iNet's 4.2.0 apart from the two GNU build IDs; device tree identical. The whole 4.2.0 hardware layer is reproduced from public sources. |

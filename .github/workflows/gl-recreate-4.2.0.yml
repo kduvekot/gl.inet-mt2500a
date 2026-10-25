@@ -48,6 +48,10 @@ env:
   MTK_FEED_MIRROR: https://github.com/gl-inet/mtk-openwrt-feeds.git
   OFFICIAL_URL: https://fw.gl-inet.com/firmware/mt2500/release/openwrt-mt2500-4.2.0-0314-1678763050.bin
   OFFICIAL_SHA256: 3c13b26fbfe9fe1710b42f90c80a47fe000dd98d899fec2d0ed3b8053ac69348
+  # GL.iNet's build time, from the official kernel banner "Tue Mar 14
+  # 02:16:44 2023" (OpenWrt prints SOURCE_DATE_EPOCH with gmtime); written
+  # to version.date, also used for other build timestamps.
+  SOURCE_DATE_EPOCH: "1678760204"
 
 jobs:
   recreate:
@@ -122,6 +126,10 @@ jobs:
           cd mt7981
           git log --oneline -3
 
+          # GL.iNet's build time (see env): get_source_date_epoch.sh reads
+          # version.date first; an environment variable would be overridden.
+          echo "$SOURCE_DATE_EPOCH" > version.date
+
           # Cached downloads.
           rm -rf dl && ln -s /work/cache/dl dl
 
@@ -174,7 +182,10 @@ jobs:
           open(".config", "w").write(cfg)
           with open(".config", "a") as f:
               f.write("CONFIG_DEVEL=y\nCONFIG_CCACHE=y\nCONFIG_CCACHE_DIR=\"/work/cache/ccache\"\n"
-                      "CONFIG_ALL_KMODS=y\nCONFIG_SDK=y\n")
+                      "CONFIG_ALL_KMODS=y\nCONFIG_SDK=y\n"
+                      # GL.iNet's kernel banner: "5.4.211 (glinet@glinet)"; the
+                      # string length shifts all later read-only data.
+                      "CONFIG_KERNEL_BUILD_USER=\"glinet\"\nCONFIG_KERNEL_BUILD_DOMAIN=\"glinet\"\n")
               # Kernel module packages from feeds GL.iNet's build didn't have
               # (run 4: the only 17 kernel options left that differ).
               for k in ("dm-raid", "usb-test", "sound-soc-core", "sound-soc-ac97",
@@ -227,7 +238,7 @@ jobs:
       - name: Build in Ubuntu 20.04
         run: |
           docker run --rm -v "$PWD/work:/work" \
-            -e FORK -e FORK_TAG -e MTK_FEED_OLD -e MTK_FEED_MIRROR \
+            -e FORK -e FORK_TAG -e MTK_FEED_OLD -e MTK_FEED_MIRROR -e SOURCE_DATE_EPOCH \
             ubuntu:20.04 bash /work/build.sh 2>&1 | tee work/out/build.log | tail -n 400
 
       - name: Save cache
