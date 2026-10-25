@@ -791,6 +791,49 @@ flags, which depend on the compiling process's state; Python tracks this as
 bpo-37596). #13 also published the ImageBuilder and the generated files for
 the private assembly.
 
+**The complete image, assembled (assembly runs #1 to #9).** A full build
+including GL.iNet's closed packages takes over four hours on the private
+repo's 2-core runners (private full #2 ran 3½ hours and then stopped on a
+recipe error the assembly had already found). Much quicker: the public
+recreation publishes its SDK and ImageBuilder (all public packages
+included); the closed packages are packaged with that SDK (each package
+Makefile called directly, so their 84 public dependencies aren't compiled)
+and the image is put together with the ImageBuilder, in about ten minutes.
+Assembly run #3 produced the first complete image (466 packages, like the
+official one), and each run since showed what was still off:
+
+- GL.iNet's start-up and network scripts (`rc.local`, `sysupgrade`,
+  `20-firewall`, `10-mount`, …), until then put down to "GL.iNet overwrites
+  them", are installed by `gl-sdk4-base-files`, `-init-portal` and `-modem`
+  under `/rootfs-overlay/`; GL.iNet's (public) `lib/functions.sh` copies
+  that over the root and deletes it after installing. The recipe looked for
+  them at `/rootfs-overlay/...` in the image and found nothing.
+- `gl-sdk4-ddns`'s install script moved six files over `ddns-scripts`'
+  paths during GL.iNet's image build (OpenWrt deletes every install script
+  afterwards, so it isn't in the image): reconstructed.
+- GL.iNet's kernel modules changed because OpenWrt stripped them again; the
+  closed recipes now leave GL.iNet's files untouched. Two packages have a
+  custom `prerm`; kernel modules' `Version`/`Section`; `Source:` paths.
+- `Installed-Size` is not the installed size: OpenWrt's `ipkg-build` writes
+  the size of the package's compressed `data.tar.gz`. GL.iNet's original
+  `kmod-mtfwd.ipk` is still on their package feed; rebuilt from our recipe
+  its `data.tar.gz` is byte-identical once the owner names `root/root` are
+  stored. The SDK's portable `tar` can't look up names (fixed with
+  `TAR=/bin/tar`), and the container's umask made folders 775.
+- `/etc/opkg/keys/`: `base-files` installs the build key's public half;
+  GL.iNet's (`06a6bf2ad909388f`) is in the image and now used.
+  `distfeeds.conf` lists GL.iNet's own feeds; `/init` comes from the kernel
+  build, which the ImageBuilder skips.
+
+**Moved to the public runners.** The closed part doesn't need to be stored
+anywhere: like the comparison, the run downloads the official image from
+GL.iNet and generates the closed packages from it
+(`.github/scripts/gen-closed-feed.py`, `openwrt/gl-4.2.0-closed/` with the
+three source-built recipes and the image-file paths). The recreation's
+`closed` mode builds the complete image, `gl-assemble-4.2.0.yml` assembles
+it; both publish only reports, never the image. The private repo keeps the
+decompilation.
+
 **A version-by-version comparison** of all 15 published releases (workflow
 `gl-versions.yml`) classifies every file per step as new, gone, identical,
 metadata-only or really changed, and checks kernel code (build date, build
@@ -938,3 +981,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-25 | Recreation run #11: public part 89.7 % identical; ccache wrapper works (build-ID-only differences 82 → 0); Samba shown to be non-reproducible (random library order, also between GL.iNet's own releases). Version-by-version comparison of all 15 releases done. |
 | 2026-10-25 | Recreation run #12: built as a normal user, `libdevmapper` now identical; outside Samba 161 differing files left. The four "build-ID-only" programs were mislabelled: real differences, found as BusyBox options, net-tools, `git describe` hash (accepted) and `ip-full` symbol order (open). |
 | 2026-10-25 | Recreation run #13: `busybox`, `openvpn`, `ip-full` identical (BusyBox options from GL.iNet's profiles, net-tools, iproute2 directory order); Python bytecode shown to vary by nature, also in GL.iNet's own releases. SDK + ImageBuilder published for the private assembly. |
+| 2026-10-25 | Complete 4.2.0 image assembled from the published SDK and ImageBuilder plus the closed packages (assembly runs #1 to #9): rootfs-overlay scripts, the ddns move, unstripped modules, Installed-Size (= size of data.tar.gz; owner names and folder modes), GL.iNet's build key. Complete builds moved to the public runners (closed part generated in the run, reports only). |
