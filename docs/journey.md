@@ -733,6 +733,20 @@ reproduced; the order is random in GL.iNet's builds too, so GL.iNet 4.2.0's
 exact order can't be recovered (its seed came from `/dev/urandom`). Our
 build now fixes `PYTHONHASHSEED` so our own runs are repeatable.
 
+**Run #12 (built as a normal user): `libdevmapper` identical.** GL.iNet
+built as a normal user, so `libdevmapper` (installed read-only, 0555) stayed
+unstripped; built as root, strip could write it anyway. As a normal user it
+now comes out identical, and the build step took 89 minutes instead of 109.
+The total went from 419 to 498 differing files, all of it Samba reshuffling
+its library order again (#12 still ran without the fixed hash seed); outside
+Samba the count went from 165 to 161. What is left outside Samba: 15
+start-up and network scripts that GL.iNet overwrites (they come from the
+private recipe), four programs differing only in their build ID (`busybox`,
+`wg`, `ip-full`, `openvpn`, from ccache), package records carrying the
+vermagic hash, and Python bytecode. The cache helped less than it could: the
+toolchain is rebuilt every run, so ccache saw a "new" compiler each time;
+it now compares the compiler by content.
+
 **A version-by-version comparison** of all 15 published releases (workflow
 `gl-versions.yml`) classifies every file per step as new, gone, identical,
 metadata-only or really changed, and checks kernel code (build date, build
@@ -877,3 +891,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-25 | Recreation run #10: public part 86.9 % of files identical; Samba records match (AD DC), VFSX found missing; build-ID differences traced to ccache (`libsasl2`, `getdns` identical without it). Workflow: invisible ccache, per-package logs, live progress; SDK package test moved to the public repo. |
 | 2026-10-25 | GL.iNet built as a normal user (the read-only `libdevmapper` stays unstripped); recreation builds as `glinet` from now on. Validation criteria for the 4.2.0 base written down; `kmod-gl-sdk4-tertf`/`-hw-info` confirmed identical from public source. |
 | 2026-10-25 | Recreation run #11: public part 89.7 % identical; ccache wrapper works (build-ID differences 86 → 4); Samba shown to be non-reproducible (random library order, also between GL.iNet's own releases). Version-by-version comparison of all 15 releases done. |
+| 2026-10-25 | Recreation run #12: built as a normal user, `libdevmapper` now identical; outside Samba 161 differing files left (private-recipe scripts, four build-ID-only programs, vermagic records, bytecode). |
