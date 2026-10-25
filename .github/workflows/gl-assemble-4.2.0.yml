@@ -222,12 +222,12 @@ jobs:
           done
           echo $pk | tr ' ' '\n' > /w/out/ib-packages.txt
           make image PROFILE="$profile" PACKAGES="$(echo $pk)" FILES=/w/files BIN_DIR=/w/out/images \
-            > /w/out/ib-image.log 2>&1 || { tail -n 60 /w/out/ib-image.log; exit 1; }
+            > /w/out/ib-image.log 2>&1 || { tail -n 80 /w/out/ib-image.log | sed 's/^/IB: /'; exit 1; }
           ls -l /w/out/images
           EOF
           timeout 75m docker run --rm -v "$PWD/w:/w" -v "$PWD/w/sdk:/home/glinet/work/_github/mt7981" \
             -e SOURCE_DATE_EPOCH ubuntu:20.04 bash /w/build.sh 2>&1 \
-            | tee w/out/build.log | grep --line-buffered -E "^(closed: |ABI versions|\\+ make image|.*FAILED|[0-9]+ /w/out)|ERROR" || true
+            | tee w/out/build.log | grep --line-buffered -E "^(IB: |closed: |ABI versions|\\+ make image|.*FAILED|[0-9]+ /w/out)|ERROR" || true
           ls w/out/images/*sysupgrade* > /dev/null
 
       - name: Compare with the official 4.2.0
@@ -266,3 +266,4 @@ jobs:
             w/out/ib-info.txt
             w/out/ib-packages.txt
             w/out/closed-ipks.txt
+            w/out/ib-image.log
