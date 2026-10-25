@@ -246,6 +246,9 @@ jobs:
             case "$p" in -*) continue;; esac
             grep -qx "$p" /w/official-packages.txt || pk="$pk -$p"
           done
+          # the ImageBuilder's defaults name libc and libgcc explicitly; the
+          # official status has them (held) without "user": not named
+          pk="$pk -libc -libgcc"
           echo $pk | tr ' ' '\n' > /w/out/ib-packages.txt
           make image PROFILE="$profile" PACKAGES="$(echo $pk)" FILES=/w/files BIN_DIR=/w/out/images \
             > /w/out/ib-image.log 2>&1 || { tail -n 80 /w/out/ib-image.log | sed 's/^/IB: /'; exit 1; }
