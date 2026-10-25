@@ -75,10 +75,15 @@ jobs:
           make defconfig > /dev/null
           grep -E "$(echo $PKGS | tr ' ' '|')" .config | head -40 > /home/glinet/work/_github/mt7981/config-used.txt
           # build by source package: dnsmasq-full comes from package/.../dnsmasq
+          done_dirs=" "
           for p in $PKGS; do
             src=$(awk -v p="$p" '/^Source-Makefile:/{m=$2} $0=="Package: "p{print m; exit}' tmp/.packageinfo)
             dir=$(basename "$(dirname "$src")")
             echo "$p -> $src ($dir)"
+            # one source package builds all its output packages; compiling it
+            # again would clean-build it again (Samba: three times)
+            case "$done_dirs" in *" $dir "*) echo "=== $p: built with $dir already" >&2; continue;; esac
+            done_dirs="$done_dirs$dir "
             echo "=== $(date -u +%H:%M) building $p" >&2
             make package/$dir/compile -j"$(nproc)" > /home/glinet/work/_github/mt7981/build-$p.log 2>&1 || make package/$dir/compile -j1 V=s > /home/glinet/work/_github/mt7981/build-$p.log 2>&1
             rc=$?
