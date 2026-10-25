@@ -54,7 +54,7 @@ jobs:
           set -x
           export DEBIAN_FRONTEND=noninteractive
           apt-get update -q && apt-get install -y -q build-essential gawk gettext git libncurses5-dev \
-            python3 python3-distutils rsync unzip wget curl file zlib1g-dev ca-certificates xz-utils zstd \
+            python3 python3-distutils rsync unzip wget curl file zlib1g-dev ca-certificates xz-utils zstd net-tools \
             swig libssl-dev cmake > /dev/null
           git config --global --add safe.directory '*'
           cd /home/glinet/work/_github/mt7981
