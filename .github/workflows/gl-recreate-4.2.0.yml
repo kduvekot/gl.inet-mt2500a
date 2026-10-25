@@ -462,6 +462,8 @@ jobs:
           fi
           sudo python3 "$S/compare-firmware.py" off_root our_root \
             ../out/removed-packages.txt ../out/report kconfig-official.txt kconfig-ours.txt
+          # the report folder belongs to root now; the appends below run as us
+          sudo chown -R "$(id -u)" ../out
           if [ -d our_root ]; then
             sudo python3 "$S/classify-diffs.py" off_root our_root ../out/report/files-different.txt \
               ../out/report/files-different-classes.tsv >> ../out/report/report.md || true
