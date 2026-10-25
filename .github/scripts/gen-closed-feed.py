@@ -135,6 +135,11 @@ def main():
         if (d / "files/www/views").is_dir():
             for e in ("www/views/img", "www/i18n", "usr/share/oui/menu.d"):
                 (d / "files" / e).mkdir(parents=True, exist_ok=True)
+        # gl-sdk4-ddns ships an empty etc/ddns/ (its postinst moves two files
+        # into it): the only one of the image's folders that gives GL.iNet's
+        # Installed-Size
+        if name == "gl-sdk4-ddns":
+            (d / "files/etc/ddns").mkdir(parents=True, exist_ok=True)
         (d / "version.date").write_text(c.get("SourceDateEpoch", "") + "\n")
         pkg = name[5:] if kmod else name
         lines = ["include $(TOPDIR)/rules.mk", ""]
