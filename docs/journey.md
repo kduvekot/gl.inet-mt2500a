@@ -616,16 +616,15 @@ can build from source instead of copying:
 | GL.iNet's file | Project, version | Source |
 |---|---|---|
 | AdGuardHome | AdGuardHome v0.107.8 | AdGuard's release binary, unchanged except OpenWrt's `sstrip` (verified: code and data identical) |
-| `sipcalc` | sipcalc 1.1.6 | release (GL.iNet's own build, not OpenWrt's package) |
-| `mkfs.exfat`, `fsck.exfat`, `libexfat.so` | relan/exfat 1.2.7 | release, with `libexfat` built as a shared library |
-| `fcgiwrap` | gnosek/fcgiwrap | 1.1.0 or git (no version in the binary) |
-| `gl_modem` | GL.iNet's `gl-modem-at` | public on GitHub (2023) |
+| `sipcalc` | sipcalc 1.1.6 | release; **rebuilt identical** (some `config.h` features off, GL.iNet's link order) |
+| `mkfs.exfat`, `fsck.exfat`, `libexfat.so` | relan/exfat 1.2.7 | release; **rebuilt identical** (`libexfat` as a shared library, lazy binding) |
+| `fcgiwrap` | gnosek/fcgiwrap, git 99c942c9 | closest build has the same size but different code: GL.iNet's version calls `prctl` and `fwrite`, so it carries a GL.iNet patch |
+| `gl_modem` | GL.iNet's `gl-modem-at` | the public repo (2023) builds a 12 KB program; GL.iNet's is 98 KB with more libraries: an internal, larger version |
 | `webdav_ser`, `gl_nas_sys` | lighttpd 1.4.48/1.4.49 plus GL.iNet's own modules | partly public |
 | `qcm`, `QFirehose` | Quectel QConnectManager V1.6.3.1, QFirehose V1.4 | exact versions not found in public mirrors (V1.6.2/V1.6.4, V1.2.4/V1.4.9 exist) |
 
-Rebuilding the first five from source is under way in the private
-repository (recipes in an `oss` feed, built with the SDK and compared byte for
-byte).
+Recipes for these live in an `oss` feed in the private repository, built
+with the SDK and compared byte for byte (one commit per attempt).
 
 **Smaller builds instead of full runs.** A full recreation takes an hour or
 more, so package questions are now checked in isolation: an "SDK package
@@ -637,8 +636,10 @@ packages need the `base` feed, and GL.iNet patches some of them (`dnsmasq`,
 `netifd`, `base-files`, ...), so run #10 also publishes the patched
 `package/` folder; and the SDK must run at GL.iNet's build path too, or
 same-size libraries differ in their build IDs (`libsasl2`). Already
-identical from the SDK: `attr`, `libattr`, `libexpat`, `libffi`, `libgdbm`,
-`liblzma`, `liburing`. ccache is now a run option: on while iterating, off
+identical from the SDK: 55 packages built along the way, among them
+OpenSSL, PCRE, Lua, ncurses, libubox, json-c, ca-certificates, `attr`,
+`libexpat`, `libffi`, `liblzma`. GL.iNet's nginx is its own recipe in the
+public `gl-feeds` (`gl_feed_common`), which takes priority over OpenWrt's. ccache is now a run option: on while iterating, off
 for the final validation run.
 
 ## Next steps
