@@ -94,7 +94,7 @@ Checked 2026-10-24/25 by unpacking the firmware images and by recreating
 ### Rebuilding it ourselves
 
 The workflow `gl-recreate-4.2.0.yml` rebuilds 4.2.0 from these public
-sources and compares it with GL.iNet's image. State after seven runs
+sources and compares it with GL.iNet's image. State after run #8
 (2026-10-25):
 
 | | Result |

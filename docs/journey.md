@@ -445,6 +445,8 @@ firmware **4.7.4**, reset to factory settings and set up again. Only the
 
 ## Chapter 11: Inside GL.iNet's firmware (2026-10-24/25)
 
+*Run numbers are GitHub's (`#N` on the Actions page of the workflow).*
+
 With the old unit running again, we turned to the question behind the whole
 project: what does GL.iNet's firmware do with the hardware that upstream
 OpenWrt doesn't? Four pieces of work, all read-only.
@@ -453,16 +455,16 @@ OpenWrt doesn't? Four pieces of work, all read-only.
 GL.iNet's firmware is OpenWrt 21.02 plus patches, and the build recipe
 survives in a fork, so we tried to rebuild 4.2.0 and compare.
 
-- Run 1 gave the identical OpenWrt version string; 142 of 143 shared
+- Run #2 gave the identical OpenWrt version string; 142 of 143 shared
   packages had the same version, 1029 of 1169 shared files were identical.
-- Run 2 mirrored the official package set: 360 of 466 packages built. Only 7
+- Run #3 mirrored the official package set: 360 of 466 packages built. Only 7
   public packages were missing; the rest are GL.iNet's closed or private
   ones. The official kernel carries its configuration (`IKCONFIG`), so we
   extracted it and found GL.iNet built with `ALL_KMODS`.
-- Run 3 switched on `DEVEL`, ccache and `ALL_KMODS` (95 minutes). `ALL_KMODS`
+- Run #4 switched on `DEVEL`, ccache and `ALL_KMODS` (95 minutes). `ALL_KMODS`
   barely changed anything: the generated config already held hundreds of
   explicit "not set" lines for kernel modules, and Kconfig defaults never
-  override explicit values. Fixed for run 4, which is still to come.
+  override explicit values. Fixed for run #5, which is still to come.
 
 **Driver analysis, phases A and B.** The running 4.7.4 gave a baseline
 (registers, debugfs, eMMC clock); the source comparison covered the WAN PHY,
@@ -491,11 +493,11 @@ private. Details in [firmware-sources.md](firmware-sources.md).
 With the recreation close to GL.iNet's build, phase D of the driver analysis
 started early: what do GL.iNet's closed kernel modules actually do?
 
-**A compiler that matches.** Run 4 of the recreation, with every kernel
+**A compiler that matches.** Run #5 of the recreation, with every kernel
 module package built (`ALL_KMODS` finally effective), produced kernel
 modules **byte-identical** to every one in GL.iNet's official 4.2.0. So our
 toolchain and kernel configuration are GL.iNet's. The 17 kernel options
-still different come from feeds GL.iNet didn't have; run 5 drops them and
+still different come from feeds GL.iNet didn't have; run #6 drops them and
 publishes the OpenWrt SDK as a release, so other workflows can build
 modules exactly like GL.iNet did. Builds got faster with ccache (95 to 76
 minutes).
@@ -530,17 +532,17 @@ and stripped like `strip-kmod.sh`), all 76 functions came out
 byte-identical to GL.iNet's 4.7.4, and the unmodified source to 4.2.0.
 **GL.iNet's hardware NAT is MediaTek's public code.**
 
-On the way, run 5 made the kernel configuration fully identical (0 of 2090
-options differ) and run 6 published the Ethernet driver sources next to the
+On the way, run #6 made the kernel configuration fully identical (0 of 2090
+options differ) and run #7 published the Ethernet driver sources next to the
 SDK. The matching loop itself was tried on `mtfwd` (7 of 28 functions in 12
 rounds) and then parked: it is a Wi-Fi leftover.
 
 **The kernel image as well.** That left the kernel image, with the built-in
-drivers. Our run 6 image had exactly GL.iNet's size and differed in 8551 of
+drivers. Our run #7 image had exactly GL.iNet's size and differed in 8551 of
 10.5 million bytes, all for one reason: the kernel banner said
 `root@<container>` instead of `glinet@glinet`, 4 characters longer, which
 moved all later read-only data by 16 bytes and with it every instruction
-pointing there. Run 7 used GL.iNet's build user, host and time (from the
+pointing there. Run #8 used GL.iNet's build user, host and time (from the
 official banner): 40 bytes left, the two GNU build IDs, which hash build
 paths in parts of the kernel that are never loaded. The device tree is
 identical too. **GL.iNet's 4.2.0 hardware layer (kernel, built-in drivers,
@@ -549,27 +551,27 @@ modules, device tree) is reproduced byte for byte from public sources.**
 ## Chapter 13: Towards a complete 4.2.0 recipe (2026-10-25, in progress)
 
 With the hardware layer reproduced, the goal widened: rebuild all of 4.2.0
-as closely as possible. Run 7 left 479 files that differ. A classifier
+as closely as possible. Run #8 left 479 files that differ. A classifier
 (now part of the workflow's report) sorted them by cause:
 
 | Group | Files | Cause | Status |
 |---|---|---|---|
-| opkg package records | 169 | `SourceDateEpoch` = commit date of the applied patches (ours: build day) | run 8: patches applied with GL.iNet's commit date |
-| Samba | 171 | GL.iNet's build path compiled in (`/home/glinet/work/_github/mt7981`, ours `/work/gl-infra-builder/mt7981`) | run 8: built in GL.iNet's path |
-| ELF build ID only | 95 | build ID hashes the build path | run 8 (path) |
-| Python bytecode | 22 | build path | run 8 (path) |
-| `/etc/glversion`, `version.type`, `version.date` | 3 | written by `gen_config.py` from a non-public `gl_metadata.yaml` and the clock | run 9 |
+| opkg package records | 169 | `SourceDateEpoch` = commit date of the applied patches (ours: build day) | run #9: patches applied with GL.iNet's commit date |
+| Samba | 171 | GL.iNet's build path compiled in (`/home/glinet/work/_github/mt7981`, ours `/work/gl-infra-builder/mt7981`) | run #9: built in GL.iNet's path |
+| ELF build ID only | 95 | build ID hashes the build path | run #9 (path) |
+| Python bytecode | 22 | build path | run #9 (path) |
+| `/etc/glversion`, `version.type`, `version.date` | 3 | written by `gen_config.py` from a non-public `gl_metadata.yaml` and the clock | run #10 |
 | GL.iNet-adjusted scripts | ~16 | overwritten by GL.iNet's closed packages (`gl-sdk4-base-files`, `-ddns`, `-modem`) or modified in their private feeds | only with GL.iNet's packages |
 
 Two more findings:
 
 - `kmod-gl-sdk4-tertf` and `kmod-gl-sdk4-hw-info` are not closed: their
-  recipes are public in `gl-feeds` at the recipe's commit, so run 9 builds
+  recipes are public in `gl-feeds` at the recipe's commit, so run #10 builds
   them from source.
 - The kernel package's version hash (vermagic, `86cd...` at GL.iNet, ours
   `1198...`) is cosmetic but appears in every kernel module's record. OpenWrt
   hashes `.config.set`, the kernel configuration *before* `oldconfig`, so
-  options that never reach the kernel count too. Run 9 keeps that file.
+  options that never reach the kernel count too. Run #10 keeps that file.
 
 **GL.iNet's closed packages.** A complete image needs GL.iNet's 100 closed
 packages. Measured: 463 web interface files, 206 scripts and configuration
@@ -583,7 +585,7 @@ them. Both live in the private repository: the result contains GL.iNet's
 files and is never built in this public repo. Decompiling the 46 programs
 fully is not realistic; behaviour notes, and matching only where it matters.
 
-**Run 8 (GL.iNet's build path and patch commit date): 479 → 404 files.** The
+**Run #9 (GL.iNet's build path and patch commit date): 479 → 404 files.** The
 commit date fixed `SourceDateEpoch` for all packages. The rest turned out to
 have other causes, found by comparing package records and configure flags:
 
@@ -599,7 +601,7 @@ have other causes, found by comparing package records and configure flags:
   step also switched off build options such as `dnsmasq_full_ipset`, as if
   they were packages.
 
-All four are fixed on the branch for run 9 (which waits for the owner's go),
+All four are fixed on the branch for run #10 (which waits for the owner's go),
 together with GL.iNet's version files, the LuCI languages en and zh-cn, and
 building `kmod-gl-sdk4-tertf` and `-hw-info` from their public source.
 
@@ -625,6 +627,20 @@ Rebuilding the first five from source is under way in the private
 repository (recipes in an `oss` feed, built with the SDK and compared byte for
 byte).
 
+**Smaller builds instead of full runs.** A full recreation takes an hour or
+more, so package questions are now checked in isolation: an "SDK package
+test" workflow (private repository, because it compares with the official
+image) builds just the named packages with GL.iNet's toolchain and given
+build options and compares every file. Lessons from the first tests: build
+by source package (`dnsmasq-full` comes from `dnsmasq`); OpenWrt's base
+packages need the `base` feed, and GL.iNet patches some of them (`dnsmasq`,
+`netifd`, `base-files`, ...), so run #10 also publishes the patched
+`package/` folder; and the SDK must run at GL.iNet's build path too, or
+same-size libraries differ in their build IDs (`libsasl2`). Already
+identical from the SDK: `attr`, `libattr`, `libexpat`, `libffi`, `libgdbm`,
+`liblzma`, `liburing`. ccache is now a run option: on while iterating, off
+for the final validation run.
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -644,12 +660,12 @@ byte).
 - [x] Driver analysis phases A and B ([driver-analysis.md](driver-analysis.md)).
 - [x] Compare 16 GL.iNet versions (15 published plus 4.7.13).
 - [ ] Before upstream on the replacement: boot the Airoha profile's initramfs and check that the EN8811H answers at 13 (GL.iNet's firmware shows 5; upstream's 13 works for forum users).
-- [x] Recreation run 4: all kernel modules identical to GL.iNet's 4.2.0.
-- [x] Recreation runs 5 and 6: kernel configuration fully identical, SDK and driver sources published.
+- [x] Recreation run #5: all kernel modules identical to GL.iNet's 4.2.0.
+- [x] Recreation runs #6 and #7: kernel configuration fully identical, SDK and driver sources published.
 - [ ] Phase C: the same measurements on upstream OpenWrt, with a fast peer (the GMKtec, next week).
 - [x] Phase D, triage: what each closed module does (Chapter 12).
 - [x] Phase D: `mtkhnat` 4.7.4 rebuilt byte-identical from public source (one warning removed).
-- [x] Kernel image compared (run 7): identical apart from the GNU build IDs; no extra GL.iNet kernel patches.
+- [x] Kernel image compared (run #8): identical apart from the GNU build IDs; no extra GL.iNet kernel patches.
 - [ ] Find out why about 300 libraries and programs still differ in the recreation (Samba, Python, busybox and others).
 - [x] Find the WAN PHY variant of **each** unit separately: the two units
       have **different** chips (table below).
@@ -718,11 +734,11 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-24 | The old MT2500A boots by itself again: 2025-02-24 U-Boot written to `fip` with `dd` from the initramfs (verified), boots GL.iNet 4.7.4 from the eMMC. That firmware was an untouched official 4.7.4; only its settings (from 26 May 2025) were wiped. Factory reset in failsafe needs `mount_root` first. First-time setup done over the JSON-RPC API. |
 | 2026-10-24 | Replacement unit's WAN PHY identified (read-only over SSH, GL.iNet 4.7.13): **Airoha EN8811H** → `glinet_gl-mt2500-airoha`. The two units have different WAN PHYs. On GL.iNet's firmware it sits at MDIO address 5; upstream's device tree says 13 (open question). |
 | 2026-10-24 | Driver analysis phases A (read-only baseline on GL.iNet 4.7.4) and B (vendor against mainline source: WAN PHY, SGMII, hardware NAT, eMMC) done; results in `docs/driver-analysis.md`. |
-| 2026-10-24 | Recreating GL.iNet 4.2.0 from public sources, runs 1 to 3: identical version string, 360 of 466 packages in run 2; run 3 showed that explicit "not set" kernel module lines defeat `ALL_KMODS`. Run 4 pending. |
+| 2026-10-24 | Recreating GL.iNet 4.2.0 from public sources, runs #2 to #4: identical version string, 360 of 466 packages in run #3; run #4 showed that explicit "not set" kernel module lines defeat `ALL_KMODS`. Run #5 pending. |
 | 2026-10-25 | Compared 16 GL.iNet firmware versions (the 15 published ones, 4.1.1 to 4.9.0_beta3, plus 4.7.13): the hardware layer changes mainly in 4.6.2 (Airoha PHY, reset scheme), 4.7.0 (eMMC 26 MHz) and 4.7.4 (eMMC drive strength). |
 | 2026-10-25 | Obtained GL.iNet 4.7.13 (not published) by reading the replacement unit; kept private, summary in `docs/firmware-sources.md`. |
-| 2026-10-25 | Recreation run 4: every kernel module byte-identical to GL.iNet's 4.2.0; 17 kernel options left, all from feeds GL.iNet didn't have. |
+| 2026-10-25 | Recreation run #5: every kernel module byte-identical to GL.iNet's 4.2.0; 17 kernel options left, all from feeds GL.iNet didn't have. |
 | 2026-10-25 | Phase D started: private decompilation repo with Ghidra and build-and-compare workflows. Only `mtkhnat` touches hardware (public source plus 4 changed functions); `mtfwd` and `mtqos` are Wi-Fi features. |
-| 2026-10-25 | Recreation run 5: kernel configuration identical to GL.iNet's (0 of 2090 options differ), SDK published; build time 57 minutes. |
+| 2026-10-25 | Recreation run #6: kernel configuration identical to GL.iNet's (0 of 2090 options differ), SDK published; build time 57 minutes. |
 | 2026-10-25 | Phase D result: GL.iNet's 4.7.4 `mtkhnat` rebuilt byte-identical (76/76 functions) from MediaTek's public source minus one warning; GL.iNet's firmware holds no unpublished hardware code. |
-| 2026-10-25 | Recreation run 7 (GL.iNet's build user, host and time): kernel image byte-identical to GL.iNet's 4.2.0 apart from the two GNU build IDs; device tree identical. The whole 4.2.0 hardware layer is reproduced from public sources. |
+| 2026-10-25 | Recreation run #8 (GL.iNet's build user, host and time): kernel image byte-identical to GL.iNet's 4.2.0 apart from the two GNU build IDs; device tree identical. The whole 4.2.0 hardware layer is reproduced from public sources. |
