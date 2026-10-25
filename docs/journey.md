@@ -825,6 +825,21 @@ official one), and each run since showed what was still off:
   `distfeeds.conf` lists GL.iNet's own feeds; `/init` comes from the kernel
   build, which the ImageBuilder skips.
 
+**First public assemblies (#1 to #3).** On the free runner, with the
+closed part generated in the run, the complete image has 466 packages and
+6,071 files like the official one, with no file missing or extra; 404
+files differ, all in the accepted classes (Samba, 22 `.pyc`, `wg`, package
+records carrying the vermagic hash) plus `/usr/lib/opkg/status`. GL.iNet's
+web-interface packages also contain an empty `www/views/img/` (empty in the
+image too, owned by no package); with it, 31 of 41 get GL.iNet's exact
+`Installed-Size`. 27 records still differ in it: 8 because their contents
+differ (Samba, Python, `wireguard-tools`), `base-files` by 15 bytes, and 14
+closed packages by 3 to 73 bytes. `status` depends on the install order: a
+full build installs by sorted source directory (feeds first, then
+`kernel/linux`, then base packages), and anything an earlier package pulls
+in is marked `Auto-Installed`; the ImageBuilder installs `libc` and `kernel`
+first.
+
 **Moved to the public runners.** The closed part doesn't need to be stored
 anywhere: like the comparison, the run downloads the official image from
 GL.iNet and generates the closed packages from it
