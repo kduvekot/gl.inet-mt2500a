@@ -26,7 +26,7 @@ name: GL.iNet 4.2.0 recreation (MT2500)
 #   * git01.mediatek.com now needs a login; the same commit (df3fc79) is
 #     taken from GL.iNet's GitHub mirror instead.
 #
-# Cache: downloads (dl/) and ccache are restored before and saved after
+# Cache: downloads (dl/) (and ccache, now off) are restored before and saved after
 # every run, also failed ones, so iterations only recompile what changed.
 # ccache needs CONFIG_DEVEL=y in OpenWrt 21.02 (config/Config-devel.in:
 # 'bool "Use ccache" if DEVEL').
@@ -197,14 +197,28 @@ jobs:
           cfg = re.sub(r"^# CONFIG_PACKAGE_kmod-\S+ is not set\n", "", cfg, flags=re.M)
           open(".config", "w").write(cfg)
           with open(".config", "a") as f:
-              f.write("CONFIG_DEVEL=y\nCONFIG_CCACHE=y\nCONFIG_CCACHE_DIR=\"/work/cache/ccache\"\n"
+              # No ccache: GL.iNet built without it, and some programs record
+              # their compiler (nginx: --with-cc=aarch64-openwrt-linux-musl-gcc).
+              f.write("CONFIG_DEVEL=y\n# CONFIG_CCACHE is not set\n"
                       "CONFIG_ALL_KMODS=y\nCONFIG_SDK=y\n"
                       # GL.iNet's kernel banner: "5.4.211 (glinet@glinet)"; the
                       # string length shifts all later read-only data.
                       "CONFIG_KERNEL_BUILD_USER=\"glinet\"\nCONFIG_KERNEL_BUILD_DOMAIN=\"glinet\"\n"
                       # LuCI builds translation packages only for enabled
                       # languages; the official image has en and zh-cn ones.
-                      "CONFIG_LUCI_LANG_en=y\nCONFIG_LUCI_LANG_zh_Hans=y\n")
+                      "CONFIG_LUCI_LANG_en=y\nCONFIG_LUCI_LANG_zh_Hans=y\n"
+                      # Samba as GL.iNet built it: AD DC support (its samba4-libs
+                      # depends on acl, jansson, libarchive, libopenldap,
+                      # python3-cryptodome).
+                      "CONFIG_SAMBA4_SERVER_AD_DC=y\n")
+              # nginx as GL.iNet built it (configure arguments in the official
+              # binary): Lua and ubus, no naxsi/headers-more, 22 modules off.
+              f.write("CONFIG_NGINX_LUA=y\n# CONFIG_NGINX_NAXSI is not set\n"
+                      "# CONFIG_NGINX_HEADERS_MORE is not set\n# CONFIG_NGINX_HTTP_CACHE is not set\n")
+              for m in ("ACCESS AUTH_BASIC AUTOINDEX BROWSER CHARSET EMPTY_GIF GEO GZIP LIMIT_CONN "
+                        "LIMIT_REQ MAP MEMCACHED REFERER SCGI SPLIT_CLIENTS SSI UPSTREAM_HASH "
+                        "UPSTREAM_IP_HASH UPSTREAM_KEEPALIVE UPSTREAM_LEAST_CONN USERID").split():
+                  f.write(f"# CONFIG_NGINX_HTTP_{m} is not set\n")
               # Kernel module packages from feeds GL.iNet's build didn't have
               # (run 4: the only 17 kernel options left that differ).
               for k in ("dm-raid", "usb-test", "sound-soc-core", "sound-soc-ac97",
@@ -219,7 +233,10 @@ jobs:
           subprocess.run(["make", "defconfig"], check=True)
           cfg = open(".config").read()
           selected = set(re.findall(r"^CONFIG_PACKAGE_(\S+)=y$", cfg, re.M))
-          extra = sorted(selected - official)
+          # Only real packages: CONFIG_PACKAGE_dnsmasq_full_ipset and the like
+          # are build options of a package, not packages.
+          real = set(re.findall(r"^Package: (\S+)$", open("tmp/.packageinfo").read(), re.M))
+          extra = sorted((selected - official) & real)
           missing = sorted(p for p in wanted if p not in selected)
           with open(".config", "a") as f:
               for p in extra:
