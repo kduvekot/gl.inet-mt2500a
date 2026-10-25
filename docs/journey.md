@@ -651,7 +651,11 @@ More pieces settled by isolated tests and comparisons:
 - **Python bytecode:** OpenWrt compiles `.pyc` files with
   `PYTHONHASHSEED=$SOURCE_DATE_EPOCH`, and frozenset constants are written in
   hash order, so the seed shows up in the bytes. Ours (1678760204) gives a
-  different order than GL.iNet's; a search for GL.iNet's seed is running.
+  different order than GL.iNet's. A seed search with a standard Python 3.9.13
+  didn't even reproduce our own `.pyc` (marshal also depends on the
+  interpreter build), so it has to run with OpenWrt's own host Python inside
+  the build environment. Parked as a later optimization (about 24 files,
+  0.8 MB).
 - **GL.iNet's web interface** is generated, not source: a webpack build of a
   Vue.js application (`app.<hash>.js`, minified, 40 per-feature views), with
   no source maps. Its original sources are not public, so it can only be
@@ -703,6 +707,7 @@ AdGuardHome, `sipcalc` and the exFAT tools, which are built from source.
 - [x] Phase D: `mtkhnat` 4.7.4 rebuilt byte-identical from public source (one warning removed).
 - [x] Kernel image compared (run #8): identical apart from the GNU build IDs; no extra GL.iNet kernel patches.
 - [ ] Find out why about 300 libraries and programs still differ in the recreation (Samba, Python, busybox and others).
+- [ ] Later optimization: Python bytecode (find GL.iNet's `PYTHONHASHSEED` with OpenWrt's own host Python inside the build).
 - [ ] After the release-by-release comparison (4.2.0 → 4.9): why GL.iNet stayed on Linux 5.4 / OpenWrt 21.02 (MediaTek SDK, shared firmware base, op24 builds).
 - [x] Find the WAN PHY variant of **each** unit separately: the two units
       have **different** chips (table below).
