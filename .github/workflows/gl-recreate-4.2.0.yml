@@ -96,6 +96,10 @@ jobs:
           echo "${OFFICIAL_SHA256}  official.bin" | sha256sum -c -
           mkdir official && tar -xf official.bin -C official
           sudo unsquashfs -q -d off_root official/*/root > /dev/null
+          # GL.iNet's public build key (base-files installs it as
+          # /etc/opkg/keys/<fingerprint>), taken from the official image at run time
+          k=$(grep '^/etc/opkg/keys/' off_root/usr/lib/opkg/info/base-files.list | grep -v 2f8b0b98e08306bf | head -1)
+          cp "off_root$k" ../gl-build-key.pub && echo "GL.iNet build key: $k"
           # Package names as in .config: drop the ABI suffix (libjson-c5 -> libjson-c).
           python3 - off_root/usr/lib/opkg/status > ../official-packages.txt << 'PY'
           import sys
@@ -211,6 +215,11 @@ jobs:
           ./scripts/feeds install -a > /dev/null
           # Our own patches for build-machine effects GL.iNet's build had
           # (openwrt/gl-4.2.0-patches/<package>/), e.g. iproute2's directory order.
+          # base-files installs the build key's public half as
+          # /etc/opkg/keys/<fingerprint>: install GL.iNet's instead (our own
+          # key still signs the package index, which isn't in the image)
+          sed -i '/etc\/opkg\/keys\//s#$(BUILD_KEY)\.pub#/work/gl-build-key.pub#g' package/base-files/Makefile
+          grep -n 'opkg/keys/' package/base-files/Makefile
           for d in /work/gl-4.2.0-patches/*/; do
             t="$(dirname "$(find package -path "*/$(basename "$d")/Makefile" | head -1)")/patches"
             mkdir -p "$t" && cp "$d"*.patch "$t/" && echo "patches for $(basename "$d") -> $t"
