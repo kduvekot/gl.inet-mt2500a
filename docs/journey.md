@@ -546,6 +546,43 @@ paths in parts of the kernel that are never loaded. The device tree is
 identical too. **GL.iNet's 4.2.0 hardware layer (kernel, built-in drivers,
 modules, device tree) is reproduced byte for byte from public sources.**
 
+## Chapter 13: Towards a complete 4.2.0 recipe (2026-10-25, in progress)
+
+With the hardware layer reproduced, the goal widened: rebuild all of 4.2.0
+as closely as possible. Run 7 left 479 files that differ. A classifier
+(now part of the workflow's report) sorted them by cause:
+
+| Group | Files | Cause | Status |
+|---|---|---|---|
+| opkg package records | 169 | `SourceDateEpoch` = commit date of the applied patches (ours: build day) | run 8: patches applied with GL.iNet's commit date |
+| Samba | 171 | GL.iNet's build path compiled in (`/home/glinet/work/_github/mt7981`, ours `/work/gl-infra-builder/mt7981`) | run 8: built in GL.iNet's path |
+| ELF build ID only | 95 | build ID hashes the build path | run 8 (path) |
+| Python bytecode | 22 | build path | run 8 (path) |
+| `/etc/glversion`, `version.type`, `version.date` | 3 | written by `gen_config.py` from a non-public `gl_metadata.yaml` and the clock | run 9 |
+| GL.iNet-adjusted scripts | ~16 | overwritten by GL.iNet's closed packages (`gl-sdk4-base-files`, `-ddns`, `-modem`) or modified in their private feeds | only with GL.iNet's packages |
+
+Two more findings:
+
+- `kmod-gl-sdk4-tertf` and `kmod-gl-sdk4-hw-info` are not closed: their
+  recipes are public in `gl-feeds` at the recipe's commit, so run 9 builds
+  them from source.
+- The kernel package's version hash (vermagic, `86cd...` at GL.iNet, ours
+  `1198...`) is cosmetic but appears in every kernel module's record. OpenWrt
+  hashes `.config.set`, the kernel configuration *before* `oldconfig`, so
+  options that never reach the kernel count too. Run 9 keeps that file.
+
+**GL.iNet's closed packages.** A complete image needs GL.iNet's 100 closed
+packages. Measured: 463 web interface files, 206 scripts and configuration
+files and 18 Lua files (readable as they are), 5 kernel modules (phase D),
+AdGuardHome (34 MB; it is AdGuard's own v0.107.8 release binary, same Go
+build ID, stripped differently) and 46 programs and libraries of GL.iNet's
+own (about 3 MB of compiled code). A generator turns each closed package into
+an OpenWrt recipe with its original files and GL.iNet's package record
+(version, dependencies, `SourceDateEpoch`), and a full-build workflow uses
+them. Both live in the private repository: the result contains GL.iNet's
+files and is never built in this public repo. Decompiling the 46 programs
+fully is not realistic; behaviour notes, and matching only where it matters.
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
