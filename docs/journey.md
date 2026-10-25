@@ -721,8 +721,17 @@ libraries in Python sets, whose order depends on Python's random hash seed,
 which waf doesn't fix. 243 of the 252 differing Samba files differ only in
 the order of their `NEEDED` libraries, and GL.iNet's own releases show the
 same: between consecutive versions with the same Samba (4.14.12), 45 to 65
-Samba libraries come out different every time. Nine files differ in which
-libraries they link (`libndr-samba4`, `libdcerpc-binding`), still to look at.
+Samba libraries come out different every time. Comparing GL.iNet's own
+4.2.0 and 4.7.4 (both Samba 4.14.12-1) settles it: their library order
+differs in 140 of 213 libraries. Of our 252 differing Samba files, about 130
+differ only in the order of the library list, 71 have exactly the same
+functions with the same sizes (only addresses and order differ), and 9 link
+`libdcerpc-binding` instead of `libndr-samba4` or the other way round, most
+likely the same effect (waf drops libraries already pulled in through
+another one, and which stays depends on the order). The content is
+reproduced; the order is random in GL.iNet's builds too, so GL.iNet 4.2.0's
+exact order can't be recovered (its seed came from `/dev/urandom`). Our
+build now fixes `PYTHONHASHSEED` so our own runs are repeatable.
 
 **A version-by-version comparison** of all 15 published releases (workflow
 `gl-versions.yml`) classifies every file per step as new, gone, identical,
@@ -753,7 +762,7 @@ public sources):
 | Python bytecode (frozenset order) | needs OpenWrt's own host Python to find the seed; later optimization |
 | GL.iNet's web interface and own programs | generated or closed; taken from the official image in the private recipe |
 | `fcgiwrap`, `gl_modem` | GL.iNet's patch / internal version, not public |
-| Samba: library order (`NEEDED`) in about 240 files | waf orders libraries via Python sets with a random hash seed; differs between GL.iNet's own builds too |
+| Samba: library and object order in about 250 files (content identical) | waf orders libraries via Python sets with a random hash seed; GL.iNet's own 4.2.0 and 4.7.4 builds of the same Samba differ in 140 of 213 libraries |
 
 **Where 4.2.0 stands** (5,451 regular files, 219 MB unpacked, after run #9):
 61.6 % of the files and 43 % of the bytes are byte-identical from public
