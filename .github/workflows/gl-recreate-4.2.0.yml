@@ -259,6 +259,13 @@ jobs:
             F=feeds.conf; [ -f "$F" ] || F=feeds.conf.default
             printf 'src-cpy glinet /work/closed/glinet\nsrc-cpy mt7981 /work/closed/mt7981\n' >> "$F"
             ( umask 022; ./scripts/feeds update glinet mt7981 > /dev/null )
+            # OpenWrt names a source package after its folder: GL.iNet's
+            # gl-ui4.0/module/adguardhome (gl-sdk4-ui-adguardhome) clashes with
+            # the packages feed's adguardhome (not in the official image), and
+            # only the first one gets installed
+            ./scripts/feeds uninstall adguardhome > /dev/null
+            ./scripts/feeds install -a -p glinet > /dev/null
+            ./scripts/feeds install -a -p mt7981 > /dev/null
             ./scripts/feeds install -a > /dev/null
           fi
           python3 - << 'PY'
@@ -291,7 +298,14 @@ jobs:
                       "CONFIG_KERNEL_BUILD_USER=\"glinet\"\nCONFIG_KERNEL_BUILD_DOMAIN=\"glinet\"\n"
                       # LuCI builds translation packages only for enabled
                       # languages; the official image has en and zh-cn ones.
-                      "CONFIG_LUCI_LANG_en=y\nCONFIG_LUCI_LANG_zh_Hans=y\n"
+                      # (en only without the closed packages: with them, a closed
+                      # package depends on luci-i18n-base-en, and LUCI_LANG_en would
+                      # add English translations of every LuCI app, more than GL.iNet had)
+                      + ("" if os.environ.get("CLOSED") == "true" else "CONFIG_LUCI_LANG_en=y\n") +
+                      "CONFIG_LUCI_LANG_zh_Hans=y\n"
+                      # no WSD daemon: the official image has no wsdd2 (default y,
+                      # selected by samba4-server)
+                      "# CONFIG_SAMBA4_SERVER_WSDD2 is not set\n"
                       # Samba as GL.iNet built it: AD DC support (its samba4-libs
                       # depends on acl, jansson, libarchive, libopenldap,
                       # python3-cryptodome).

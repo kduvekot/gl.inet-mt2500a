@@ -78,6 +78,7 @@ jobs:
           PY
           sort -o ../w/official-packages.txt ../w/official-packages.txt
           wc -l ../w/official-packages.txt
+          sudo cat off_root/usr/lib/opkg/status > ../w/official-status
           # What opkg marks Auto-Installed in /usr/lib/opkg/status depends on
           # what it was asked to install, and in which order: a package pulled
           # in as a dependency before its own turn gets the flag. Installing
@@ -249,6 +250,12 @@ jobs:
           # the ImageBuilder's defaults name libc and libgcc explicitly; the
           # official status has them (held) without "user": not named
           pk="$pk -libc -libgcc"
+          # A full build then flags the essential packages "hold" (package/Makefile:
+          # opkg flag <flags from .install.flags>), which replaces "user"; the
+          # ImageBuilder doesn't. Same for the official held packages here.
+          hold=$(awk '/^Package: /{p=$2} /^Status: .*hold/{print p}' /w/official-status | tr '\n' ' ')
+          sed -i "s|^\t\$(OPKG) install \$(BUILD_PACKAGES)|&\n\t\$(OPKG) flag hold $hold|" Makefile
+          grep -n 'OPKG) flag' Makefile
           echo $pk | tr ' ' '\n' > /w/out/ib-packages.txt
           make image PROFILE="$profile" PACKAGES="$(echo $pk)" FILES=/w/files BIN_DIR=/w/out/images \
             > /w/out/ib-image.log 2>&1 || { tail -n 80 /w/out/ib-image.log | sed 's/^/IB: /'; exit 1; }
