@@ -231,6 +231,9 @@ jobs:
           pk=$(cat /w/install-order.txt)
           find build_dir -maxdepth 3 \( -name 'libc_*.ipk' -o -name 'kernel_*.ipk' \) -exec cp {} packages/ \;
           sed -i '/\$(OPKG) install \$(firstword \$(wildcard \$(LINUX_DIR)\/\(libc\|kernel\)_/d' Makefile
+          # ... and the package index must list them (ipkg-make-index.sh skips both)
+          sed -i '/\[\[ "\$name" = "\(kernel\|libc\)" \]\] && continue/d' scripts/ipkg-make-index.sh
+          grep -c 'continue' scripts/ipkg-make-index.sh || true
           grep -n 'OPKG) install' Makefile; ls packages/libc_* packages/kernel_*
           defaults=$(sed -n 's/^Default Packages: //p' /w/out/ib-info.txt)
           dev=$(awk -v p="$profile:" '$1==p{f=1;next} f&&/Packages:/{sub(/.*Packages: /,""); print; exit}' /w/out/ib-info.txt)
