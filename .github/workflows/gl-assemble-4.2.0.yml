@@ -78,6 +78,26 @@ jobs:
           PY
           sort -o ../w/official-packages.txt ../w/official-packages.txt
           wc -l ../w/official-packages.txt
+          # Install order as in a full build (package/Makefile): by source
+          # directory relative to package/, sorted like make's $(sort), feed
+          # packages as feeds/<feed>/<dir>; it decides which packages opkg
+          # marks Auto-Installed in /usr/lib/opkg/status.
+          python3 - off_root/usr/lib/opkg/info > ../w/install-order.txt << 'PY'
+          import os, sys
+          d = sys.argv[1]; rows = []
+          for f in os.listdir(d):
+              if not f.endswith(".control"):
+                  continue
+              c = dict(l.split(": ", 1) for l in open(os.path.join(d, f), errors="replace").read().splitlines() if ": " in l)
+              src = c.get("Source", "")
+              parts = src.split("/")
+              key = f"feeds/{parts[1]}/{parts[-1]}" if parts[0] == "feeds" else src.removeprefix("package/")
+              name, abi = c["Package"], c.get("ABIVersion", "")
+              rows.append((key, name[:-len(abi)] if abi and name.endswith(abi) else name))
+          for key, name in sorted(rows):
+              print(name)
+          PY
+          head -3 ../w/install-order.txt
 
       - name: Package the closed packages and assemble the image
         timeout-minutes: 80
@@ -189,7 +209,11 @@ jobs:
           make info > /w/out/ib-info.txt
           profile=$(grep -oE '^glinet_gl-mt2500:' /w/out/ib-info.txt | tr -d :)
           # exactly the official package set: add what it has, remove defaults it hasn't
-          pk=$(cat /w/official-packages.txt)
+          # in the full build's order (install-order.txt); the ImageBuilder
+          # would install libc and kernel first and explicitly: not here
+          pk=$(cat /w/install-order.txt)
+          sed -i '/\$(OPKG) install \$(firstword \$(wildcard \$(LINUX_DIR)\/\(libc\|kernel\)_/d' Makefile
+          grep -n 'OPKG) install' Makefile
           defaults=$(sed -n 's/^Default Packages: //p' /w/out/ib-info.txt)
           dev=$(awk -v p="$profile:" '$1==p{f=1;next} f&&/Packages:/{sub(/.*Packages: /,""); print; exit}' /w/out/ib-info.txt)
           for p in $defaults $dev; do
