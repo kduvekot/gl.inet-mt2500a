@@ -275,6 +275,9 @@ jobs:
           # .config.set (before oldconfig); kept to find why it differs.
           cp "$K/.config.set" /work/out/kernel-config.set || true
           cp "$K/.vermagic" /work/out/kernel-vermagic.txt || true
+          # OpenWrt's package/ folder after GL.iNet's patches (they patch e.g.
+          # dnsmasq, netifd, base-files): lets SDK builds of base packages match.
+          tar -czf /work/out/sdk/openwrt-package-dir.tar.gz --exclude=.git package
           tar -C "$K" -czf /work/out/sdk/mtk-eth-driver-src.tar.gz \
             --exclude='*.o' --exclude='*.ko' --exclude='*.cmd' --exclude='*.mod*' \
             drivers/net/ethernet/mediatek
