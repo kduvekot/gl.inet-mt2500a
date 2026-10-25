@@ -39,7 +39,7 @@ on:
   workflow_dispatch:
     inputs:
       ccache:
-        description: "Use ccache (faster; off for a final, byte-exact validation run: GL.iNet built without it)"
+        description: "Use ccache (wrapped invisibly; off for the final validation run: GL.iNet built without it)"
         type: boolean
         default: true
 
@@ -202,12 +202,10 @@ jobs:
           cfg = re.sub(r"^# CONFIG_PACKAGE_kmod-\S+ is not set\n", "", cfg, flags=re.M)
           open(".config", "w").write(cfg)
           with open(".config", "a") as f:
-              # ccache on for iterations, off for validation: GL.iNet built
-              # without it, and some programs record their compiler (nginx:
-              # --with-cc=aarch64-openwrt-linux-musl-gcc).
-              cc = ("CONFIG_CCACHE=y\nCONFIG_CCACHE_DIR=\"/work/cache/ccache\"\n"
-                    if os.environ.get("USE_CCACHE") == "true" else "# CONFIG_CCACHE is not set\n")
-              f.write("CONFIG_DEVEL=y\n" + cc +
+              # OpenWrt's own ccache mode stays off: it calls the compiler as
+              # "ccache_cc", which programs record (nginx --with-cc, Python's
+              # sysconfig). ccache, when wanted, is wrapped in invisibly below.
+              f.write("CONFIG_DEVEL=y\n# CONFIG_CCACHE is not set\n"
                       "CONFIG_ALL_KMODS=y\nCONFIG_SDK=y\n"
                       # GL.iNet's kernel banner: "5.4.211 (glinet@glinet)"; the
                       # string length shifts all later read-only data.
@@ -265,9 +263,35 @@ jobs:
 
           cp .config /work/out/config.txt
           grep -E "^CONFIG_(DEVEL|CCACHE|ALL_KMODS)=" .config
-          export CCACHE_DIR=/work/cache/ccache CCACHE_MAXSIZE=4G
+          # Logs per package (BUILD_LOG) and a summary of failed packages are
+          # saved even when the build fails.
+          save_logs() {
+            mkdir -p /work/out
+            [ -d logs ] && tar -czf /work/out/build-logs.tar.gz logs || true
+            { grep -h "ERROR: " /work/out/progress.log 2>/dev/null | sort -u
+              for f in $(grep -rl -E "Error [0-9]|error:" logs 2>/dev/null | head -20); do
+                echo "== $f"; grep -E -B3 "Error [0-9]|error:" "$f" | tail -12; done
+            } > /work/out/failed.txt || true
+          }
+          trap save_logs EXIT
           make download -j8 || make download -j1 V=s
-          make -j"$(nproc)" || make -j1 V=s
+          if [ "$USE_CCACHE" = "true" ]; then
+            # ccache in disguise: after building the toolchain, each compiler
+            # becomes a wrapper with its own name that runs ccache on the real
+            # binary (.<name>.real), so recorded compiler names stay as GL.iNet's.
+            # A separate cache, filled only at GL.iNet's build path.
+            export CCACHE_DIR=/work/cache/ccache-glpath CCACHE_MAXSIZE=5G
+            rm -rf /work/cache/ccache
+            make -j"$(nproc)" BUILD_LOG=1 tools/install toolchain/install
+            for c in staging_dir/toolchain-*/bin/aarch64-openwrt-linux-musl-{gcc,g++,c++,cpp} \
+                     staging_dir/toolchain-*/bin/aarch64-openwrt-linux-{gcc,g++,c++,cpp}; do
+              [ -f "$c" ] && [ ! -L "$c" ] && [ ! -e "$(dirname "$c")/.$(basename "$c").real" ] || continue
+              mv "$c" "$(dirname "$c")/.$(basename "$c").real"
+              printf '#!/bin/sh\nexec ccache "$(dirname "$0")/.%s.real" "$@"\n' "$(basename "$c")" > "$c"
+              chmod +x "$c"; echo "ccache wrapper: $c"
+            done
+          fi
+          make -j"$(nproc)" BUILD_LOG=1
           ls -l bin/targets/mediatek/mt7981/
           mkdir -p /work/out/sdk
           mv bin/targets/mediatek/mt7981/openwrt-sdk-*.tar.* /work/out/sdk/ || true
@@ -286,7 +310,7 @@ jobs:
             --exclude='*.o' --exclude='*.ko' --exclude='*.cmd' --exclude='*.mod*' \
             drivers/net/ethernet/mediatek
           cp -a bin/targets/mediatek/mt7981 /work/out/images
-          staging_dir/host/bin/ccache -s || true
+          ccache -s 2>/dev/null || true
           EOF
           chmod +x work/build.sh
 
@@ -294,9 +318,15 @@ jobs:
         env:
           USE_CCACHE: ${{ inputs.ccache }}
         run: |
-          docker run --rm -v "$PWD/work:/work" \
+          # Full output to build.log; package-level progress and errors to the
+          # live log (and progress.log). The time limit leaves room for the
+          # steps that save cache, report and logs.
+          set -o pipefail
+          timeout 320m docker run --rm -v "$PWD/work:/work" \
             -e FORK -e FORK_TAG -e MTK_FEED_OLD -e MTK_FEED_MIRROR -e SOURCE_DATE_EPOCH -e USE_CCACHE \
-            ubuntu:20.04 bash /work/build.sh 2>&1 | tee work/out/build.log | tail -n 400
+            ubuntu:20.04 bash /work/build.sh 2>&1 | tee work/out/build.log \
+            | grep --line-buffered -E "^ make\[[0-9]+\] |ERROR: |ccache wrapper|^\+ make |Collected errors" \
+            | tee work/out/progress.log
 
       - name: Save cache
         if: always()
@@ -355,3 +385,6 @@ jobs:
             work/out/mirror.txt
             work/out/removed-packages.txt
             work/out/build.log
+            work/out/progress.log
+            work/out/failed.txt
+            work/out/build-logs.tar.gz
