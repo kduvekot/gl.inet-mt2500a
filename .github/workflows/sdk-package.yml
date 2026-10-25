@@ -69,6 +69,9 @@ jobs:
             'src-git-full telephony https://git.openwrt.org/feed/telephony.git^920fbc5' \
             'src-git mtk_openwrt_feed https://github.com/gl-inet/mtk-openwrt-feeds.git^df3fc792' \
             > feeds.conf
+          # the SDK's bundled tar can't look up owner names (packages got none
+          # instead of root/root, changing Installed-Size): use the system tar
+          export TAR=/bin/tar
           ./scripts/feeds update -a > /dev/null
           ./scripts/feeds install -a > /dev/null
           for d in /home/glinet/work/_github/mt7981/gl-4.2.0-patches/*/; do
