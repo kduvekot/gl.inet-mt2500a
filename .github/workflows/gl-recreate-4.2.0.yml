@@ -37,6 +37,11 @@ name: GL.iNet 4.2.0 recreation (MT2500)
 
 on:
   workflow_dispatch:
+    inputs:
+      ccache:
+        description: "Use ccache (faster; off for a final, byte-exact validation run: GL.iNet built without it)"
+        type: boolean
+        default: true
 
 permissions:
   contents: write   # publish the SDK as a release (open-source tooling only)
@@ -182,7 +187,7 @@ jobs:
           # closed/private packages), then deselect whatever we have extra.
           ./scripts/feeds install -a > /dev/null
           python3 - << 'PY'
-          import re, subprocess
+          import os, re, subprocess
           official = {l.strip() for l in open("/work/official-packages.txt") if l.strip()}
           def private(p):
               if p in {"kmod-gl-sdk4-tertf", "kmod-gl-sdk4-hw-info"}:   # public source
@@ -197,9 +202,12 @@ jobs:
           cfg = re.sub(r"^# CONFIG_PACKAGE_kmod-\S+ is not set\n", "", cfg, flags=re.M)
           open(".config", "w").write(cfg)
           with open(".config", "a") as f:
-              # No ccache: GL.iNet built without it, and some programs record
-              # their compiler (nginx: --with-cc=aarch64-openwrt-linux-musl-gcc).
-              f.write("CONFIG_DEVEL=y\n# CONFIG_CCACHE is not set\n"
+              # ccache on for iterations, off for validation: GL.iNet built
+              # without it, and some programs record their compiler (nginx:
+              # --with-cc=aarch64-openwrt-linux-musl-gcc).
+              cc = ("CONFIG_CCACHE=y\nCONFIG_CCACHE_DIR=\"/work/cache/ccache\"\n"
+                    if os.environ.get("USE_CCACHE") == "true" else "# CONFIG_CCACHE is not set\n")
+              f.write("CONFIG_DEVEL=y\n" + cc +
                       "CONFIG_ALL_KMODS=y\nCONFIG_SDK=y\n"
                       # GL.iNet's kernel banner: "5.4.211 (glinet@glinet)"; the
                       # string length shifts all later read-only data.
@@ -276,9 +284,11 @@ jobs:
           chmod +x work/build.sh
 
       - name: Build in Ubuntu 20.04
+        env:
+          USE_CCACHE: ${{ inputs.ccache }}
         run: |
           docker run --rm -v "$PWD/work:/work" \
-            -e FORK -e FORK_TAG -e MTK_FEED_OLD -e MTK_FEED_MIRROR -e SOURCE_DATE_EPOCH \
+            -e FORK -e FORK_TAG -e MTK_FEED_OLD -e MTK_FEED_MIRROR -e SOURCE_DATE_EPOCH -e USE_CCACHE \
             ubuntu:20.04 bash /work/build.sh 2>&1 | tee work/out/build.log | tail -n 400
 
       - name: Save cache
