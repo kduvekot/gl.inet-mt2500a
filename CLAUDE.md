@@ -76,11 +76,11 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   phases A and B (vendor vs mainline drivers), 16 firmware versions
   compared, GL.iNet 4.2.0 recreated (kernel config and all modules
   identical; SDK published as release `gl-4.2.0-sdk`), phase D (closed
-  modules: only `mtkhnat` touches hardware and it is public code). The
+  modules: only `mtkhnat` touches hardware and it is public code), kernel
+  image identical apart from its build IDs (run 7). The
   decompiled code lives in a private repo on the owner's account (name in
   Claude's memory), never in this one.
-- **Next:** compare GL.iNet's kernel image with ours (built-in drivers);
-  the ~300 differing files in the recreation; phase C (upstream OpenWrt on
+- **Next:** the ~300 differing files in the recreation (optional); phase C (upstream OpenWrt on
   the old unit, iperf with the GMKtec when it arrives, about a week). Ask
   the owner before any write to a router.
 - WAN PHY: old unit MaxLinear GPY211C0VC (`glinet_gl-mt2500`; board
