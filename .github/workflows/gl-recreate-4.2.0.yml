@@ -168,7 +168,13 @@ jobs:
           print(f"{len(removed)} private packages left out")
           PY
 
+          # gen_config.py writes /etc/glversion and /etc/version.type from
+          # gl_metadata.yaml (not in the public recipe) and /etc/version.date
+          # from the clock (local time); use GL.iNet's values from the official
+          # image.
+          printf 'version: 4.2.0\ntype: release4\n' > gl_metadata.yaml
           ./scripts/gen_config.py public_target_mt2500 public_glinet_mt2500
+          echo "2023-03-14 10:33:32" > files/etc/version.date
 
           # Mirror the official package set: make every feed package
           # selectable, select what the official image has (except GL.iNet's
