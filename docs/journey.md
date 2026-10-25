@@ -713,6 +713,26 @@ make files writable first: as a normal user it fails on that file, as root
 their `/home/glinet` build path; the recreation now installs its tools as
 root and then builds as user `glinet`.
 
+**Run #11 (VFSX, invisible ccache): 89.7 % of the public part identical**
+(72.6 % of all files). The ccache wrapper works: files differing only in
+their build ID went from 86 to 4. What remains is mostly Samba, and Samba
+turns out not to be reproducible by nature: its build system (waf) collects
+libraries in Python sets, whose order depends on Python's random hash seed,
+which waf doesn't fix. 243 of the 252 differing Samba files differ only in
+the order of their `NEEDED` libraries, and GL.iNet's own releases show the
+same: between consecutive versions with the same Samba (4.14.12), 45 to 65
+Samba libraries come out different every time. Nine files differ in which
+libraries they link (`libndr-samba4`, `libdcerpc-binding`), still to look at.
+
+**A version-by-version comparison** of all 15 published releases (workflow
+`gl-versions.yml`) classifies every file per step as new, gone, identical,
+metadata-only or really changed, and checks kernel code (build date, build
+IDs and initramfs timestamps masked), kernel configuration and device tree.
+Kernel code stays the same from 4.2.1 to 4.4.6; it changes with the same
+configuration in 4.2.0 → 4.2.1, 4.6.2 → 4.6.4, 4.6.4 → 4.6.8 and
+4.6.8 → 4.7.0, so GL.iNet changed kernel source there. That is where the
+release-by-release steps will look first.
+
 **What "validated" means for 4.2.0.** The base counts as validated, and the
 release-by-release comparison can start, when a run without ccache shows:
 
@@ -733,6 +753,7 @@ public sources):
 | Python bytecode (frozenset order) | needs OpenWrt's own host Python to find the seed; later optimization |
 | GL.iNet's web interface and own programs | generated or closed; taken from the official image in the private recipe |
 | `fcgiwrap`, `gl_modem` | GL.iNet's patch / internal version, not public |
+| Samba: library order (`NEEDED`) in about 240 files | waf orders libraries via Python sets with a random hash seed; differs between GL.iNet's own builds too |
 
 **Where 4.2.0 stands** (5,451 regular files, 219 MB unpacked, after run #9):
 61.6 % of the files and 43 % of the bytes are byte-identical from public
@@ -846,3 +867,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-25 | Recreation run #8 (GL.iNet's build user, host and time): kernel image byte-identical to GL.iNet's 4.2.0 apart from the two GNU build IDs; device tree identical. The whole 4.2.0 hardware layer is reproduced from public sources. |
 | 2026-10-25 | Recreation run #10: public part 86.9 % of files identical; Samba records match (AD DC), VFSX found missing; build-ID differences traced to ccache (`libsasl2`, `getdns` identical without it). Workflow: invisible ccache, per-package logs, live progress; SDK package test moved to the public repo. |
 | 2026-10-25 | GL.iNet built as a normal user (the read-only `libdevmapper` stays unstripped); recreation builds as `glinet` from now on. Validation criteria for the 4.2.0 base written down; `kmod-gl-sdk4-tertf`/`-hw-info` confirmed identical from public source. |
+| 2026-10-25 | Recreation run #11: public part 89.7 % identical; ccache wrapper works (build-ID differences 86 → 4); Samba shown to be non-reproducible (random library order, also between GL.iNet's own releases). Version-by-version comparison of all 15 releases done. |
