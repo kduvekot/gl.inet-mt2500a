@@ -39,7 +39,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # publish the SDK as a release (open-source tooling only)
 
 env:
   FORK: https://github.com/spmadden/gl-infra-builder.git
@@ -174,7 +174,16 @@ jobs:
           open(".config", "w").write(cfg)
           with open(".config", "a") as f:
               f.write("CONFIG_DEVEL=y\nCONFIG_CCACHE=y\nCONFIG_CCACHE_DIR=\"/work/cache/ccache\"\n"
-                      "CONFIG_ALL_KMODS=y\n")
+                      "CONFIG_ALL_KMODS=y\nCONFIG_SDK=y\n")
+              # Kernel module packages from feeds GL.iNet's build didn't have
+              # (run 4: the only 17 kernel options left that differ).
+              for k in ("dm-raid", "usb-test", "sound-soc-core", "sound-soc-ac97",
+                        "sound-soc-mt79xx", "sound-soc-spdif", "openvswitch",
+                        "openvswitch-intree", "openvswitch-geneve", "openvswitch-geneve-intree",
+                        "openvswitch-gre", "openvswitch-gre-intree", "openvswitch-vxlan",
+                        "openvswitch-vxlan-intree", "openvswitch-lisp-intree",
+                        "openvswitch-stt-intree"):
+                  f.write(f"# CONFIG_PACKAGE_kmod-{k} is not set\n")
               for p in wanted:
                   f.write(f"CONFIG_PACKAGE_{p}=y\n")
           subprocess.run(["make", "defconfig"], check=True)
@@ -201,6 +210,15 @@ jobs:
           make download -j8 || make download -j1 V=s
           make -j"$(nproc)" || make -j1 V=s
           ls -l bin/targets/mediatek/mt7981/
+          mkdir -p /work/out/sdk
+          mv bin/targets/mediatek/mt7981/openwrt-sdk-*.tar.* /work/out/sdk/ || true
+          # The SDK leaves out driver-private headers; the Ethernet/PPE driver
+          # folder as compiled (all patches applied) lets out-of-tree builds
+          # of mtk_hnat find "../mtk_eth_soc.h" etc.
+          K=$(ls -d build_dir/target-*/linux-*/linux-5.4.* | head -1)
+          tar -C "$K" -czf /work/out/sdk/mtk-eth-driver-src.tar.gz \
+            --exclude='*.o' --exclude='*.ko' --exclude='*.cmd' --exclude='*.mod*' \
+            drivers/net/ethernet/mediatek
           cp -a bin/targets/mediatek/mt7981 /work/out/images
           staging_dir/host/bin/ccache -s || true
           EOF
@@ -235,6 +253,22 @@ jobs:
             ../out/removed-packages.txt ../out/report kconfig-official.txt kconfig-ours.txt
           sudo chown -R "$(id -u)" ../out
           cat ../out/report/report.md >> "$GITHUB_STEP_SUMMARY"
+
+      # The SDK (GL.iNet's 21.02 toolchain plus the prepared kernel tree)
+      # lets other workflows build kernel modules exactly like GL.iNet did.
+      # It contains only open-source code: OpenWrt, the kernel and
+      # GL.iNet's public patches.
+      - name: Publish the SDK
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -l work/out/sdk/
+          tag=gl-4.2.0-sdk
+          gh release view "$tag" > /dev/null 2>&1 || gh release create "$tag" \
+            --title "GL.iNet 4.2.0 recreation: OpenWrt SDK" --prerelease \
+            --notes "OpenWrt SDK from the GL.iNet 4.2.0 recreation (OpenWrt 21.02 at bcaabe6d plus GL.iNet's public patches; CONFIG_ALL_KMODS). For building kernel modules like GL.iNet's. Updated by every successful run."
+          gh release upload "$tag" work/out/sdk/* --clobber
 
       - uses: actions/upload-artifact@v7
         if: always()

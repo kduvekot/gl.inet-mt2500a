@@ -95,6 +95,14 @@ Only if A7 leaves important questions: disassembly of `mtfwd.ko` /
 `mtqos.ko` for interoperability (allowed in the EU for that purpose, as far
 as we know; not legal advice).
 
+**Status (2026-10-25): done for the modules.** Started early, with the
+recreation's toolchain as compiler (SDK release) and the decompiled code in
+a private repository. Result in
+[driver-analysis.md](driver-analysis.md#glinets-closed-modules-what-they-do-phase-d):
+only `mtkhnat` touches hardware, and it rebuilds byte-identical from
+public source. Still open: comparing the kernel image itself (built-in
+drivers).
+
 ## Deliverables
 
 - `docs/driver-analysis.md`: findings per question, with sources.

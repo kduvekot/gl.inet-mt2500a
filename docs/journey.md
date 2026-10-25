@@ -486,6 +486,55 @@ private. Details in [firmware-sources.md](firmware-sources.md).
 
 ---
 
+## Chapter 12: Decompiling GL.iNet's closed modules (2026-10-25)
+
+With the recreation close to GL.iNet's build, phase D of the driver analysis
+started early: what do GL.iNet's closed kernel modules actually do?
+
+**A compiler that matches.** Run 4 of the recreation, with every kernel
+module package built (`ALL_KMODS` finally effective), produced kernel
+modules **byte-identical** to every one in GL.iNet's official 4.2.0. So our
+toolchain and kernel configuration are GL.iNet's. The 17 kernel options
+still different come from feeds GL.iNet didn't have; run 5 drops them and
+publishes the OpenWrt SDK as a release, so other workflows can build
+modules exactly like GL.iNet did. Builds got faster with ccache (95 to 76
+minutes).
+
+**A private workbench.** GL.iNet's binaries and anything derived from them
+stay out of this public repo, in a private repository with two workflows:
+Ghidra turns each module into rough C, and a build-and-compare workflow
+compiles our C with the SDK and reports per function whether it matches
+byte for byte. Every iteration is its own commit. Subagents write the C;
+the method is the "matching decompilation" one (as on decomp.wtf, which
+used other tools for console games and has since stopped).
+
+**What the modules turned out to be.** Before any matching, reading the
+binaries already answered the main question
+([driver-analysis.md](driver-analysis.md), "GL.iNet's closed modules"):
+
+- Only `mtkhnat` (hardware NAT and QDMA QoS) touches hardware, and its 4.2.0
+  version is MediaTek's public source plus GL.iNet's public patches; up to
+  4.7.4 only 4 of its 76 functions change.
+- `mtfwd` and `mtqos`, the two closed MediaTek modules, are Wi-Fi features
+  (EasyMesh forwarding, 802.11 QoS management): SDK leftovers on a router
+  without Wi-Fi. That corrects our earlier guess that `mtqos` drives the
+  hardware queues.
+- GL.iNet's own modules (`kmwan`, `gl-mpflow`, `black_white_list`, `tertf`,
+  `parental_control`, `hw-info`) are app logic without hardware access.
+
+So the only unpublished hardware knowledge could be in those 4 `mtkhnat`
+functions. It isn't: their assembly diff showed one change, a removed
+warning message, and once the published SDK's toolchain compiled the
+public source the way OpenWrt does (with OpenWrt's `-fno-caller-saves`,
+and stripped like `strip-kmod.sh`), all 76 functions came out
+byte-identical to GL.iNet's 4.7.4, and the unmodified source to 4.2.0.
+**GL.iNet's hardware NAT is MediaTek's public code.**
+
+On the way, run 5 made the kernel configuration fully identical (0 of 2090
+options differ) and run 6 published the Ethernet driver sources next to the
+SDK. The matching loop itself was tried on `mtfwd` (7 of 28 functions in 12
+rounds) and then parked: it is a Wi-Fi leftover.
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -505,9 +554,13 @@ private. Details in [firmware-sources.md](firmware-sources.md).
 - [x] Driver analysis phases A and B ([driver-analysis.md](driver-analysis.md)).
 - [x] Compare 16 GL.iNet versions (15 published plus 4.7.13).
 - [ ] Before upstream on the replacement: boot the Airoha profile's initramfs and check that the EN8811H answers at 13 (GL.iNet's firmware shows 5; upstream's 13 works for forum users).
-- [ ] Recreation run 4 (module "not set" lines dropped first) and compare.
+- [x] Recreation run 4: all kernel modules identical to GL.iNet's 4.2.0.
+- [x] Recreation runs 5 and 6: kernel configuration fully identical, SDK and driver sources published.
 - [ ] Phase C: the same measurements on upstream OpenWrt, with a fast peer (the GMKtec, next week).
-- [ ] Phase D (optional): the closed `mtfwd` / `mtqos` modules in depth.
+- [x] Phase D, triage: what each closed module does (Chapter 12).
+- [x] Phase D: `mtkhnat` 4.7.4 rebuilt byte-identical from public source (one warning removed).
+- [ ] Compare GL.iNet's kernel image with ours byte for byte (ignoring build timestamps): are the built-in drivers identical, and does GL.iNet carry extra kernel patches (`parental_control` needs `gl_parental_control_handle` and `athrs_fast_nat_recv`)?
+- [ ] Find out why about 300 libraries and programs still differ in the recreation (Samba, Python, busybox and others).
 - [x] Find the WAN PHY variant of **each** unit separately: the two units
       have **different** chips (table below).
 
@@ -578,3 +631,7 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-24 | Recreating GL.iNet 4.2.0 from public sources, runs 1 to 3: identical version string, 360 of 466 packages in run 2; run 3 showed that explicit "not set" kernel module lines defeat `ALL_KMODS`. Run 4 pending. |
 | 2026-10-25 | Compared 16 GL.iNet firmware versions (the 15 published ones, 4.1.1 to 4.9.0_beta3, plus 4.7.13): the hardware layer changes mainly in 4.6.2 (Airoha PHY, reset scheme), 4.7.0 (eMMC 26 MHz) and 4.7.4 (eMMC drive strength). |
 | 2026-10-25 | Obtained GL.iNet 4.7.13 (not published) by reading the replacement unit; kept private, summary in `docs/firmware-sources.md`. |
+| 2026-10-25 | Recreation run 4: every kernel module byte-identical to GL.iNet's 4.2.0; 17 kernel options left, all from feeds GL.iNet didn't have. |
+| 2026-10-25 | Phase D started: private decompilation repo with Ghidra and build-and-compare workflows. Only `mtkhnat` touches hardware (public source plus 4 changed functions); `mtfwd` and `mtqos` are Wi-Fi features. |
+| 2026-10-25 | Recreation run 5: kernel configuration identical to GL.iNet's (0 of 2090 options differ), SDK published; build time 57 minutes. |
+| 2026-10-25 | Phase D result: GL.iNet's 4.7.4 `mtkhnat` rebuilt byte-identical (76/76 functions) from MediaTek's public source minus one warning; GL.iNet's firmware holds no unpublished hardware code. |

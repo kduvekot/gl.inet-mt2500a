@@ -15,7 +15,7 @@ source says it outright. Everything else was checked in source or on a unit.
 | A | Read-only baseline on a running GL.iNet 4.7.4 (old unit): `mii_mgr -g`, `mii_mgr_cl45` (hex arguments), `regs`, debugfs, `dmesg` | done |
 | B | Code reading on the Pi: vendor tree (SDK 7.6.6.1 plus GL.iNet patches) against Linux 6.12.112 plus OpenWrt patches | done (B1 to B4) |
 | C | Same measurements on upstream OpenWrt on the old unit | waiting (GMKtec peer next week) |
-| D | Closed modules (`mtfwd`, `mtqos`, `fwdd`, `kmwan`, `black_white_list`, `gl-mpflow`) in depth, with the recreated toolchain | optional, not started |
+| D | Closed modules in depth, with the recreated toolchain | started: what each does (below); matching decompilation in a private repo |
 
 No register was written in phase A. Raw logs and the eMMC backup stay on the
 Pi.
@@ -76,7 +76,7 @@ GL.iNet's patches around this PHY: `0403`, `3003` (link polling), `3006`
 | Multicast | code present, disabled in the build (our inference) | no |
 | Hardware QoS | QDMA: 4 schedulers, 16 queues, rates and weights, queue chosen by `skb->mark` | one fixed queue per flow, not configurable |
 | Per-flow accounting | v2/v4 only | yes |
-| Configuration | debugfs read/write, closed `mtqos` and `mtfwd` | nft; debugfs read-only |
+| Configuration | debugfs read/write | nft; debugfs read-only |
 
 GL patches: `3004` hard-codes the MT2500 port layout (LAN on GMAC2, WAN on
 GMAC1), `3009` adds the IPv6 offload switch, `3010` fixes stale entries on a
@@ -91,8 +91,49 @@ neighbour change.
 - Automatic offload: upstream needs firewall4 `flow_offloading` and
   `flow_offloading_hw` switched on (our inference).
 
-`mtfwd` and `mtqos` have no references in the hnat source. That `mtqos`
-sets the marks and queue settings is our inference; phase D would tell.
+`mtfwd` and `mtqos` have no references in the hnat source, and phase D
+showed they have nothing to do with it (next section): the QDMA hardware QoS
+is configured only through `mtkhnat` itself.
+
+## GL.iNet's closed modules: what they do (phase D)
+
+Read from the binaries (symbols, strings, Ghidra's decompiled output) and
+spot-checked against the disassembly; the decompiled code itself stays in a
+private repository. Only `mtkhnat` touches hardware: it is the only module
+that maps registers (`devm_ioremap_nocache`), and none of the others imports
+anything from it.
+
+| Module | What it does | Relevance for the hardware |
+|---|---|---|
+| `mtkhnat` | Hardware NAT (PPE) and QDMA QoS. **Public code:** 4.2.0 is byte-identical to our build from MediaTek's public source plus GL.iNet's public patches, and 4.7.4 is that same source with one warning message removed ("Unknown case of dp"); confirmed by compiling it: all 76 functions byte-identical | **high**, but nothing unpublished |
+| `mtfwd` (+ daemon `fwdd`) | Wi-Fi EasyMesh (IEEE 1905.1, EtherType 0x893a) forwarding in the bridge, controlled over netlink protocol 25: link, sender and path tables, loop prevention | none on the MT2500 (no Wi-Fi; an SDK leftover) |
+| `mtqos` | Wi-Fi 802.11 QoS management (MSCS, SCS, QoS Map): picks a user priority per client and rewrites DSCP on bridged frames; netlink protocol 27, sysfs `/sys/mtqos/`. No queues, rates, `skb->mark` or registers | none on the MT2500 |
+| `kmwan` | Multi-WAN failover: own ping probes, marks routes dead or alive, fixes connection tracking when the WAN address changes | low |
+| `gl-mpflow` | Per-interface byte counters in `/proc` | low |
+| `black_white_list` | MAC block/allow list, LAN/guest isolation in the bridge | low |
+| `tertf` | Client table with ARP keepalive and per-client counters (public source) | low |
+| `parental_control` | Web filter (HTTP, TLS server name) in the forward hook (public source); needs two functions only GL.iNet's patched kernel exports | low |
+| `hw-info` | Factory data and country code into `/proc` (public source) | none |
+
+`kmwan` and `tertf` count traffic in software hooks, so flows taken over by
+the hardware NAT would be missing from their statistics (our inference).
+
+**Conclusion of phase D (for the kernel modules):** GL.iNet's closed
+modules (up to 4.7.4) contain no unpublished hardware code. Its hardware
+NAT and QoS driver is MediaTek's public `mtk_hnat` code; everything closed
+is either a Wi-Fi feature (irrelevant on the MT2500) or GL.iNet's
+application logic. Not yet checked byte for byte: the kernel image itself,
+which holds the built-in drivers (Ethernet, GPY211 PHY, eMMC). Its
+configuration is identical to GL.iNet's, but its package checksum still
+differs, and `parental_control` needs two functions that only GL.iNet's
+patched kernel exports, so GL.iNet may carry kernel patches beyond the
+public recipe (about filtering, not hardware, as far as we can tell). What
+upstream OpenWrt lacks (hardware QoS, tunnel offload; see above) is
+therefore a matter of porting MediaTek's public SDK features to mainline,
+not of secret code. How we checked: the recreation's toolchain (published
+as an SDK release) compiles the public source out of tree, the result is
+stripped like OpenWrt's `strip-kmod.sh` does, and each function is compared
+byte for byte with GL.iNet's module.
 
 ## eMMC
 
@@ -208,6 +249,7 @@ change between 4.6.2 and 4.9.0_beta3.
   upstream (the PCS power cycle on a speed change is our best guess)?
 - Does 52 MHz work reliably on upstream, given the card supports it? Why
   did GL.iNet lower it in 4.7.0?
-- What do the closed `mtfwd`, `mtqos` and `fwdd` do exactly (phase D)?
+- Is GL.iNet's kernel image (with the built-in drivers) identical to ours, apart from build timestamps? Which kernel patches provide `gl_parental_control_handle` and `athrs_fast_nat_recv`?
+- Does `mtkhnat` change after 4.7.4 (4.7.13, 4.8.2, 4.9.0)? The files' hashes say it doesn't after 4.6.2.
 - Does mainline `mxl-gpy` from OpenWrt main (kernel 6.18) fix the WAN link on
   the old unit (phase C)?
