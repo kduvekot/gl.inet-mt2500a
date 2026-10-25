@@ -775,6 +775,22 @@ repeatable; the differences from GL.iNet's are real:
 toolchain is rebuilt every run, so ccache saw a "new" compiler each time;
 it now compares the compiler by content.
 
+**Run #13 (BusyBox options, net-tools, iproute2 order): `busybox`,
+`openvpn` and `ip-full` identical.** 402 files differ (#12: 498), 155
+outside Samba (#12: 161). What remains outside Samba: the scripts GL.iNet
+overwrites (private recipe), `wg` (accepted), package records with the
+vermagic hash, and about 25 Python bytecode files. Those turned out not to
+be a seed question: OpenWrt compiles bytecode with
+`PYTHONHASHSEED=$(SOURCE_DATE_EPOCH)` (GL.iNet's value, exported by
+`include/toplevel.mk`), yet 600 of 626 files are always identical and 26
+vary between our own runs #11 to #13, sometimes matching GL.iNet's by
+chance. GL.iNet's own builds do the same: between 4.4.5 and 4.4.6, whose
+`python3` packages are identical, 23 `.pyc` files differ. So, like Samba's
+library order, this varies by nature (set order and marshal's reference
+flags, which depend on the compiling process's state; Python tracks this as
+bpo-37596). #13 also published the ImageBuilder and the generated files for
+the private assembly.
+
 **A version-by-version comparison** of all 15 published releases (workflow
 `gl-versions.yml`) classifies every file per step as new, gone, identical,
 metadata-only or really changed, and checks kernel code (build date, build
@@ -801,7 +817,7 @@ public sources):
 | kernel vermagic hash (kernel version text, kernel modules' `Depends`) | most likely kernel options from GL.iNet's private kernel module recipes; not searchable |
 | two GNU build IDs in the kernel image | hash over build details of never-loaded parts |
 | order of `python3`'s `Depends`, a few bytes of `Installed-Size` | GNU make 4.2 doesn't sort file lists; size rounding |
-| Python bytecode (frozenset order) | needs OpenWrt's own host Python to find the seed; later optimization |
+| Python bytecode: about 25 of 626 `.pyc` files (set order, marshal reference flags) | not a seed question: OpenWrt already compiles with `PYTHONHASHSEED=$(SOURCE_DATE_EPOCH)`, yet they vary between our own runs, and between GL.iNet's 4.4.5 and 4.4.6 (identical `python3` packages) 23 differ too |
 | GL.iNet's web interface and own programs | generated or closed; taken from the official image in the private recipe |
 | `fcgiwrap`, `gl_modem` | GL.iNet's patch / internal version, not public |
 | Samba: library and object order in about 250 files (content identical) | waf orders libraries via Python sets with a random hash seed; GL.iNet's own 4.2.0 and 4.7.4 builds of the same Samba differ in 140 of 213 libraries |
@@ -921,3 +937,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-25 | GL.iNet built as a normal user (the read-only `libdevmapper` stays unstripped); recreation builds as `glinet` from now on. Validation criteria for the 4.2.0 base written down; `kmod-gl-sdk4-tertf`/`-hw-info` confirmed identical from public source. |
 | 2026-10-25 | Recreation run #11: public part 89.7 % identical; ccache wrapper works (build-ID-only differences 82 → 0); Samba shown to be non-reproducible (random library order, also between GL.iNet's own releases). Version-by-version comparison of all 15 releases done. |
 | 2026-10-25 | Recreation run #12: built as a normal user, `libdevmapper` now identical; outside Samba 161 differing files left. The four "build-ID-only" programs were mislabelled: real differences, found as BusyBox options, net-tools, `git describe` hash (accepted) and `ip-full` symbol order (open). |
+| 2026-10-25 | Recreation run #13: `busybox`, `openvpn`, `ip-full` identical (BusyBox options from GL.iNet's profiles, net-tools, iproute2 directory order); Python bytecode shown to vary by nature, also in GL.iNet's own releases. SDK + ImageBuilder published for the private assembly. |
