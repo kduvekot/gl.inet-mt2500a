@@ -756,10 +756,12 @@ repeatable; the differences from GL.iNet's are real:
 - `busybox`: GL.iNet's has five more applets (`addgroup`, `adduser`,
   `chpasswd`, `delgroup`, `deluser`), exactly the seven options in GL.iNet's
   own profiles `glinet_nas.yml` and `glinet_depends.yml`, though not in the
-  public MT2500 profile. Added to the recreation.
+  public MT2500 profile. Added to the recreation; SDK test #3 builds it
+  byte-identical.
 - `openvpn`: its configure records the build host's `ifconfig`; GL.iNet's
   binary says `/usr/sbin/ifconfig` (net-tools installed), ours plain
-  `ifconfig`. net-tools added to the build container.
+  `ifconfig`. net-tools added to the build container; SDK test #3 builds
+  it byte-identical.
 - `wg`: embeds `git describe` of the OpenWrt tree: GL.iNet's
   `21.02.3-135-gb77ee244f5`, ours `…-g20ebd753f9-dirty`. That hash is the
   tree's top commit after the builder applies GL.iNet's patches with
