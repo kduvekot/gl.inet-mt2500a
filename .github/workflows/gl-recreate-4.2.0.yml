@@ -388,6 +388,10 @@ jobs:
           fi
           make -j"$(nproc)" BUILD_LOG=1
           ls -l bin/targets/mediatek/mt7981/
+          # the order opkg installed the packages in (it decides which ones
+          # are marked Auto-Installed in /usr/lib/opkg/status); the assembly
+          # replays it
+          cp tmp/opkg_install_list /work/out/opkg-install-list.txt || true
           mkdir -p /work/out/sdk
           mv bin/targets/mediatek/mt7981/openwrt-sdk-*.tar.* /work/out/sdk/ || true
           # The ImageBuilder (with all packages of this build, IB_STANDALONE) and
@@ -400,6 +404,7 @@ jobs:
             rm -rf /tmp/glf && mkdir -p /tmp/glf && cp -a files /tmp/glf/
             install -m 0755 target/linux/generic/other-files/init /tmp/glf/files/init
             tar -C /tmp/glf -czf /work/out/sdk/gl-files.tar.gz files
+            cp /work/out/opkg-install-list.txt /work/out/sdk/ || true
           fi
           # The SDK leaves out driver-private headers; the Ethernet/PPE driver
           # folder as compiled (all patches applied) lets out-of-tree builds
@@ -497,6 +502,7 @@ jobs:
             work/out/kernel-config.set
             work/out/kernel-vermagic.txt
             work/out/mirror.txt
+            work/out/opkg-install-list.txt
             work/out/removed-packages.txt
             work/out/build.log
             work/out/progress.log
