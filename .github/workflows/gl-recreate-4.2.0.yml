@@ -42,6 +42,10 @@ on:
         description: "Use ccache (wrapped invisibly; off for the final validation run: GL.iNet built without it)"
         type: boolean
         default: true
+      publish_sdk:
+        description: "Build and publish the OpenWrt SDK (takes several minutes; only needed when toolchain or kernel change)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write   # publish the SDK as a release (open-source tooling only)
@@ -215,7 +219,8 @@ jobs:
               # "ccache_cc", which programs record (nginx --with-cc, Python's
               # sysconfig). ccache, when wanted, is wrapped in invisibly below.
               f.write("CONFIG_DEVEL=y\n# CONFIG_CCACHE is not set\n"
-                      "CONFIG_ALL_KMODS=y\nCONFIG_SDK=y\n"
+                      "CONFIG_ALL_KMODS=y\n"
+                      + ("CONFIG_SDK=y\n" if os.environ.get("PUBLISH_SDK") == "true" else "# CONFIG_SDK is not set\n") +
                       # GL.iNet's kernel banner: "5.4.211 (glinet@glinet)"; the
                       # string length shifts all later read-only data.
                       "CONFIG_KERNEL_BUILD_USER=\"glinet\"\nCONFIG_KERNEL_BUILD_DOMAIN=\"glinet\"\n"
@@ -326,13 +331,14 @@ jobs:
       - name: Build in Ubuntu 20.04
         env:
           USE_CCACHE: ${{ inputs.ccache }}
+          PUBLISH_SDK: ${{ inputs.publish_sdk }}
         run: |
           # Full output to build.log; package-level progress and errors to the
           # live log (and progress.log). The time limit leaves room for the
           # steps that save cache, report and logs.
           set -o pipefail
           timeout 320m docker run --rm -v "$PWD/work:/work" \
-            -e FORK -e FORK_TAG -e MTK_FEED_OLD -e MTK_FEED_MIRROR -e SOURCE_DATE_EPOCH -e USE_CCACHE \
+            -e FORK -e FORK_TAG -e MTK_FEED_OLD -e MTK_FEED_MIRROR -e SOURCE_DATE_EPOCH -e USE_CCACHE -e PUBLISH_SDK \
             ubuntu:20.04 bash /work/build.sh 2>&1 | tee work/out/build.log \
             | grep --line-buffered -E "^ make\[[0-9]+\] |ERROR: |ccache wrapper|^\+ make |Collected errors" \
             | tee work/out/progress.log
@@ -370,7 +376,7 @@ jobs:
       # It contains only open-source code: OpenWrt, the kernel and
       # GL.iNet's public patches.
       - name: Publish the SDK
-        if: success()
+        if: success() && inputs.publish_sdk
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
