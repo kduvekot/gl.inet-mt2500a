@@ -224,6 +224,7 @@ jobs:
           if [ -d our_root ]; then
             sudo python3 "$S/classify-diffs.py" off_root our_root ../w/out/report/files-different.txt \
               ../w/out/report/files-different-classes.tsv >> ../w/out/report/report.md || true
+            sudo python3 "$S/control-diffs.py" off_root our_root ../w/out/report/control-diffs.tsv >> ../w/out/report/control-kinds.txt || true
           fi
           sudo chown -R "$(id -u)" ../w/out
           cat ../w/out/report/report.md >> "$GITHUB_STEP_SUMMARY"
