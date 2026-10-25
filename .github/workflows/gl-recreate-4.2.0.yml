@@ -349,7 +349,13 @@ jobs:
           # the generated files/ (version stamps): the private repo assembles
           # the complete image from these plus GL.iNet's closed packages.
           mv bin/targets/mediatek/mt7981/openwrt-imagebuilder-*.tar.* /work/out/sdk/ || true
-          [ "${PUBLISH_SDK:-}" = true ] && tar -czf /work/out/sdk/gl-files.tar.gz files
+          # plus /init, which the full build copies in during the kernel build
+          # (include/kernel-defaults.mk) and the ImageBuilder doesn't
+          if [ "${PUBLISH_SDK:-}" = true ]; then
+            rm -rf /tmp/glf && mkdir -p /tmp/glf && cp -a files /tmp/glf/
+            install -m 0755 target/linux/generic/other-files/init /tmp/glf/files/init
+            tar -C /tmp/glf -czf /work/out/sdk/gl-files.tar.gz files
+          fi
           # The SDK leaves out driver-private headers; the Ethernet/PPE driver
           # folder as compiled (all patches applied) lets out-of-tree builds
           # of mtk_hnat find "../mtk_eth_soc.h" etc.
