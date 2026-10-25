@@ -68,20 +68,20 @@ jobs:
             echo "# GL.iNet MT2500 firmware, version by version"; echo
             echo "| Step | identical | meta-only | changed | new | gone | kernel code | kernel config | device tree |"
             echo "|---|---|---|---|---|---|---|---|---|"
-            for f in $(ls reports/*.md | sort -V); do
+            for f in $(ls reports/*-to-*.md | sort -V); do
               python3 - "$f" << 'PY'
           import re, sys
           t = open(sys.argv[1]).read()
           step = t.splitlines()[0][3:]
           n = lambda k: (re.search(rf"{k} \*\*(\d+)\*\*", t) or [0, "?"])[1]
           kc = "same" if "Kernel code: **same**" in t else "changed"
-          cfg = re.search(r"kernel config: ([^;(]+)", t).group(1).strip()
+          m = re.search(r"kernel config: ([^;(]+)", t); cfg = m.group(1).strip() if m else "?"
           dt = "same" if "device tree: same" in t else "changed"
           print(f"| {step} | {n('identical')} | {n('meta-only')} | {n('changed')} | {n('new')} | {n('gone')} | {kc} | {cfg} | {dt} |")
           PY
             done
             echo
-            for f in $(ls reports/*.md | sort -V); do cat "$f"; echo; done
+            for f in $(ls reports/*-to-*.md | sort -V); do cat "$f"; echo; done
           } > reports/summary.md
           cat reports/summary.md >> "$GITHUB_STEP_SUMMARY"
 

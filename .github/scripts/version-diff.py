@@ -110,9 +110,16 @@ def fit_kernel(path):
         comp = k.get("compression", b"none").rstrip(b"\0").decode()
         raw = lzma.decompress(k["data"], format=lzma.FORMAT_ALONE) if comp == "lzma" else \
             gzip.decompress(k["data"]) if comp == "gzip" else k["data"]
-        raw_nb = re.sub(rb"Linux version [^\n\0]*", b"", raw)          # banner = build metadata
+        # build metadata, not code: the build date (banner and UTS_VERSION, uname -v),
+        raw_nb = raw
+        # UTS_VERSION ("#0 SMP Tue Mar 14 02:16:44 2023", uname -v) is stored separately
+        raw_nb = re.sub(rb"#\d+ SMP(?: PREEMPT)? [A-Z][a-z]{2} [A-Z][a-z]{2} +\d{1,2} \d\d:\d\d:\d\d(?: [A-Z]{2,5})? \d{4}", b"#UTS", raw_nb)
+        # built-in initramfs: cpio "newc" headers carry each file's mtime
+        raw_nb = re.sub(rb"(070701(?:[0-9A-Fa-f]{8}){5})[0-9A-Fa-f]{8}", rb"\1MTIMEXXX", raw_nb)
         # GNU build-ID notes (20-byte hashes over build details) are metadata too
         raw_nb = re.sub(rb"(\x04\x00\x00\x00\x14\x00\x00\x00\x03\x00\x00\x00GNU\x00).{20}", rb"\1", raw_nb, flags=re.S)
+        # ... and the zero padding after strings whose length changed with the date
+        raw_nb = re.sub(rb"\x00+", b"\x00", raw_nb)
         i = raw.find(b"IKCFG_ST")
         cfg = zlib.decompressobj(16 + zlib.MAX_WBITS).decompress(raw[i + 8:]).decode() if i >= 0 else ""
         dtb = next((v["data"] for n, v in props.items() if n.startswith("fdt")), b"")
