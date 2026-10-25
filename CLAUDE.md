@@ -35,7 +35,7 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   addresses, home domain). Those stay in local files on the Pi, such as
   `~/.config/dirigera/`.
 
-## Where things stand (2026-10-24)
+## Where things stand (2026-10-25)
 
 - Workflows on `main`: **Build OpenWrt**, **Recovery kit**, **Raspberry Pi
   OS image** (all Node 24 actions). The `recovery-kit` release is
@@ -70,9 +70,19 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   and JSON-RPC at 192.168.8.1 from the Pi. Factory reset from failsafe:
   `mount_root; firstboot -y; sync; reboot -f` (without `mount_root` it does
   nothing on this firmware).
-- **Next:** connect WAN and finish the internet setup, check the WAN PHY in
-  `dmesg`, then decide between stock 4.7.4 and our OpenWrt build. Ask the
-  owner before any write.
+- WAN of the old unit is connected (home LAN switch); GL.iNet 4.7.4
+  running, used for read-only analysis.
+- **Analysis done** (docs/driver-analysis.md, journey chapters 11-12):
+  phases A and B (vendor vs mainline drivers), 16 firmware versions
+  compared, GL.iNet 4.2.0 recreated (kernel config and all modules
+  identical; SDK published as release `gl-4.2.0-sdk`), phase D (closed
+  modules: only `mtkhnat` touches hardware and it is public code). The
+  decompiled code lives in a private repo on the owner's account (name in
+  Claude's memory), never in this one.
+- **Next:** compare GL.iNet's kernel image with ours (built-in drivers);
+  the ~300 differing files in the recreation; phase C (upstream OpenWrt on
+  the old unit, iperf with the GMKtec when it arrives, about a week). Ask
+  the owner before any write to a router.
 - WAN PHY: old unit MaxLinear GPY211C0VC (`glinet_gl-mt2500`; board
   MT2500-V1.1, DDR4 1 GB, Samsung 8 GB eMMC); replacement Airoha EN8811H (`glinet_gl-mt2500-airoha`; GL.iNet 4.7.13; table in docs/journey.md). The old unit's UART is
   J13: 3.3V (square pad), RX, TX, GND, open through-holes.
@@ -153,7 +163,10 @@ for line in open(sys.argv[1]):
 ## Repo map
 
 - `.github/workflows/`: `build-openwrt.yml`, `recovery-kit.yml`,
-  `raspios-image.yml`
+  `raspios-image.yml`, `gl-recreate-4.2.0.yml`; `.github/scripts/`:
+  `compare-firmware.py`, `fit-ikconfig.py`
+- `analysis/`: `collect-baseline.sh`, `summarize-baseline.py`,
+  `source-diff.py`, `firmware-versions.py`
 - `openwrt/packages.txt`: extra packages for the OpenWrt images
 - `recovery/`: `pi-setup.sh`, `uartboot.sh`, `console.sh`, `web-flash.sh`,
   `get-stock-firmware.sh` (GL.iNet's firmware is fetched from GL.iNet, never

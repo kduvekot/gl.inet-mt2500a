@@ -559,6 +559,8 @@ rounds) and then parked: it is a Wi-Fi leftover.
 - [ ] Phase C: the same measurements on upstream OpenWrt, with a fast peer (the GMKtec, next week).
 - [x] Phase D, triage: what each closed module does (Chapter 12).
 - [x] Phase D: `mtkhnat` 4.7.4 rebuilt byte-identical from public source (one warning removed).
+- [ ] Compare GL.iNet's kernel image with ours byte for byte (ignoring build timestamps): are the built-in drivers identical, and does GL.iNet carry extra kernel patches (`parental_control` needs `gl_parental_control_handle` and `athrs_fast_nat_recv`)?
+- [ ] Find out why about 300 libraries and programs still differ in the recreation (Samba, Python, busybox and others).
 - [x] Find the WAN PHY variant of **each** unit separately: the two units
       have **different** chips (table below).
 

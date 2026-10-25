@@ -91,6 +91,29 @@ Checked 2026-10-24/25 by unpacking the firmware images and by recreating
 * **Private feeds:** GL.iNet's GitLab feeds (`gl-sdk4-collect`,
   `mt7981-feeds`) are not public.
 
+### Rebuilding it ourselves
+
+The workflow `gl-recreate-4.2.0.yml` rebuilds 4.2.0 from these public
+sources and compares it with GL.iNet's image. State after six runs
+(2026-10-25):
+
+| | Result |
+|---|---|
+| OpenWrt version string | identical (`r15812+878-46b6ee7ffc`) |
+| Kernel configuration | identical (0 of 2090 options differ) |
+| Kernel modules | all byte-identical |
+| Kernel image | not compared yet (package checksum differs) |
+| Packages | 363 of 466 (GL.iNet's closed and private packages can't be built) |
+| Other files | about 300 libraries and programs differ, not investigated yet |
+
+Each successful run publishes release `gl-4.2.0-sdk`: the OpenWrt SDK
+(GL.iNet's GCC 8.4.0 toolchain and the prepared kernel tree) and
+`mtk-eth-driver-src.tar.gz` (the Ethernet/PPE driver folder as compiled,
+which the SDK leaves out). Open-source code only; it lets other workflows
+build kernel modules exactly like GL.iNet did. Matching GL.iNet's modules
+also needs OpenWrt's `KCFLAGS=-fno-caller-saves` and stripping like
+`scripts/strip-kmod.sh`.
+
 ### Closed kernel modules
 
 Their declared licenses come from `modinfo`. Most claim a GPL license, yet
@@ -101,7 +124,7 @@ only some have public source.
 | `gl-sdk4-hw-info` | GPL | yes: `gl-inet/gl-feeds`, branch `v4.7` |
 | `gl-sdk4-tertf` | GPL | yes: `gl-inet/gl-feeds`, branch `fix-nginx` |
 | `parental_control` | GPL | yes: [gl-inet/parental-control](https://github.com/gl-inet/parental-control) (2023) |
-| `mtkhnat` | GPL v2 | partly: MediaTek's source is in the feed mirror, GL.iNet's patches `3004`/`3009`/`3010` are in the 4.2.0 recipe; the later builds (changed up to 4.6.2) are not published |
+| `mtkhnat` | GPL v2 | yes, in effect: MediaTek's source plus GL.iNet's public patches rebuilds 4.2.0 byte-identical; 4.7.4 is the same with one warning removed (see driver-analysis.md) |
 | `kmwan`, `black_white_list`, `gl-mpflow` | GPL | not found |
 | `mtfwd`, `mtqos` | Dual BSD/GPL | not found (both are Wi-Fi features; see driver-analysis.md) |
 

@@ -118,10 +118,16 @@ anything from it.
 `kmwan` and `tertf` count traffic in software hooks, so flows taken over by
 the hardware NAT would be missing from their statistics (our inference).
 
-**Conclusion of phase D:** GL.iNet's firmware (up to 4.7.4) contains no
-unpublished hardware knowledge. Its hardware NAT and QoS driver is
-MediaTek's public `mtk_hnat` code; everything closed is either a Wi-Fi
-feature (irrelevant on the MT2500) or GL.iNet's application logic. What
+**Conclusion of phase D (for the kernel modules):** GL.iNet's closed
+modules (up to 4.7.4) contain no unpublished hardware code. Its hardware
+NAT and QoS driver is MediaTek's public `mtk_hnat` code; everything closed
+is either a Wi-Fi feature (irrelevant on the MT2500) or GL.iNet's
+application logic. Not yet checked byte for byte: the kernel image itself,
+which holds the built-in drivers (Ethernet, GPY211 PHY, eMMC). Its
+configuration is identical to GL.iNet's, but its package checksum still
+differs, and `parental_control` needs two functions that only GL.iNet's
+patched kernel exports, so GL.iNet may carry kernel patches beyond the
+public recipe (about filtering, not hardware, as far as we can tell). What
 upstream OpenWrt lacks (hardware QoS, tunnel offload; see above) is
 therefore a matter of porting MediaTek's public SDK features to mainline,
 not of secret code. How we checked: the recreation's toolchain (published
@@ -243,6 +249,7 @@ change between 4.6.2 and 4.9.0_beta3.
   upstream (the PCS power cycle on a speed change is our best guess)?
 - Does 52 MHz work reliably on upstream, given the card supports it? Why
   did GL.iNet lower it in 4.7.0?
+- Is GL.iNet's kernel image (with the built-in drivers) identical to ours, apart from build timestamps? Which kernel patches provide `gl_parental_control_handle` and `athrs_fast_nat_recv`?
 - Does `mtkhnat` change after 4.7.4 (4.7.13, 4.8.2, 4.9.0)? The files' hashes say it doesn't after 4.6.2.
 - Does mainline `mxl-gpy` from OpenWrt main (kernel 6.18) fix the WAN link on
   the old unit (phase C)?
