@@ -111,6 +111,10 @@ jobs:
                   order.append(n)
           for n in explicit:
               visit(n)
+          # then all the others: the official status has "user" on every
+          # package (a full build names them all), Auto-Installed on those
+          # an earlier package pulled in
+          order += sorted(set(st) - set(order))
           print("\n".join(order))
           PY
           wc -l ../w/install-order.txt
