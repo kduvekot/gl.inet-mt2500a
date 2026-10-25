@@ -131,6 +131,13 @@ jobs:
             mkdir -p /home/glinet/work && chown -R glinet: /home/glinet /work
             exec runuser -u glinet -- bash "$0"
           fi
+          # Samba's build system (waf) orders libraries via Python sets, so the
+          # link order follows Python's hash seed, random by default (GL.iNet's
+          # 4.2.0 and 4.7.4 builds of the same Samba differ in 140 of 213
+          # libraries). A fixed seed makes our own builds repeatable; GL.iNet's
+          # random order itself can't be reproduced. (OpenWrt's .pyc
+          # compilation sets its own seed and is unaffected.)
+          export PYTHONHASHSEED=0
           git config --global user.email ci@invalid.invalid
           git config --global user.name ci
           git config --global --add safe.directory '*'
