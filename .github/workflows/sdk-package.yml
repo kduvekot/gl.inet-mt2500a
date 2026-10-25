@@ -87,7 +87,7 @@ jobs:
           find bin/packages -name '*.ipk' > /home/glinet/work/_github/mt7981/ipks.txt
           SH
           # GL.iNet's build path (embedded in binaries and build IDs)
-          timeout 300m docker run --rm -v "$PWD/sdk:/home/glinet/work/_github/mt7981" -e PKGS="$PKGS" -e CFG="$CFG" ubuntu:20.04 bash /home/glinet/work/_github/mt7981/build.sh 2>&1 | grep -E "^(=== |\\+ echo|[a-z0-9_-]+: exit|[a-z0-9_-]+ ->)" || true
+          timeout 300m docker run --rm -v "$PWD/sdk:/home/glinet/work/_github/mt7981" -e PKGS="$PKGS" -e CFG="$CFG" ubuntu:20.04 bash /home/glinet/work/_github/mt7981/build.sh 2>&1 | grep --line-buffered -E "^(=== |\\+ echo|[a-z0-9_-]+: exit|[a-z0-9_-]+ ->)" || true
       - name: Compare with GL.iNet's files
         if: always()
         env:
