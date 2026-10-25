@@ -80,9 +80,20 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   image identical apart from its build IDs (run #8). The
   decompiled code lives in a private repo on the owner's account (name in
   Claude's memory), never in this one.
-- **Next:** the ~300 differing files in the recreation (optional); phase C (upstream OpenWrt on
-  the old unit, iperf with the GMKtec when it arrives, about a week). Ask
-  the owner before any write to a router.
+- **4.2.0 recreation, complete image** (journey chapter 13, 2026-10-25):
+  public part identical except accepted differences (Samba library order
+  and ~25 `.pyc`, both random in GL.iNet's own builds too; vermagic hash;
+  `wg`'s tree hash). The complete image, with GL.iNet's closed packages
+  generated *inside the run* from the official image, builds on the free
+  public runners: `gl-recreate-4.2.0.yml` input `closed` (full build) or
+  `gl-assemble-4.2.0.yml` (published SDK + ImageBuilder, ~10 min). Both
+  publish reports only, never the image. 466 packages, 6071 files like the
+  official; still open: `status` (install order, `Auto-Installed`) and a
+  few `Installed-Size` values (= size of a package's data.tar.gz).
+- **Next:** finish 4.2.0 (status, Installed-Size, a validation run without
+  ccache), then compare release by release up to 4.9; phase C (upstream
+  OpenWrt on the old unit, iperf with the GMKtec). Ask the owner before any
+  write to a router.
 - WAN PHY: old unit MaxLinear GPY211C0VC (`glinet_gl-mt2500`; board
   MT2500-V1.1, DDR4 1 GB, Samsung 8 GB eMMC); replacement Airoha EN8811H (`glinet_gl-mt2500-airoha`; GL.iNet 4.7.13; table in docs/journey.md). The old unit's UART is
   J13: 3.3V (square pad), RX, TX, GND, open through-holes.
@@ -163,8 +174,14 @@ for line in open(sys.argv[1]):
 ## Repo map
 
 - `.github/workflows/`: `build-openwrt.yml`, `recovery-kit.yml`,
-  `raspios-image.yml`, `gl-recreate-4.2.0.yml`; `.github/scripts/`:
-  `compare-firmware.py`, `fit-ikconfig.py`
+  `raspios-image.yml`, `gl-recreate-4.2.0.yml` (inputs `ccache`,
+  `publish_sdk`, `closed`), `gl-assemble-4.2.0.yml`, `sdk-package.yml`,
+  `gl-versions.yml`; `.github/scripts/`: `compare-firmware.py`,
+  `classify-diffs.py`, `control-diffs.py`, `fit-ikconfig.py`,
+  `gen-closed-feed.py`, `version-diff.py`
+- `openwrt/gl-4.2.0-patches/`: our patches for build-machine effects
+  (iproute2 order); `openwrt/gl-4.2.0-closed/`: what the closed part needs
+  besides the official image (three source-built recipes, image-file paths)
 - `analysis/`: `collect-baseline.sh`, `summarize-baseline.py`,
   `source-diff.py`, `firmware-versions.py`
 - `openwrt/packages.txt`: extra packages for the OpenWrt images
