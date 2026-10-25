@@ -112,9 +112,10 @@ jobs:
           for n in explicit:
               visit(n)
           # then all the others: the official status has "user" on every
-          # package (a full build names them all), Auto-Installed on those
+          # package except the six held toolchain ones (libc, libgcc1, ...),
+          # so a full build names all but those; Auto-Installed marks the ones
           # an earlier package pulled in
-          order += sorted(set(st) - set(order))
+          order += sorted(n for n in set(st) - set(order) if "hold" not in st[n].get("Status", ""))
           print("\n".join(order))
           PY
           wc -l ../w/install-order.txt
