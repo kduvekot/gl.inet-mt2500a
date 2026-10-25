@@ -212,6 +212,13 @@ jobs:
           ls -l bin/targets/mediatek/mt7981/
           mkdir -p /work/out/sdk
           mv bin/targets/mediatek/mt7981/openwrt-sdk-*.tar.* /work/out/sdk/ || true
+          # The SDK leaves out driver-private headers; the Ethernet/PPE driver
+          # folder as compiled (all patches applied) lets out-of-tree builds
+          # of mtk_hnat find "../mtk_eth_soc.h" etc.
+          K=$(ls -d build_dir/target-*/linux-*/linux-5.4.* | head -1)
+          tar -C "$K" -czf /work/out/sdk/mtk-eth-driver-src.tar.gz \
+            --exclude='*.o' --exclude='*.ko' --exclude='*.cmd' --exclude='*.mod*' \
+            drivers/net/ethernet/mediatek
           cp -a bin/targets/mediatek/mt7981 /work/out/images
           staging_dir/host/bin/ccache -s || true
           EOF
