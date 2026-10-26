@@ -12,6 +12,12 @@ Every regular file falls in one class:
               files where only version/date/hash lines changed; opkg records
               where only Version/Installed-Size/SourceDateEpoch changed; .pyc
               files whose body is identical
+  random      same source, but output that varies from build to build: .pyc
+              files with the same source hash (header) and a different body
+              (set order, marshal reference flags), ELF files with the same
+              NEEDED libraries in a different order and equally sized
+              sections (Samba's library order; GL.iNet's own builds differ
+              the same way)
   changed     real change: code, data or content (ELF: which sections)
 The report groups changed files by package (from the opkg .list files of the
 new image) and lists package version changes, plus the kernel image (code),
@@ -56,6 +62,17 @@ def sections(path):
     return out
 
 
+def section_sizes(path):
+    r = subprocess.run(["readelf", "-SW", path], capture_output=True, text=True).stdout
+    return sorted((m.group(1), m.group(4)) for m in
+                  re.finditer(r"\]\s+(\S+)\s+(\S+)\s+[0-9a-f]+\s+([0-9a-f]+)\s+([0-9a-f]+)", r))
+
+
+def needed(path):
+    r = subprocess.run(["readelf", "-dW", path], capture_output=True, text=True).stdout
+    return re.findall(r"\(NEEDED\)\s+Shared library: \[([^\]]+)\]", r)
+
+
 def classify(a, b, rel):
     A, B = open(a, "rb").read(), open(b, "rb").read()
     if A == B: return "identical", ""
@@ -67,9 +84,14 @@ def classify(a, b, rel):
         subst = [n for n in diff if n.startswith(ELF_SUBSTANCE) or n in ("__ksymtab", "__ksymtab_strings")]
         if not subst:
             return "meta-only", ",".join(diff)[:80]
+        na, nb = needed(a), needed(b)
+        if na != nb and sorted(na) == sorted(nb) and section_sizes(a) == section_sizes(b):
+            return "random", "library order"
         return "changed", ",".join(subst)[:80]
     if rel.endswith(".pyc") and len(A) > 16 and A[16:] == B[16:]:
         return "meta-only", "pyc header"
+    if rel.endswith(".pyc") and len(A) > 16 and A[:16] == B[:16]:
+        return "random", "pyc: same source hash"
     try:
         ta, tb = A.decode().splitlines(), B.decode().splitlines()
     except UnicodeDecodeError:
@@ -156,7 +178,7 @@ def main():
     cfg_n = {l.split("=")[0]: l for l in kn[2].splitlines() if l.startswith("CONFIG_")}
     cfg_d = sorted(k for k in set(cfg_o) | set(cfg_n) if cfg_o.get(k) != cfg_n.get(k))
     r = [f"## {label}", "",
-         "Files: " + ", ".join(f"{k} **{cls[k]}**" for k in ("identical", "meta-only", "changed", "new", "gone")), "",
+         "Files: " + ", ".join(f"{k} **{cls[k]}**" for k in ("identical", "meta-only", "random", "changed", "new", "gone")), "",
          f"Kernel code: {'**same**' if ko[0] == kn[0] else '**changed**'} (banner excluded); "
          f"kernel config: {len(cfg_d) or 'same'}{' (' + ', '.join(x.replace('CONFIG_','') for x in cfg_d[:8]) + ')' if 0 < len(cfg_d) <= 8 else ''}; "
          f"device tree: {'same' if ko[3] == kn[3] else '**changed**'}", "",
