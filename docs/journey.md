@@ -875,6 +875,30 @@ always), and `gl-sdk4-ddns` matches with an empty `etc/ddns/`. Left:
 the size equally, so size alone can't tell), `gl-sdk4-clients`,
 `gl-sdk4-base-files` and `base-files`.
 
+**Validation run without ccache (2026-10-26, on the M5+).** GL.iNet built
+without ccache, so this is the formal check: the complete build (`closed`
+mode, same workflow steps run locally on a 16-thread mini PC, 81 minutes
+instead of about two hours on GitHub). Result: 466 packages and 6,071
+files like the official image, nothing missing or extra, 391 differing
+files. Outside the accepted classes (Samba's library order, Python
+bytecode, the vermagic hash in the kernel package and in 106 kernel-module
+records, `wg`'s tree hash) no file differs. `/usr/lib/opkg/status` matches
+apart from the kernel's version (vermagic); this time even `python3`'s
+`Depends` order matches. `Installed-Size` differs in 15 records: 11 whose
+contents differ in the accepted ways (Samba, Python, `wireguard-tools`),
+and 4 closed packages still unexplained (`gl-oui-rpc`,
+`gl-sdk4-base-files`, `gl-sdk4-clients`, `gl-sdk4-plugins`).
+
+**The vermagic hash, searched harder.** With 16 threads, a small C program
+(OpenSSL MD5, prefix cache) tries billions of `.config.set` variants:
+adding up to 4 of the 243 options that are `=y`/`=m` in GL.iNet's final
+configuration but missing from our `.config.set` (140 million), dropping
+up to 4 of our 255 lines that don't reach the final configuration (130
+million), and mixed changes up to 3 (20 million): no match. The likeliest
+remaining explanation stays the same: `KCONFIG` lines from GL.iNet's
+private kernel-module recipes, possibly for options that don't exist in
+this kernel at all (those can't be enumerated).
+
 **Moved to the public runners.** The closed part doesn't need to be stored
 anywhere: like the comparison, the run downloads the official image from
 GL.iNet and generates the closed packages from it
@@ -1033,3 +1057,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-25 | Recreation run #13: `busybox`, `openvpn`, `ip-full` identical (BusyBox options from GL.iNet's profiles, net-tools, iproute2 directory order); Python bytecode shown to vary by nature, also in GL.iNet's own releases. SDK + ImageBuilder published for the private assembly. |
 | 2026-10-25 | Complete 4.2.0 image assembled from the published SDK and ImageBuilder plus the closed packages (assembly runs #1 to #9): rootfs-overlay scripts, the ddns move, unstripped modules, Installed-Size (= size of data.tar.gz; owner names and folder modes), GL.iNet's build key. Complete builds moved to the public runners (closed part generated in the run, reports only). |
 | 2026-10-25 | Complete full build on the public runner (#16): 466 packages, 6,071 files, `status` identical apart from accepted fields (order and Auto-Installed included). Fixes: adguardhome folder clash, no wsdd2, LUCI_LANG_en only public-only; empty folders in web-interface packages (Installed-Size). |
+| 2026-10-26 | Validation run without ccache (M5+, 81 min): 466 packages, 6,071 files, status identical apart from the kernel's vermagic; outside the accepted classes no file differs; 4 closed packages' Installed-Size open. vermagic brute force (adds/drops up to 4, mixed up to 3): no match. |
