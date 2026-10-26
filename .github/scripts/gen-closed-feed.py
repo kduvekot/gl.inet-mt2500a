@@ -135,11 +135,19 @@ def main():
         if (d / "files/www/views").is_dir():
             for e in ("www/views/img", "www/i18n", "usr/share/oui/menu.d"):
                 (d / "files" / e).mkdir(parents=True, exist_ok=True)
-        # gl-sdk4-ddns ships an empty etc/ddns/ (its postinst moves two files
-        # into it): the only one of the image's folders that gives GL.iNet's
-        # Installed-Size
-        if name == "gl-sdk4-ddns":
-            (d / "files/etc/ddns").mkdir(parents=True, exist_ok=True)
+        # Empty folders GL.iNet's packages ship (empty in the image too). Each
+        # was found by rebuilding the package archive and checked against the
+        # package's other versions in other releases (same rule, exact
+        # Installed-Size every time):
+        #   gl-sdk4-ddns     etc/ddns (its postinst moves two files into it)
+        #   gl-sdk4-plugins  etc/rc.d          (4.1.1, 4.2.0, 4.2.1)
+        #   gl-sdk4-clients  usr/libexec/rpcd  (7 versions, 4.1.1 to 4.7.4)
+        #   gl-oui-rpc       etc/oui, etc/oui-httpd (4.1.1 to 4.6.2)
+        EMPTY = {"gl-sdk4-ddns": ["etc/ddns"], "gl-sdk4-plugins": ["etc/rc.d"],
+                 "gl-sdk4-clients": ["usr/libexec/rpcd"],
+                 "gl-oui-rpc": ["etc/oui", "etc/oui-httpd"]}
+        for e in EMPTY.get(name, []):
+            (d / "files" / e).mkdir(parents=True, exist_ok=True)
         (d / "version.date").write_text(c.get("SourceDateEpoch", "") + "\n")
         pkg = name[5:] if kmod else name
         lines = ["include $(TOPDIR)/rules.mk", ""]
