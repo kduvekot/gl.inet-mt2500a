@@ -1111,6 +1111,29 @@ symbol exported by two Samba libraries to the other one); `wg` carries
 GL.iNet's tree hash. GL.iNet's vermagic hash is the same in 4.2.0 and 4.2.1,
 and so is ours.
 
+**4.2.3, two more release values.** Values from the official image: build
+time 1688620184 (kernel banner, two seconds after the patch commit date
+this time), patch commit date 1688620182, `release5`, AdGuardHome v0.107.26,
+builder tag `v4.2.3_release5`. Two new effects:
+
+- **`kmod-gl-sdk4-tertf` left the public feed.** gl-feeds at 4.2.3's
+  revision (`4fd97cf`, "remove parental-control and tertf") no longer has it,
+  so the module wasn't selectable and `gl-sdk4-clients`, which depends on
+  it, couldn't be installed. The release value `private_now` lists packages
+  of `built-from-public.txt` that a release's public feeds no longer have;
+  those come from the image like the other closed packages. (To find this,
+  the build now keeps opkg's error lines when `package/install` fails: that
+  step writes no log.)
+- **The second boundary at the end.** `dnsmasq` and `odhcpd` (last touched
+  by patches 18 and 19 of 42) have `SourceDateEpoch` 1688620183, every other
+  OpenWrt-tree package (patch 16 or earlier) 1688620182: the mirror image of
+  4.2.1. Release value `late_patches` (the last 25 patch commits one second
+  later; a boundary at 17 or 18 gives the same image).
+
+Run 20 (4.2.3): every file present, `status` identical apart from the
+kernel's vermagic, and of the package records only the vermagic hash and
+the accepted `Installed-Size` values differ, as for 4.2.0 and 4.2.1.
+
 **The kernel is byte-identical without ccache.** The validation run
 without ccache (run 16, 43 minutes) gives a root file system identical to
 run 14's, but a kernel image of exactly GL.iNet's size. Decoded property by
@@ -1237,3 +1260,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-26 | "Same code" proven: all 22 differing `.pyc` files have identical code objects; of the 246 differing ELF files, 174 have identical machine code and Samba's other 71 match function by function (35,453 of 35,455 functions, all 12,507 data objects; the last 2 bind a duplicated symbol to another library). |
 | 2026-10-26 | Recipe per release (`openwrt/gl-releases.tsv`); 4.2.1 recreated to 4.2.0's level (run 14): AdGuardHome v0.107.26 release binary, `early_patches` (patch commits crossing a second), `rebuilt_packages` (ABI names in `Depends` when GL.iNet's tree held earlier builds). |
 | 2026-10-26 | Kernel image byte-identical to GL.iNet's (4.2.0 and 4.2.1) when built without ccache; the build-ID difference was ccache. |
+| 2026-10-26 | 4.2.3 recreated to the same level (run 20): release values `private_now` (tertf left gl-feeds) and `late_patches`; opkg errors kept on a failed install. |
