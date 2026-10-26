@@ -1051,7 +1051,7 @@ public sources):
 | Difference | Why |
 |---|---|
 | kernel vermagic hash (kernel version text, kernel modules' `Depends`) | most likely kernel options from GL.iNet's private kernel module recipes; not searchable |
-| two GNU build IDs in the kernel image | hash over build details of never-loaded parts |
+| ~~two GNU build IDs in the kernel image~~ | only with ccache: without it the kernel is byte-identical (2026-10-26, chapter 14) |
 | order of `python3`'s `Depends` (fixed since), `Installed-Size` of the 11 packages whose contents differ in the accepted ways | GNU make 4.2 doesn't sort file lists; the size follows the contents |
 | Python bytecode: about 25 of 626 `.pyc` files (set order, marshal reference flags) | not a seed question: OpenWrt already compiles with `PYTHONHASHSEED=$(SOURCE_DATE_EPOCH)`, yet they vary between our own runs, and between GL.iNet's 4.4.5 and 4.4.6 (identical `python3` packages) 23 differ too |
 | GL.iNet's web interface and own programs | generated or closed; taken from the official image in the private recipe |
@@ -1110,6 +1110,16 @@ other 62 match function by function (the 4 functions that differ bind a
 symbol exported by two Samba libraries to the other one); `wg` carries
 GL.iNet's tree hash. GL.iNet's vermagic hash is the same in 4.2.0 and 4.2.1,
 and so is ours.
+
+**The kernel is byte-identical without ccache.** The validation run
+without ccache (run 16, 43 minutes) gives a root file system identical to
+run 14's, but a kernel image of exactly GL.iNet's size. Decoded property by
+property, its FIT image differs from GL.iNet's only in the root file
+system's size and hashes, which the image records; the kernel itself and
+the device tree are byte-identical. The same holds for 4.2.0 (the
+validation run without ccache); with ccache the kernel data differs. So the
+"two GNU build IDs" accepted since run #8 were a ccache effect, not a
+difference from GL.iNet's build.
 
 ## Next steps
 
@@ -1226,3 +1236,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-26 | Last four `Installed-Size` values solved (empty folders in three closed packages, GL.iNet's modes for 7 base-files overlay files), each checked across releases; run 9 confirms: only the 11 accepted ones remain. |
 | 2026-10-26 | "Same code" proven: all 22 differing `.pyc` files have identical code objects; of the 246 differing ELF files, 174 have identical machine code and Samba's other 71 match function by function (35,453 of 35,455 functions, all 12,507 data objects; the last 2 bind a duplicated symbol to another library). |
 | 2026-10-26 | Recipe per release (`openwrt/gl-releases.tsv`); 4.2.1 recreated to 4.2.0's level (run 14): AdGuardHome v0.107.26 release binary, `early_patches` (patch commits crossing a second), `rebuilt_packages` (ABI names in `Depends` when GL.iNet's tree held earlier builds). |
+| 2026-10-26 | Kernel image byte-identical to GL.iNet's (4.2.0 and 4.2.1) when built without ccache; the build-ID difference was ccache. |
