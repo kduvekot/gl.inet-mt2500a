@@ -148,6 +148,20 @@ def main():
                  "gl-oui-rpc": ["etc/oui", "etc/oui-httpd"]}
         for e in EMPTY.get(name, []):
             (d / "files" / e).mkdir(parents=True, exist_ok=True)
+        # rootfs-overlay files whose path another package also installs: the
+        # overlay copy (cp -R onto an existing file) keeps that file's mode, so
+        # the image doesn't show GL.iNet's. Their modes, found as the only one
+        # of all 128 combinations that gives GL.iNet's exact Installed-Size in
+        # six releases (4.1.1 to 4.5.0):
+        MODES = {"gl-sdk4-base-files": {
+            "etc/uci-defaults/99-firewall": 0o644, "etc/hotplug.d/iface/20-firewall": 0o644,
+            "sbin/sysupgrade": 0o755, "lib/netifd/ppp6-up": 0o644,
+            "etc/hotplug.d/block/10-mount": 0o755, "etc/rc.local": 0o644,
+            "etc/rc.button/reset": 0o755}}
+        for f, m in MODES.get(name, {}).items():
+            t = d / "files/rootfs-overlay" / f
+            if t.is_file():
+                t.chmod(m)
         (d / "version.date").write_text(c.get("SourceDateEpoch", "") + "\n")
         pkg = name[5:] if kmod else name
         lines = ["include $(TOPDIR)/rules.mk", ""]
