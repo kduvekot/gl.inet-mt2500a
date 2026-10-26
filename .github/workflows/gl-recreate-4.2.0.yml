@@ -106,6 +106,11 @@ env:
   #   EXTRA_CONFIG      extra .config lines, space-separated ("-": none), for
   #                     options from GL.iNet's private profiles (4.4.5: busybox
   #                     usleep)
+  #   FEED_REVS         public feed revisions as name=commit, space-separated
+  #                     ("-": the profiles' own). From 4.5.0 on the builder
+  #                     isn't public; the gl-feeds revisions follow from the
+  #                     image (each package's SourceDateEpoch is the last
+  #                     commit to its folder; analysis/release-values.py)
 
 jobs:
   recreate:
@@ -143,7 +148,7 @@ jobs:
           REL="${{ inputs.release }}"
           case "$REL" in ""|false) REL=4.2.0 ;; esac
           awk -F'\t' -v r="$REL" -v q="'" '$1 == r { f = 1
-              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES PRIVATE_NOW LATE_PATCHES PATCHES_REV EXTRA_CONFIG", k, " ")
+              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES PRIVATE_NOW LATE_PATCHES PATCHES_REV EXTRA_CONFIG FEED_REVS", k, " ")
               for (i = 1; i <= n; i++) print k[i] "=" q $i q }
             END { exit !f }' openwrt/gl-releases.tsv > work/release.env \
             || { echo "release $REL not in openwrt/gl-releases.tsv"; exit 1; }
@@ -282,8 +287,10 @@ jobs:
           # Public copies of GL.iNet's two MT2500 profiles: drop private feeds
           # and the packages that only exist there.
           python3 - << 'PY'
-          import yaml
+          import os, yaml
           private_feeds = {"glinet", "mt7981"}
+          # this release's feed revisions (see env)
+          revs = dict(x.split("=", 1) for x in os.environ.get("FEED_REVS", "-").split() if "=" in x)
           # kmod-gl-sdk4-tertf and -hw-info are public (gl_feed_common at the
           # recipe's commit), so they are built from source.
           private_pkgs = {"fwdd", "kmod-mtfwd", "kmod-mtqos", "mtk-base-files",
@@ -296,10 +303,16 @@ jobs:
                            ("glinet_mt2500", "public_glinet_mt2500")):
               d = yaml.safe_load(open(f"profiles/{src}.yml"))
               d["feeds"] = [f for f in d.get("feeds", []) if f.get("name") not in private_feeds]
+              for f in d["feeds"]:
+                  if f.get("name") in revs:
+                      f.pop("branch", None)
+                      f["revision"] = revs.pop(f["name"])
+                      print(f"feed {f['name']} at {f['revision']}")
               keep = [p for p in d.get("packages", []) if not private(p)]
               removed += [f"{src}: {p}" for p in d.get("packages", []) if private(p)]
               d["packages"] = keep
               yaml.safe_dump(d, open(f"profiles/{dst}.yml", "w"), sort_keys=False)
+          assert not revs, f"FEED_REVS names feeds the profiles don't have: {revs}"
           open("/work/out/removed-packages.txt", "w").write("\n".join(removed) + "\n")
           print(f"{len(removed)} private packages left out")
           PY
