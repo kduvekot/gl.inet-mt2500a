@@ -430,6 +430,9 @@ jobs:
                         "openvswitch-vxlan-intree", "openvswitch-lisp-intree",
                         "openvswitch-stt-intree"):
                   f.write(f"# CONFIG_PACKAGE_kmod-{k} is not set\n")
+              # gl_feed_common's fan driver (from January 2024) needs headers of
+              # GL.iNet's closed gl-sdk4-utils; no MT2500 image ships it
+              f.write("# CONFIG_PACKAGE_kmod-gl-sdk4-fan is not set\n")
               for p in wanted:
                   f.write(f"CONFIG_PACKAGE_{p}=y\n")
           subprocess.run(["make", "defconfig"], check=True)
