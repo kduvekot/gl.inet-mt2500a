@@ -457,7 +457,11 @@ jobs:
             for p in $REBUILT_PACKAGES; do make -j"$(nproc)" BUILD_LOG=1 "$p/compile"; done
             for p in $REBUILT_PACKAGES; do make "$p/clean"; done
           fi
-          make -j"$(nproc)" BUILD_LOG=1
+          make -j"$(nproc)" BUILD_LOG=1 || {
+            # package/install writes no log with BUILD_LOG: keep opkg's error lines
+            make package/install V=s 2>&1 | grep -i -E "error|cannot|collide|clash|satisf|unknown package|not found" \
+              | sort -u | head -60 > /work/out/install-errors.txt || true
+            cat /work/out/install-errors.txt; exit 1; }
           ls -l bin/targets/mediatek/mt7981/
           # the order opkg installed the packages in (it decides which ones
           # are marked Auto-Installed in /usr/lib/opkg/status); the assembly
