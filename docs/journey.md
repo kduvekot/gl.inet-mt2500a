@@ -899,6 +899,78 @@ order and the Python bytecode come out the same every time. With that,
 4.2.0 counts as validated: built without ccache like GL.iNet's, repeatable,
 and outside the accepted classes no file differs.
 
+**The last four `Installed-Size` values (2026-10-26).** `Installed-Size`
+is the size of the package's compressed `data.tar.gz`, so a missing empty
+folder or another file mode changes it by a few bytes, while the file
+list in the image stays the same. Each hypothesis was checked against the
+same package in other releases: it only counts if it gives GL.iNet's exact
+size in every release where the package exists (the size computed with the
+same GNU tar and gzip options as `ipkg-build`).
+
+| Package | Cause | Checked in |
+|---|---|---|
+| `gl-sdk4-plugins` | empty `etc/rc.d/` in the package | 3 releases |
+| `gl-sdk4-clients` | empty `usr/libexec/rpcd/` | 7 releases |
+| `gl-oui-rpc` | empty `etc/oui/` and `etc/oui-httpd/` | 5 of 6 releases |
+| `gl-sdk4-base-files` | modes of 7 overlay files that overwrite other packages' files (`cp` keeps the existing file's mode, so the package holds GL.iNet's source modes, not the image's) | 6 releases; exactly 1 of the 128 mode combinations fits all of them |
+
+`gen-closed-feed.py` now creates those folders and sets those modes. Run 9
+on the M5+ (closed mode) confirms it: of the `Installed-Size` values only
+the 11 accepted ones still differ (Python, Samba, `wireguard-tools`, whose
+contents differ in the accepted ways); `status` is identical apart from the
+kernel's vermagic.
+
+**"Same code", proven instead of inferred (2026-10-26).** For Samba and the
+Python bytecode, "content identical" rested on indirect evidence (same
+library set, equal section sizes, same source hash; GL.iNet's own builds
+varying the same way). Both are now checked directly, on the official 4.2.0
+root and ours:
+
+- **Python bytecode.** In Python 3.9 (the version OpenWrt 21.02 compiles
+  with), each differing `.pyc` is loaded with `marshal` and its code
+  objects compared recursively: bytecode, constants (sets as sets), names,
+  variables, line tables, file names. All 22 differing files: identical
+  code objects, identical headers. So the bytes differ only in how
+  `marshal` wrote the same objects. Negative controls: two different
+  modules, and one module with a single character changed in a nested
+  string constant; both are reported as different, at the right spot.
+- **Programs and libraries.** All 246 differing ELF files were compared
+  with the cross binutils (`aarch64-linux-gnu-objdump`). 174 have
+  byte-identical machine code (`.text`), and every other section is
+  identical too, except the ones that follow the library list (`.dynamic`,
+  `.dynstr`, symbol order); all are Samba. `wg` has no section table (its
+  `git describe` hash, see above). The other 71, all Samba, have functions
+  and strings in another order: waf's random order applies to the object
+  files inside a library, not only to its list of libraries. Those were
+  compared function by function, by name: every address an instruction
+  uses is turned into what it points to (function or object + offset,
+  the text of an unnamed string, the symbol of a GOT or PLT entry), with
+  register values followed through the function's branches (value sets at
+  merge points, spilled registers on the stack, calls that never return,
+  only 64-bit registers carrying addresses), and every named data object
+  compared byte for byte with pointers compared by target.
+
+  Result: **35,453 of 35,455 functions and all 12,507 data objects
+  identical**, nothing present on one side only. The last 2 functions
+  (`cli_session_request_sent`, `nb_connect_connected` in
+  `liblibsmb-samba4.so`) call the same `writev_recv`/`writev_send`, but
+  bound to another library: two Samba libraries export that function
+  (`libsmbconf`, `libsmb-transport`), and the linker takes the first in
+  the random library order. Negative controls on `smbpasswd`: one changed
+  instruction, one changed character in a string, one changed byte in a
+  data object; each is reported, in the right function or object.
+
+  The comparison tool is our own construction (no standard tool does
+  this). It found gaps in itself along the way: every remaining
+  difference was traced by hand to its cause before the tool was fixed,
+  and the negative controls were rerun after each fix. One rule in it is
+  a deduction rather than an observation: an immediate added to a
+  register that may hold an `adrp` page is treated as that page's
+  `:lo12:` offset.
+
+So the accepted Samba and `.pyc` differences are now proven to be order
+only: the same machine code, data and bytecode as GL.iNet's.
+
 **The vermagic hash, searched harder.** With 16 threads, a small C program
 (OpenSSL MD5, prefix cache) tries billions of `.config.set` variants:
 adding up to 4 of the 243 options that are `=y`/`=m` in GL.iNet's final
@@ -979,12 +1051,12 @@ public sources):
 | Difference | Why |
 |---|---|
 | kernel vermagic hash (kernel version text, kernel modules' `Depends`) | most likely kernel options from GL.iNet's private kernel module recipes; not searchable |
-| two GNU build IDs in the kernel image | hash over build details of never-loaded parts |
-| order of `python3`'s `Depends`, a few bytes of `Installed-Size` | GNU make 4.2 doesn't sort file lists; size rounding |
+| ~~two GNU build IDs in the kernel image~~ | only with ccache: without it the kernel is byte-identical (2026-10-26, chapter 14) |
+| order of `python3`'s `Depends` (fixed since), `Installed-Size` of the 11 packages whose contents differ in the accepted ways | GNU make 4.2 doesn't sort file lists; the size follows the contents |
 | Python bytecode: about 25 of 626 `.pyc` files (set order, marshal reference flags) | not a seed question: OpenWrt already compiles with `PYTHONHASHSEED=$(SOURCE_DATE_EPOCH)`, yet they vary between our own runs, and between GL.iNet's 4.4.5 and 4.4.6 (identical `python3` packages) 23 differ too |
 | GL.iNet's web interface and own programs | generated or closed; taken from the official image in the private recipe |
 | `fcgiwrap`, `gl_modem` | GL.iNet's patch / internal version, not public |
-| Samba: library and object order in about 250 files (content identical) | waf orders libraries via Python sets with a random hash seed; GL.iNet's own 4.2.0 and 4.7.4 builds of the same Samba differ in 140 of 213 libraries |
+| Samba: library and object order in about 250 files (machine code and data proven identical function by function, 2026-10-26) | waf orders libraries via Python sets with a random hash seed; GL.iNet's own 4.2.0 and 4.7.4 builds of the same Samba differ in 140 of 213 libraries |
 | `wg` version string (`git describe` hash) | hash of GL.iNet's tree after their `git am`, depends on their committer identity and timestamps |
 
 **Where 4.2.0 stands** (5,451 regular files, 219 MB unpacked, after run #9):
@@ -993,6 +1065,84 @@ sources, plus the whole kernel layer. Run #10 targets most of the rest
 (Samba alone is about 700 files and 66 MB). GL.iNet's closed packages (about
 1,100 files, 40.6 MB) come from the private recipe: as originals, except
 AdGuardHome, `sipcalc` and the exFAT tools, which are built from source.
+
+## Chapter 14: Release by release, 4.2.1 (2026-10-26)
+
+**One recipe, a row per release.** Everything that differs between releases
+is a row of `openwrt/gl-releases.tsv`; the recreation's input `release`
+selects it (default 4.2.0). The first step writes the row to
+`work/release.env`, which the later steps and the build container read:
+builder tag, official image, build time, patch commit date, `version.date`,
+release type, the AdGuardHome release, and two values about GL.iNet's build
+environment (below). Built again with the new mechanism, 4.2.0 gives a root
+file system and kernel identical to the previous run.
+
+**4.2.1, four rounds on the M5+.** The first complete build already matched
+in package set, file list, install order and `Auto-Installed`. What
+remained, and what it was:
+
+- **AdGuardHome**: GL.iNet's 4.2.1 file is AdGuard's official v0.107.26
+  release binary after OpenWrt's `sstrip -z`, byte for byte (4.2.0 was
+  v0.107.8 the same way). Upstream names the tarball the same for every
+  version, so the local download name now carries the version.
+- **`uboot-envtools`' `SourceDateEpoch`** one second before the other 115
+  packages from the OpenWrt tree: GL.iNet's `git am` crossed a second
+  boundary. `uboot-envtools` was last touched by patch 2, every other one by
+  patch 9 or later, so the first 2 patch commits get the earlier date
+  (`early_patches`; any boundary from 2 to 8 gives the same image).
+- **`curl` and `libc` depending on `libcurl4`/`libgcc1`** instead of
+  `libcurl`/`libgcc`: OpenWrt's `GetABISuffix` (`include/feeds.mk`) uses a
+  sibling's ABI name once its `BuildPackage` has been read, and otherwise
+  the sibling's `staging_dir/pkginfo/<name>.version`. `curl` and `libc` are
+  defined before their sibling, so a clean build writes the plain name; the
+  ABI name appears only if the sibling was built before. Across all 15
+  releases: plain in 4.1.1–4.2.0 and 4.5.0–4.8.2, ABI names in 4.2.1–4.4.6
+  and 4.9.0, so GL.iNet's build trees in those periods held earlier builds.
+  Reproduced by building those packages once and cleaning them (clean keeps
+  `pkginfo`) before the main build (`rebuilt_packages`).
+
+Run 14 (4.2.1): 466 packages, every file present, `status` identical apart
+from the kernel's vermagic, and of the package records only the vermagic
+hash and the 10 accepted `Installed-Size` values differ. The same checks as
+for 4.2.0 hold: all 22 differing `.pyc` files have identical code objects;
+of 274 differing ELF files 210 have identical machine code and Samba's
+other 62 match function by function (the 4 functions that differ bind a
+symbol exported by two Samba libraries to the other one); `wg` carries
+GL.iNet's tree hash. GL.iNet's vermagic hash is the same in 4.2.0 and 4.2.1,
+and so is ours.
+
+**4.2.3, two more release values.** Values from the official image: build
+time 1688620184 (kernel banner, two seconds after the patch commit date
+this time), patch commit date 1688620182, `release5`, AdGuardHome v0.107.26,
+builder tag `v4.2.3_release5`. Two new effects:
+
+- **`kmod-gl-sdk4-tertf` left the public feed.** gl-feeds at 4.2.3's
+  revision (`4fd97cf`, "remove parental-control and tertf") no longer has it,
+  so the module wasn't selectable and `gl-sdk4-clients`, which depends on
+  it, couldn't be installed. The release value `private_now` lists packages
+  of `built-from-public.txt` that a release's public feeds no longer have;
+  those come from the image like the other closed packages. (To find this,
+  the build now keeps opkg's error lines when `package/install` fails: that
+  step writes no log.)
+- **The second boundary at the end.** `dnsmasq` and `odhcpd` (last touched
+  by patches 18 and 19 of 42) have `SourceDateEpoch` 1688620183, every other
+  OpenWrt-tree package (patch 16 or earlier) 1688620182: the mirror image of
+  4.2.1. Release value `late_patches` (the last 25 patch commits one second
+  later; a boundary at 17 or 18 gives the same image).
+
+Run 20 (4.2.3): every file present, `status` identical apart from the
+kernel's vermagic, and of the package records only the vermagic hash and
+the accepted `Installed-Size` values differ, as for 4.2.0 and 4.2.1.
+
+**The kernel is byte-identical without ccache.** The validation run
+without ccache (run 16, 43 minutes) gives a root file system identical to
+run 14's, but a kernel image of exactly GL.iNet's size. Decoded property by
+property, its FIT image differs from GL.iNet's only in the root file
+system's size and hashes, which the image records; the kernel itself and
+the device tree are byte-identical. The same holds for 4.2.0 (the
+validation run without ccache); with ccache the kernel data differs. So the
+"two GNU build IDs" accepted since run #8 were a ccache effect, not a
+difference from GL.iNet's build.
 
 ## Next steps
 
@@ -1106,3 +1256,9 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-25 | Complete full build on the public runner (#16): 466 packages, 6,071 files, `status` identical apart from accepted fields (order and Auto-Installed included). Fixes: adguardhome folder clash, no wsdd2, LUCI_LANG_en only public-only; empty folders in web-interface packages (Installed-Size). |
 | 2026-10-26 | Validation run without ccache (M5+, 81 min): 466 packages, 6,071 files, status identical apart from the kernel's vermagic; outside the accepted classes no file differs; 4 closed packages' Installed-Size open. vermagic brute force (adds/drops up to 4, mixed up to 3): no match. |
 | 2026-10-26 | Second validation run: root file system identical in all 6,078 entries, kernel identical; only the image signature differs (fresh build key). 4.2.0 validated. |
+| 2026-10-26 | Last four `Installed-Size` values solved (empty folders in three closed packages, GL.iNet's modes for 7 base-files overlay files), each checked across releases; run 9 confirms: only the 11 accepted ones remain. |
+| 2026-10-26 | "Same code" proven: all 22 differing `.pyc` files have identical code objects; of the 246 differing ELF files, 174 have identical machine code and Samba's other 71 match function by function (35,453 of 35,455 functions, all 12,507 data objects; the last 2 bind a duplicated symbol to another library). |
+| 2026-10-26 | Recipe per release (`openwrt/gl-releases.tsv`); 4.2.1 recreated to 4.2.0's level (run 14): AdGuardHome v0.107.26 release binary, `early_patches` (patch commits crossing a second), `rebuilt_packages` (ABI names in `Depends` when GL.iNet's tree held earlier builds). |
+| 2026-10-26 | Kernel image byte-identical to GL.iNet's (4.2.0 and 4.2.1) when built without ccache; the build-ID difference was ccache. |
+| 2026-10-26 | 4.2.3 recreated to the same level (run 20): release values `private_now` (tertf left gl-feeds) and `late_patches`; opkg errors kept on a failed install. |
+| 2026-10-26 | 4.2.3 validated without ccache (run 21): root file system identical to run 20, kernel byte-identical to GL.iNet's. 4.4.5 queued with builder `main` at 233a758 (no fork tag after 4.4.1). |

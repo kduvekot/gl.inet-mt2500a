@@ -2,7 +2,7 @@
 """Generate OpenWrt package recipes for GL.iNet's closed packages from an
 unpacked official image, so a full build can reproduce them.
 
-    gen-closed-feed.py <official_root> <out_dir> <closed_dir> [package ...]
+    gen-closed-feed.py <official_root> <out_dir> <closed_dir> [--private-now="pkg ..."] [package ...]
 
 <closed_dir> (openwrt/gl-4.2.0-closed in the public repo) holds what isn't
 taken from the image: built-from-public.txt (packages built from public
@@ -72,10 +72,15 @@ def mk_escape(s):
 
 def main():
     root, out, closed = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
-    only = set(sys.argv[4:])
+    opts = [a for a in sys.argv[4:] if a.startswith("--private-now=")]
+    only = set(a for a in sys.argv[4:] if a not in opts)
     # packages verified identical from public source: not part of this feed
     pub = closed / "built-from-public.txt"
     public = {l.strip() for l in pub.read_text().splitlines() if l.strip() and not l.startswith("#")} if pub.exists() else set()
+    # packages of that list this release's public feeds no longer have
+    # (release value PRIVATE_NOW): taken from the image like the others
+    for o in opts:
+        public -= set(o.split("=", 1)[1].split()) - {"-"}
     info = root / "usr/lib/opkg/info"
     # ABI-versioned names (jansson4) -> the name DEPENDS uses (jansson)
     abi = {}
@@ -135,11 +140,33 @@ def main():
         if (d / "files/www/views").is_dir():
             for e in ("www/views/img", "www/i18n", "usr/share/oui/menu.d"):
                 (d / "files" / e).mkdir(parents=True, exist_ok=True)
-        # gl-sdk4-ddns ships an empty etc/ddns/ (its postinst moves two files
-        # into it): the only one of the image's folders that gives GL.iNet's
-        # Installed-Size
-        if name == "gl-sdk4-ddns":
-            (d / "files/etc/ddns").mkdir(parents=True, exist_ok=True)
+        # Empty folders GL.iNet's packages ship (empty in the image too). Each
+        # was found by rebuilding the package archive and checked against the
+        # package's other versions in other releases (same rule, exact
+        # Installed-Size every time):
+        #   gl-sdk4-ddns     etc/ddns (its postinst moves two files into it)
+        #   gl-sdk4-plugins  etc/rc.d          (4.1.1, 4.2.0, 4.2.1)
+        #   gl-sdk4-clients  usr/libexec/rpcd  (7 versions, 4.1.1 to 4.7.4)
+        #   gl-oui-rpc       etc/oui, etc/oui-httpd (4.1.1 to 4.6.2)
+        EMPTY = {"gl-sdk4-ddns": ["etc/ddns"], "gl-sdk4-plugins": ["etc/rc.d"],
+                 "gl-sdk4-clients": ["usr/libexec/rpcd"],
+                 "gl-oui-rpc": ["etc/oui", "etc/oui-httpd"]}
+        for e in EMPTY.get(name, []):
+            (d / "files" / e).mkdir(parents=True, exist_ok=True)
+        # rootfs-overlay files whose path another package also installs: the
+        # overlay copy (cp -R onto an existing file) keeps that file's mode, so
+        # the image doesn't show GL.iNet's. Their modes, found as the only one
+        # of all 128 combinations that gives GL.iNet's exact Installed-Size in
+        # six releases (4.1.1 to 4.5.0):
+        MODES = {"gl-sdk4-base-files": {
+            "etc/uci-defaults/99-firewall": 0o644, "etc/hotplug.d/iface/20-firewall": 0o644,
+            "sbin/sysupgrade": 0o755, "lib/netifd/ppp6-up": 0o644,
+            "etc/hotplug.d/block/10-mount": 0o755, "etc/rc.local": 0o644,
+            "etc/rc.button/reset": 0o755}}
+        for f, m in MODES.get(name, {}).items():
+            t = d / "files/rootfs-overlay" / f
+            if t.is_file():
+                t.chmod(m)
         (d / "version.date").write_text(c.get("SourceDateEpoch", "") + "\n")
         pkg = name[5:] if kmod else name
         lines = ["include $(TOPDIR)/rules.mk", ""]
@@ -201,7 +228,11 @@ def main():
         (d / "Makefile").write_text("\n".join(lines) + "\n")
         ov = closed / "overrides" / d.relative_to(out) / "Makefile"
         if ov.exists():                  # built from source (files/ from the image)
-            shutil.copy(ov, d / "Makefile")
+            m = ov.read_text()           # with this release's version
+            if ver:
+                m = re.sub(r"^PKG_VERSION:=.*$", f"PKG_VERSION:={ver}", m, count=1, flags=re.M)
+            m = re.sub(r"^PKG_RELEASE:=.*$", f"PKG_RELEASE:={rel}", m, count=1, flags=re.M)
+            (d / "Makefile").write_text(m)
         print(f"{name:40} -> {d.relative_to(out)}{' (override: built from source)' if ov.exists() else ''}")
 
 
