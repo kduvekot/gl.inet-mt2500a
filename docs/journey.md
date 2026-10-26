@@ -899,6 +899,26 @@ remaining explanation stays the same: `KCONFIG` lines from GL.iNet's
 private kernel-module recipes, possibly for options that don't exist in
 this kernel at all (those can't be enumerated).
 
+**Version-by-version comparison, redone (2026-10-26, M5+).** With a new
+class `random` in `version-diff.py` (`.pyc` files with the same source hash
+but a different body; ELF files with the same `NEEDED` libraries in a
+different order and equally sized sections), all 15 releases compared
+again. "Changed" files per step, before → now (random):
+
+| Step | changed | | Step | changed |
+|---|---|---|---|---|
+| 4.1.1 → 4.2.0 | 558 → 534 (24) | | 4.5.0 → 4.5.16 | 261 → 248 (13) |
+| 4.2.0 → 4.2.1 | 200 → 166 (34) | | 4.5.16 → 4.6.2 | 495 → 484 (11) |
+| 4.2.1 → 4.2.3 | 214 → 167 (47) | | 4.6.2 → 4.6.4 | 136 → 127 (9) |
+| 4.2.3 → 4.4.5 | 346 → 305 (41) | | 4.6.4 → 4.6.8 | 95 → 81 (14) |
+| 4.4.5 → 4.4.6 | 193 → 149 (44) | | 4.6.8 → 4.7.0 | 457 (0) |
+| 4.4.6 → 4.5.0 | 500 → 488 (12) | | 4.7.0 → 4.7.4 | 473 → 458 (15) |
+| | | | 4.7.4 → 4.8.2 | 1056 (0) |
+| | | | 4.8.2 → 4.9.0 | 685 (0) |
+
+In the 4.2/4.4 range 15 to 25 % of the "changes" are random build
+variation; from 4.5.0 on (Python gone: 1,958 files) the effect is small.
+
 **Moved to the public runners.** The closed part doesn't need to be stored
 anywhere: like the comparison, the run downloads the official image from
 GL.iNet and generates the closed packages from it
