@@ -88,10 +88,12 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   public runners: `gl-recreate-4.2.0.yml` input `closed` (full build) or
   `gl-assemble-4.2.0.yml` (published SDK + ImageBuilder, ~10 min). Both
   publish reports only, never the image. 466 packages, 6071 files like the
-  official; still open: `status` (install order, `Auto-Installed`) and a
-  few `Installed-Size` values (= size of a package's data.tar.gz).
-- **Next:** finish 4.2.0 (status, Installed-Size, a validation run without
-  ccache), then compare release by release up to 4.9; phase C (upstream
+  official, `status` identical apart from vermagic, every `Installed-Size`
+  explained. **Validated 2026-10-26** (two runs without ccache, identical);
+  Samba and `.pyc` differences proven to be order only (function-by-function
+  and code-object comparison, journey chapter 13).
+- **Next:** release by release up to 4.9, starting with 4.2.1 (recipe
+  parametrised per release); phase C (upstream
   OpenWrt on the old unit, iperf with the GMKtec). Ask the owner before any
   write to a router.
 - WAN PHY: old unit MaxLinear GPY211C0VC (`glinet_gl-mt2500`; board
