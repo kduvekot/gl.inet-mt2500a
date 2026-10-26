@@ -259,6 +259,13 @@ jobs:
             F=feeds.conf; [ -f "$F" ] || F=feeds.conf.default
             printf 'src-cpy glinet /work/closed/glinet\nsrc-cpy mt7981 /work/closed/mt7981\n' >> "$F"
             ( umask 022; ./scripts/feeds update glinet mt7981 > /dev/null )
+            # OpenWrt names a source package after its folder: GL.iNet's
+            # gl-ui4.0/module/adguardhome (gl-sdk4-ui-adguardhome) clashes with
+            # the packages feed's adguardhome (not in the official image), and
+            # only the first one gets installed
+            ./scripts/feeds uninstall adguardhome > /dev/null
+            ./scripts/feeds install -a -p glinet > /dev/null
+            ./scripts/feeds install -a -p mt7981 > /dev/null
             ./scripts/feeds install -a > /dev/null
           fi
           python3 - << 'PY'
@@ -291,7 +298,14 @@ jobs:
                       "CONFIG_KERNEL_BUILD_USER=\"glinet\"\nCONFIG_KERNEL_BUILD_DOMAIN=\"glinet\"\n"
                       # LuCI builds translation packages only for enabled
                       # languages; the official image has en and zh-cn ones.
-                      "CONFIG_LUCI_LANG_en=y\nCONFIG_LUCI_LANG_zh_Hans=y\n"
+                      # (en only without the closed packages: with them, a closed
+                      # package depends on luci-i18n-base-en, and LUCI_LANG_en would
+                      # add English translations of every LuCI app, more than GL.iNet had)
+                      + ("" if os.environ.get("CLOSED") == "true" else "CONFIG_LUCI_LANG_en=y\n") +
+                      "CONFIG_LUCI_LANG_zh_Hans=y\n"
+                      # no WSD daemon: the official image has no wsdd2 (default y,
+                      # selected by samba4-server)
+                      "# CONFIG_SAMBA4_SERVER_WSDD2 is not set\n"
                       # Samba as GL.iNet built it: AD DC support (its samba4-libs
                       # depends on acl, jansson, libarchive, libopenldap,
                       # python3-cryptodome).
@@ -388,6 +402,10 @@ jobs:
           fi
           make -j"$(nproc)" BUILD_LOG=1
           ls -l bin/targets/mediatek/mt7981/
+          # the order opkg installed the packages in (it decides which ones
+          # are marked Auto-Installed in /usr/lib/opkg/status); the assembly
+          # replays it
+          cp tmp/opkg_install_list /work/out/opkg-install-list.txt || true
           mkdir -p /work/out/sdk
           mv bin/targets/mediatek/mt7981/openwrt-sdk-*.tar.* /work/out/sdk/ || true
           # The ImageBuilder (with all packages of this build, IB_STANDALONE) and
@@ -400,6 +418,7 @@ jobs:
             rm -rf /tmp/glf && mkdir -p /tmp/glf && cp -a files /tmp/glf/
             install -m 0755 target/linux/generic/other-files/init /tmp/glf/files/init
             tar -C /tmp/glf -czf /work/out/sdk/gl-files.tar.gz files
+            cp /work/out/opkg-install-list.txt /work/out/sdk/ || true
           fi
           # The SDK leaves out driver-private headers; the Ethernet/PPE driver
           # folder as compiled (all patches applied) lets out-of-tree builds
@@ -457,9 +476,12 @@ jobs:
           fi
           sudo python3 "$S/compare-firmware.py" off_root our_root \
             ../out/removed-packages.txt ../out/report kconfig-official.txt kconfig-ours.txt
+          # the report folder belongs to root now; the appends below run as us
+          sudo chown -R "$(id -u)" ../out
           if [ -d our_root ]; then
             sudo python3 "$S/classify-diffs.py" off_root our_root ../out/report/files-different.txt \
               ../out/report/files-different-classes.tsv >> ../out/report/report.md || true
+            sudo python3 "$S/control-diffs.py" off_root our_root ../out/report/control-diffs.tsv >> ../out/report/control-kinds.txt || true
           fi
           sudo chown -R "$(id -u)" ../out
           cat ../out/report/report.md >> "$GITHUB_STEP_SUMMARY"
@@ -496,6 +518,7 @@ jobs:
             work/out/kernel-config.set
             work/out/kernel-vermagic.txt
             work/out/mirror.txt
+            work/out/opkg-install-list.txt
             work/out/removed-packages.txt
             work/out/build.log
             work/out/progress.log

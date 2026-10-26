@@ -825,6 +825,127 @@ official one), and each run since showed what was still off:
   `distfeeds.conf` lists GL.iNet's own feeds; `/init` comes from the kernel
   build, which the ImageBuilder skips.
 
+**First public assemblies (#1 to #3).** On the free runner, with the
+closed part generated in the run, the complete image has 466 packages and
+6,071 files like the official one, with no file missing or extra; 404
+files differ, all in the accepted classes (Samba, 22 `.pyc`, `wg`, package
+records carrying the vermagic hash) plus `/usr/lib/opkg/status`. GL.iNet's
+web-interface packages also contain an empty `www/views/img/` (empty in the
+image too, owned by no package); with it, 31 of 41 get GL.iNet's exact
+`Installed-Size`. 27 records still differ in it: 8 because their contents
+differ (Samba, Python, `wireguard-tools`), `base-files` by 15 bytes, and 14
+closed packages by 3 to 73 bytes. `status` depends on the install order: a
+full build installs by sorted source directory (feeds first, then
+`kernel/linux`, then base packages), and anything an earlier package pulls
+in is marked `Auto-Installed`; the ImageBuilder installs `libc` and `kernel`
+first.
+
+**Complete full builds on the public runner (#15, #16).** With the closed
+part generated in the run, the full build (`closed` mode) gives the same
+result as the assembly. #15 had two extra packages and one missing:
+GL.iNet's `gl-ui4.0/module/adguardhome` clashes with the packages feed's
+`adguardhome` (OpenWrt names a source package after its folder, and only
+the first gets installed), `SAMBA4_SERVER_WSDD2` defaults to `y` (no
+`wsdd2` in the official image), and `LUCI_LANG_en` is only needed without
+the closed packages (with them, a closed package pulls in
+`luci-i18n-base-en`; the language option adds English translations of
+every LuCI app). #16: 466 packages and 6,071 files like the official
+image, no file missing or extra, 403 differing files, and
+`/usr/lib/opkg/status` identical apart from the accepted fields (vermagic
+hash, `python3`'s `Depends` order), including the entry order and all 169
+`Auto-Installed` flags.
+
+**`Auto-Installed`, worked out.** opkg marks a package `Auto-Installed`
+when an earlier package pulls it in as a dependency before its own turn.
+A small simulation of that rule predicts exactly the ImageBuilder's
+result (277 flagged), and shows what reproduces the official 169: name
+the 297 unflagged packages, each after everything it reaches through its
+dependencies, then all others except the six held toolchain packages
+(`libc`, `libgcc1`, …), which a full build flags `hold` afterwards
+(`opkg flag hold`, replacing `user`). The assembly does that now; only
+the entry order of `status` (opkg's hash table, within a bucket the
+loading order) still differs there, while the full build gets it right by
+itself.
+
+**`Installed-Size`, nearly all explained.** All 40 web-interface packages
+match once they carry `www/views/img/`, `www/i18n/` and
+`usr/share/oui/menu.d/`, empty where unused (GL.iNet's build creates them
+always), and `gl-sdk4-ddns` matches with an empty `etc/ddns/`. Left:
+`gl-sdk4-plugins` and `gl-oui-rpc` (several unrelated empty folders fit
+the size equally, so size alone can't tell), `gl-sdk4-clients`,
+`gl-sdk4-base-files` and `base-files`.
+
+**Validation run without ccache (2026-10-26, on the M5+).** GL.iNet built
+without ccache, so this is the formal check: the complete build (`closed`
+mode, same workflow steps run locally on a 16-thread mini PC, 81 minutes
+instead of about two hours on GitHub). Result: 466 packages and 6,071
+files like the official image, nothing missing or extra, 391 differing
+files. Outside the accepted classes (Samba's library order, Python
+bytecode, the vermagic hash in the kernel package and in 106 kernel-module
+records, `wg`'s tree hash) no file differs. `/usr/lib/opkg/status` matches
+apart from the kernel's version (vermagic); this time even `python3`'s
+`Depends` order matches. `Installed-Size` differs in 15 records: 11 whose
+contents differ in the accepted ways (Samba, Python, `wireguard-tools`),
+and 4 closed packages still unexplained (`gl-oui-rpc`,
+`gl-sdk4-base-files`, `gl-sdk4-clients`, `gl-sdk4-plugins`).
+
+**Repeatable.** A second validation run, built independently from the same
+recipe, gives a root file system identical to the first in all 6,078
+entries (files, symlinks, modes) and the same kernel; only the sysupgrade
+signature block at the end of the image differs (each run signs with a
+fresh private build key; GL.iNet's signature can't be reproduced anyway).
+Since the hash seed is fixed (`PYTHONHASHSEED=0`), even Samba's library
+order and the Python bytecode come out the same every time. With that,
+4.2.0 counts as validated: built without ccache like GL.iNet's, repeatable,
+and outside the accepted classes no file differs.
+
+**The vermagic hash, searched harder.** With 16 threads, a small C program
+(OpenSSL MD5, prefix cache) tries billions of `.config.set` variants:
+adding up to 4 of the 243 options that are `=y`/`=m` in GL.iNet's final
+configuration but missing from our `.config.set` (140 million), dropping
+up to 4 of our 255 lines that don't reach the final configuration (130
+million), and mixed changes up to 3 (20 million): no match. The likeliest
+remaining explanation stays the same: `KCONFIG` lines from GL.iNet's
+private kernel-module recipes, possibly for options that don't exist in
+this kernel at all (those can't be enumerated).
+
+**Version-by-version comparison, redone (2026-10-26, M5+).** With a new
+class `random` in `version-diff.py` (`.pyc` files with the same source hash
+but a different body; ELF files with the same `NEEDED` libraries in a
+different order and equally sized sections), all 15 releases compared
+again. "Changed" files per step, before → now (random):
+
+| Step | changed | | Step | changed |
+|---|---|---|---|---|
+| 4.1.1 → 4.2.0 | 558 → 534 (24) | | 4.5.0 → 4.5.16 | 261 → 248 (13) |
+| 4.2.0 → 4.2.1 | 200 → 166 (34) | | 4.5.16 → 4.6.2 | 495 → 484 (11) |
+| 4.2.1 → 4.2.3 | 214 → 167 (47) | | 4.6.2 → 4.6.4 | 136 → 127 (9) |
+| 4.2.3 → 4.4.5 | 346 → 305 (41) | | 4.6.4 → 4.6.8 | 95 → 81 (14) |
+| 4.4.5 → 4.4.6 | 193 → 149 (44) | | 4.6.8 → 4.7.0 | 457 (0) |
+| 4.4.6 → 4.5.0 | 500 → 488 (12) | | 4.7.0 → 4.7.4 | 473 → 458 (15) |
+| | | | 4.7.4 → 4.8.2 | 1056 (0) |
+| | | | 4.8.2 → 4.9.0 | 685 (0) |
+
+In the 4.2/4.4 range 15 to 25 % of the "changes" are random build
+variation; from 4.5.0 on (Python gone: 1,958 files) the effect is small.
+
+**Towards 4.2.1: which builder tag.** Every release was built about an
+hour after a builder tag was committed (build time from the firmware file
+name, tag commit from the spmadden fork):
+
+| Firmware | Built (UTC) | Builder tag | Tag commit (UTC) |
+|---|---|---|---|
+| 4.2.0 | 2023-03-14 03:04 | `v4.2.0_mt2500_release4` | 02:01 |
+| 4.2.1 | 2023-04-14 12:36 | `v4.2.1_release4` | 11:26 |
+| 4.2.3 | 2023-07-06 06:07 | `v4.2.3_release5` | 05:01 |
+
+From 4.2.1 on the tags are generic (no `_mt2500_`), so the MT2500
+profiles must be in the generic tag; the fork's tags end at 4.4.1, so
+releases after that need another source. What else changes per release:
+the official image (URL and SHA256 from GL.iNet's API), the build time
+(`SOURCE_DATE_EPOCH` from the kernel banner, `version.date`), the version
+in `gl_metadata.yaml`, and the feed commits pinned by the tag.
+
 **Moved to the public runners.** The closed part doesn't need to be stored
 anywhere: like the comparison, the run downloads the official image from
 GL.iNet and generates the closed packages from it
@@ -982,3 +1103,6 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-25 | Recreation run #12: built as a normal user, `libdevmapper` now identical; outside Samba 161 differing files left. The four "build-ID-only" programs were mislabelled: real differences, found as BusyBox options, net-tools, `git describe` hash (accepted) and `ip-full` symbol order (open). |
 | 2026-10-25 | Recreation run #13: `busybox`, `openvpn`, `ip-full` identical (BusyBox options from GL.iNet's profiles, net-tools, iproute2 directory order); Python bytecode shown to vary by nature, also in GL.iNet's own releases. SDK + ImageBuilder published for the private assembly. |
 | 2026-10-25 | Complete 4.2.0 image assembled from the published SDK and ImageBuilder plus the closed packages (assembly runs #1 to #9): rootfs-overlay scripts, the ddns move, unstripped modules, Installed-Size (= size of data.tar.gz; owner names and folder modes), GL.iNet's build key. Complete builds moved to the public runners (closed part generated in the run, reports only). |
+| 2026-10-25 | Complete full build on the public runner (#16): 466 packages, 6,071 files, `status` identical apart from accepted fields (order and Auto-Installed included). Fixes: adguardhome folder clash, no wsdd2, LUCI_LANG_en only public-only; empty folders in web-interface packages (Installed-Size). |
+| 2026-10-26 | Validation run without ccache (M5+, 81 min): 466 packages, 6,071 files, status identical apart from the kernel's vermagic; outside the accepted classes no file differs; 4 closed packages' Installed-Size open. vermagic brute force (adds/drops up to 4, mixed up to 3): no match. |
+| 2026-10-26 | Second validation run: root file system identical in all 6,078 entries, kernel identical; only the image signature differs (fresh build key). 4.2.0 validated. |

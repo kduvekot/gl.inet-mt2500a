@@ -127,6 +127,19 @@ def main():
             elif s.is_file():
                 shutil.copy2(s, t)
 
+        # GL.iNet's web-interface packages always contain www/views/img/,
+        # www/i18n/ and usr/share/oui/menu.d/, empty when they have nothing
+        # there (www/views/img is empty in the image, owned by no package).
+        # With them all 40 such packages get GL.iNet's exact Installed-Size,
+        # the size of their compressed data.tar.gz.
+        if (d / "files/www/views").is_dir():
+            for e in ("www/views/img", "www/i18n", "usr/share/oui/menu.d"):
+                (d / "files" / e).mkdir(parents=True, exist_ok=True)
+        # gl-sdk4-ddns ships an empty etc/ddns/ (its postinst moves two files
+        # into it): the only one of the image's folders that gives GL.iNet's
+        # Installed-Size
+        if name == "gl-sdk4-ddns":
+            (d / "files/etc/ddns").mkdir(parents=True, exist_ok=True)
         (d / "version.date").write_text(c.get("SourceDateEpoch", "") + "\n")
         pkg = name[5:] if kmod else name
         lines = ["include $(TOPDIR)/rules.mk", ""]

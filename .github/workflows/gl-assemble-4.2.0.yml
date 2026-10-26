@@ -78,6 +78,48 @@ jobs:
           PY
           sort -o ../w/official-packages.txt ../w/official-packages.txt
           wc -l ../w/official-packages.txt
+          sudo cat off_root/usr/lib/opkg/status > ../w/official-status
+          # What opkg marks Auto-Installed in /usr/lib/opkg/status depends on
+          # what it was asked to install, and in which order: a package pulled
+          # in as a dependency before its own turn gets the flag. Installing
+          # exactly the official non-auto packages, each after everything it
+          # reaches through its dependencies, reproduces the official flags
+          # (checked by simulating opkg: 169 of 169).
+          python3 - off_root/usr/lib/opkg/status > ../w/install-order.txt << 'PY'
+          import re, sys
+          st = {}
+          for b in open(sys.argv[1], errors="replace").read().split("\n\n"):
+              f = dict(l.split(": ", 1) for l in b.splitlines() if ": " in l)
+              if "Package" in f:
+                  st[f["Package"]] = f
+          prov = {}
+          for n, f in st.items():
+              prov[n] = n
+              for x in f.get("Provides", "").split(","):
+                  if x.strip():
+                      prov.setdefault(x.strip(), n)
+          deps = lambda n: [prov.get(d, d) for d in (re.sub(r"\s*\(.*\)", "", x).strip()
+                            for x in st[n].get("Depends", "").split(",")) if d]
+          explicit = sorted(n for n, f in st.items() if f.get("Auto-Installed") != "yes")
+          seen, order = set(), []
+          def visit(n):
+              if n in seen or n not in st:
+                  return
+              seen.add(n)
+              for d in deps(n):
+                  visit(d)
+              if n in explicit:
+                  order.append(n)
+          for n in explicit:
+              visit(n)
+          # then all the others: the official status has "user" on every
+          # package except the six held toolchain ones (libc, libgcc1, ...),
+          # so a full build names all but those; Auto-Installed marks the ones
+          # an earlier package pulled in
+          order += sorted(n for n in set(st) - set(order) if "hold" not in st[n].get("Status", ""))
+          print("\n".join(order))
+          PY
+          wc -l ../w/install-order.txt
 
       - name: Package the closed packages and assemble the image
         timeout-minutes: 80
@@ -189,21 +231,39 @@ jobs:
           make info > /w/out/ib-info.txt
           profile=$(grep -oE '^glinet_gl-mt2500:' /w/out/ib-info.txt | tr -d :)
           # exactly the official package set: add what it has, remove defaults it hasn't
-          pk=$(cat /w/official-packages.txt)
+          # install-order.txt (see above). The ImageBuilder would install libc
+          # and kernel first and explicitly (by path, from next to the kernel
+          # build); as plain packages they come in as dependencies instead.
+          pk=$(cat /w/install-order.txt)
+          find build_dir -maxdepth 3 \( -name 'libc_*.ipk' -o -name 'kernel_*.ipk' \) -exec cp {} packages/ \;
+          sed -i '/\$(OPKG) install \$(firstword \$(wildcard \$(LINUX_DIR)\/\(libc\|kernel\)_/d' Makefile
+          # ... and the package index must list them (ipkg-make-index.sh skips both)
+          sed -i '/\[\[ "\$name" = "\(kernel\|libc\)" \]\] && continue/d' scripts/ipkg-make-index.sh
+          grep -c 'continue' scripts/ipkg-make-index.sh || true
+          grep -n 'OPKG) install' Makefile; ls packages/libc_* packages/kernel_*
           defaults=$(sed -n 's/^Default Packages: //p' /w/out/ib-info.txt)
           dev=$(awk -v p="$profile:" '$1==p{f=1;next} f&&/Packages:/{sub(/.*Packages: /,""); print; exit}' /w/out/ib-info.txt)
           for p in $defaults $dev; do
             case "$p" in -*) continue;; esac
             grep -qx "$p" /w/official-packages.txt || pk="$pk -$p"
           done
+          # the ImageBuilder's defaults name libc and libgcc explicitly; the
+          # official status has them (held) without "user": not named
+          pk="$pk -libc -libgcc"
+          # A full build then flags the essential packages "hold" (package/Makefile:
+          # opkg flag <flags from .install.flags>), which replaces "user"; the
+          # ImageBuilder doesn't. Same for the official held packages here.
+          hold=$(awk '/^Package: /{p=$2} /^Status: .*hold/{print p}' /w/official-status | tr '\n' ' ')
+          sed -i "s|^\t\$(OPKG) install \$(BUILD_PACKAGES)|&\n\t\$(OPKG) flag hold $hold|" Makefile
+          grep -n 'OPKG) flag' Makefile
           echo $pk | tr ' ' '\n' > /w/out/ib-packages.txt
           make image PROFILE="$profile" PACKAGES="$(echo $pk)" FILES=/w/files BIN_DIR=/w/out/images \
-            > /w/out/ib-image.log 2>&1 || { tail -n 60 /w/out/ib-image.log; exit 1; }
+            > /w/out/ib-image.log 2>&1 || { tail -n 80 /w/out/ib-image.log | sed 's/^/IB: /'; exit 1; }
           ls -l /w/out/images
           EOF
           timeout 75m docker run --rm -v "$PWD/w:/w" -v "$PWD/w/sdk:/home/glinet/work/_github/mt7981" \
             -e SOURCE_DATE_EPOCH ubuntu:20.04 bash /w/build.sh 2>&1 \
-            | tee w/out/build.log | grep --line-buffered -E "^(closed: |ABI versions|\\+ make image|.*FAILED|[0-9]+ /w/out)|ERROR" || true
+            | tee w/out/build.log | grep --line-buffered -E "^(IB: |closed: |ABI versions|\\+ make image|.*FAILED|[0-9]+ /w/out)|ERROR" || true
           ls w/out/images/*sysupgrade* > /dev/null
 
       - name: Compare with the official 4.2.0
@@ -221,9 +281,12 @@ jobs:
           fi
           sudo python3 "$S/compare-firmware.py" off_root our_root \
             ../w/out/removed-packages.txt ../w/out/report kconfig-official.txt kconfig-ours.txt
+          # the report folder belongs to root now; the appends below run as us
+          sudo chown -R "$(id -u)" ../w/out
           if [ -d our_root ]; then
             sudo python3 "$S/classify-diffs.py" off_root our_root ../w/out/report/files-different.txt \
               ../w/out/report/files-different-classes.tsv >> ../w/out/report/report.md || true
+            sudo python3 "$S/control-diffs.py" off_root our_root ../w/out/report/control-diffs.tsv >> ../w/out/report/control-kinds.txt || true
           fi
           sudo chown -R "$(id -u)" ../w/out
           cat ../w/out/report/report.md >> "$GITHUB_STEP_SUMMARY"
@@ -239,3 +302,4 @@ jobs:
             w/out/ib-info.txt
             w/out/ib-packages.txt
             w/out/closed-ipks.txt
+            w/out/ib-image.log
