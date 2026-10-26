@@ -85,6 +85,13 @@ env:
   #   EARLY_PATCHES     number of leading patches committed one second
   #                     earlier (GL.iNet's git am crossed a second boundary;
   #                     visible in SourceDateEpoch, e.g. uboot-envtools in 4.2.1)
+  #   REBUILT_PACKAGES  packages GL.iNet's tree had built before ("-": none).
+  #                     A package defined before its ABI-versioned sibling in
+  #                     the same Makefile (curl/libcurl, libc/libgcc) gets the
+  #                     sibling's ABI name in Depends only if the sibling's
+  #                     pkginfo file already exists when make reads the
+  #                     Makefile: plain in 4.1.1-4.2.0 and 4.5.0-4.8.2, ABI
+  #                     names in 4.2.1-4.4.6 and 4.9.0
 
 jobs:
   recreate:
@@ -122,7 +129,7 @@ jobs:
           REL="${{ inputs.release }}"
           case "$REL" in ""|false) REL=4.2.0 ;; esac
           awk -F'\t' -v r="$REL" -v q="'" '$1 == r { f = 1
-              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES", k, " ")
+              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES", k, " ")
               for (i = 1; i <= n; i++) print k[i] "=" q $i q }
             END { exit !f }' openwrt/gl-releases.tsv > work/release.env \
             || { echo "release $REL not in openwrt/gl-releases.tsv"; exit 1; }
@@ -442,6 +449,12 @@ jobs:
               printf '#!/bin/sh\nexec ccache "$(dirname "$0")/.%s.real" "$@"\n' "$(basename "$c")" > "$c"
               chmod +x "$c"; echo "ccache wrapper: $c"
             done
+          fi
+          if [ "${REBUILT_PACKAGES:--}" != "-" ]; then
+            # build these once and clean them (clean keeps pkginfo/*.version),
+            # so the main build builds them again, as GL.iNet's tree did (see env)
+            for p in $REBUILT_PACKAGES; do make -j"$(nproc)" BUILD_LOG=1 "$p/compile"; done
+            for p in $REBUILT_PACKAGES; do make "$p/clean"; done
           fi
           make -j"$(nproc)" BUILD_LOG=1
           ls -l bin/targets/mediatek/mt7981/
