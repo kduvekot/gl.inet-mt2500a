@@ -1261,3 +1261,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-26 | Recipe per release (`openwrt/gl-releases.tsv`); 4.2.1 recreated to 4.2.0's level (run 14): AdGuardHome v0.107.26 release binary, `early_patches` (patch commits crossing a second), `rebuilt_packages` (ABI names in `Depends` when GL.iNet's tree held earlier builds). |
 | 2026-10-26 | Kernel image byte-identical to GL.iNet's (4.2.0 and 4.2.1) when built without ccache; the build-ID difference was ccache. |
 | 2026-10-26 | 4.2.3 recreated to the same level (run 20): release values `private_now` (tertf left gl-feeds) and `late_patches`; opkg errors kept on a failed install. |
+| 2026-10-26 | 4.2.3 validated without ccache (run 21): root file system identical to run 20, kernel byte-identical to GL.iNet's. 4.4.5 queued with builder `main` at 233a758 (no fork tag after 4.4.1). |
