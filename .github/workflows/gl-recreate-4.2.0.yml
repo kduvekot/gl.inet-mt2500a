@@ -102,7 +102,10 @@ env:
   #                     used ("-": FORK_TAG's own). GL.iNet built 4.4.5 from a
   #                     release branch: profiles and feeds of early August, but
   #                     the kernel and package patches from before 13 July 2023
-  #                     (no modem rework, wireguard fix or kmwan in the image)
+  #                     (no modem rework, wireguard fix or kmwan in the image).
+  #                     Further words file=commit take single patch files from
+  #                     another commit (fixes picked onto the release branch:
+  #                     4.4.6 has the wireguard fix of 14 July)
   #   EXTRA_CONFIG      extra .config lines, space-separated ("-": none), for
   #                     options from GL.iNet's private profiles (4.4.5: busybox
   #                     usleep)
@@ -245,8 +248,14 @@ jobs:
           git checkout "$FORK_TAG"
           if [ "${PATCHES_REV:--}" != - ]; then
             # this release's patch set (see env); files added later go too
+            set -- $PATCHES_REV
             git rm -rq patches-mt798x-7.6.6.1
-            git checkout "$PATCHES_REV" -- patches-mt798x-7.6.6.1
+            git checkout "$1" -- patches-mt798x-7.6.6.1
+            shift
+            for p in "$@"; do
+              git checkout "${p#*=}" -- "patches-mt798x-7.6.6.1/${p%%=*}"
+              echo "patch ${p%%=*} from ${p#*=}"
+            done
             ls patches-mt798x-7.6.6.1 | wc -l
           fi
 
