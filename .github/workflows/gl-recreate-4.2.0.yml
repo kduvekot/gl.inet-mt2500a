@@ -98,6 +98,14 @@ env:
   #                     that this release's public feeds no longer have
   #                     ("-": none); taken from the official image instead
   #                     (gl-sdk4-tertf left gl-feeds after 4.2.1)
+  #   PATCHES_REV       builder commit whose patches-mt798x-7.6.6.1 folder is
+  #                     used ("-": FORK_TAG's own). GL.iNet built 4.4.5 from a
+  #                     release branch: profiles and feeds of early August, but
+  #                     the kernel and package patches from before 13 July 2023
+  #                     (no modem rework, wireguard fix or kmwan in the image)
+  #   EXTRA_CONFIG      extra .config lines, space-separated ("-": none), for
+  #                     options from GL.iNet's private profiles (4.4.5: busybox
+  #                     usleep)
 
 jobs:
   recreate:
@@ -135,7 +143,7 @@ jobs:
           REL="${{ inputs.release }}"
           case "$REL" in ""|false) REL=4.2.0 ;; esac
           awk -F'\t' -v r="$REL" -v q="'" '$1 == r { f = 1
-              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES PRIVATE_NOW LATE_PATCHES", k, " ")
+              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES PRIVATE_NOW LATE_PATCHES PATCHES_REV EXTRA_CONFIG", k, " ")
               for (i = 1; i <= n; i++) print k[i] "=" q $i q }
             END { exit !f }' openwrt/gl-releases.tsv > work/release.env \
             || { echo "release $REL not in openwrt/gl-releases.tsv"; exit 1; }
@@ -230,6 +238,12 @@ jobs:
           git clone "$FORK" /home/glinet/work/_github
           cd /home/glinet/work/_github
           git checkout "$FORK_TAG"
+          if [ "${PATCHES_REV:--}" != - ]; then
+            # this release's patch set (see env); files added later go too
+            git rm -rq patches-mt798x-7.6.6.1
+            git checkout "$PATCHES_REV" -- patches-mt798x-7.6.6.1
+            ls patches-mt798x-7.6.6.1 | wc -l
+          fi
 
           # GL.iNet's own step: clone OpenWrt, reset to bcaabe6d, git am the patches.
           # Commit date of the applied patches = GL.iNet's (opkg SourceDateEpoch
@@ -383,6 +397,9 @@ jobs:
                       "CONFIG_BUSYBOX_CONFIG_ADDUSER=y\nCONFIG_BUSYBOX_CONFIG_CHPASSWD=y\n"
                       "CONFIG_BUSYBOX_CONFIG_DELUSER=y\nCONFIG_BUSYBOX_CONFIG_DELGROUP=y\n"
                       "CONFIG_BUSYBOX_CONFIG_FEATURE_DEL_USER_FROM_GROUP=y\n")
+              # this release's extra options (see env)
+              if os.environ.get("EXTRA_CONFIG", "-") != "-":
+                  f.write("".join(l + "\n" for l in os.environ["EXTRA_CONFIG"].split()))
               # nginx as GL.iNet built it (configure arguments in the official
               # binary): Lua and ubus, no naxsi/headers-more, 22 modules off.
               f.write("CONFIG_NGINX_LUA=y\n# CONFIG_NGINX_NAXSI is not set\n"
