@@ -919,6 +919,23 @@ again. "Changed" files per step, before → now (random):
 In the 4.2/4.4 range 15 to 25 % of the "changes" are random build
 variation; from 4.5.0 on (Python gone: 1,958 files) the effect is small.
 
+**Towards 4.2.1: which builder tag.** Every release was built about an
+hour after a builder tag was committed (build time from the firmware file
+name, tag commit from the spmadden fork):
+
+| Firmware | Built (UTC) | Builder tag | Tag commit (UTC) |
+|---|---|---|---|
+| 4.2.0 | 2023-03-14 03:04 | `v4.2.0_mt2500_release4` | 02:01 |
+| 4.2.1 | 2023-04-14 12:36 | `v4.2.1_release4` | 11:26 |
+| 4.2.3 | 2023-07-06 06:07 | `v4.2.3_release5` | 05:01 |
+
+From 4.2.1 on the tags are generic (no `_mt2500_`), so the MT2500
+profiles must be in the generic tag; the fork's tags end at 4.4.1, so
+releases after that need another source. What else changes per release:
+the official image (URL and SHA256 from GL.iNet's API), the build time
+(`SOURCE_DATE_EPOCH` from the kernel banner, `version.date`), the version
+in `gl_metadata.yaml`, and the feed commits pinned by the tag.
+
 **Moved to the public runners.** The closed part doesn't need to be stored
 anywhere: like the comparison, the run downloads the official image from
 GL.iNet and generates the closed packages from it
