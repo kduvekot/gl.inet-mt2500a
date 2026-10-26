@@ -889,6 +889,16 @@ contents differ in the accepted ways (Samba, Python, `wireguard-tools`),
 and 4 closed packages still unexplained (`gl-oui-rpc`,
 `gl-sdk4-base-files`, `gl-sdk4-clients`, `gl-sdk4-plugins`).
 
+**Repeatable.** A second validation run, built independently from the same
+recipe, gives a root file system identical to the first in all 6,078
+entries (files, symlinks, modes) and the same kernel; only the sysupgrade
+signature block at the end of the image differs (each run signs with a
+fresh private build key; GL.iNet's signature can't be reproduced anyway).
+Since the hash seed is fixed (`PYTHONHASHSEED=0`), even Samba's library
+order and the Python bytecode come out the same every time. With that,
+4.2.0 counts as validated: built without ccache like GL.iNet's, repeatable,
+and outside the accepted classes no file differs.
+
 **The vermagic hash, searched harder.** With 16 threads, a small C program
 (OpenSSL MD5, prefix cache) tries billions of `.config.set` variants:
 adding up to 4 of the 243 options that are `=y`/`=m` in GL.iNet's final
@@ -1095,3 +1105,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-25 | Complete 4.2.0 image assembled from the published SDK and ImageBuilder plus the closed packages (assembly runs #1 to #9): rootfs-overlay scripts, the ddns move, unstripped modules, Installed-Size (= size of data.tar.gz; owner names and folder modes), GL.iNet's build key. Complete builds moved to the public runners (closed part generated in the run, reports only). |
 | 2026-10-25 | Complete full build on the public runner (#16): 466 packages, 6,071 files, `status` identical apart from accepted fields (order and Auto-Installed included). Fixes: adguardhome folder clash, no wsdd2, LUCI_LANG_en only public-only; empty folders in web-interface packages (Installed-Size). |
 | 2026-10-26 | Validation run without ccache (M5+, 81 min): 466 packages, 6,071 files, status identical apart from the kernel's vermagic; outside the accepted classes no file differs; 4 closed packages' Installed-Size open. vermagic brute force (adds/drops up to 4, mixed up to 3): no match. |
+| 2026-10-26 | Second validation run: root file system identical in all 6,078 entries, kernel identical; only the image signature differs (fresh build key). 4.2.0 validated. |
