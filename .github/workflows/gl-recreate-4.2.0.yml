@@ -457,7 +457,9 @@ jobs:
                      staging_dir/toolchain-*/bin/aarch64-openwrt-linux-{gcc,g++,c++,cpp}; do
               [ -f "$c" ] && [ ! -L "$c" ] && [ ! -e "$(dirname "$c")/.$(basename "$c").real" ] || continue
               mv "$c" "$(dirname "$c")/.$(basename "$c").real"
-              printf '#!/bin/sh\nexec ccache "$(dirname "$0")/.%s.real" "$@"\n' "$(basename "$c")" > "$c"
+              # (falls back to the real compiler without ccache: the SDK built in
+              # this run carries these wrappers)
+              printf '#!/bin/sh\nr="$(dirname "$0")/.%s.real"\ncommand -v ccache >/dev/null && exec ccache "$r" "$@"\nexec "$r" "$@"\n' "$(basename "$c")" > "$c"
               chmod +x "$c"; echo "ccache wrapper: $c"
             done
           fi
