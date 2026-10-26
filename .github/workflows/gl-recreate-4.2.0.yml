@@ -82,6 +82,9 @@ env:
   #   VERSION_DATE, GL_TYPE  /etc/version.date and gl_metadata's type, as in
   #                     the official image
   #   AGH_VERSION, AGH_SHA256  AdGuard's release binary in gl-sdk4-adguardhome
+  #   EARLY_PATCHES     number of leading patches committed one second
+  #                     earlier (GL.iNet's git am crossed a second boundary;
+  #                     visible in SourceDateEpoch, e.g. uboot-envtools in 4.2.1)
 
 jobs:
   recreate:
@@ -119,8 +122,8 @@ jobs:
           REL="${{ inputs.release }}"
           case "$REL" in ""|false) REL=4.2.0 ;; esac
           awk -F'\t' -v r="$REL" -v q="'" '$1 == r { f = 1
-              split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256", k, " ")
-              for (i = 1; i <= 10; i++) print k[i] "=" q $i q }
+              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES", k, " ")
+              for (i = 1; i <= n; i++) print k[i] "=" q $i q }
             END { exit !f }' openwrt/gl-releases.tsv > work/release.env \
             || { echo "release $REL not in openwrt/gl-releases.tsv"; exit 1; }
           cat work/release.env
@@ -222,6 +225,15 @@ jobs:
           python3 setup.py -c configs/config-mt798x-7.6.6.1.yml
           unset GIT_COMMITTER_DATE
           cd mt7981
+          if [ "${EARLY_PATCHES:-0}" -gt 0 ]; then
+            # the first EARLY_PATCHES patch commits one second earlier (see env)
+            early=$(git log --reverse --format='%H %ct' \
+              | awk -v d="$GIT_COMMIT_DATE" -v n="$EARLY_PATCHES" '$2 == d && c < n { printf "%s ", $1; c++ }')
+            FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --env-filter \
+              "case ' $early ' in *\" \$GIT_COMMIT \"*) export GIT_COMMITTER_DATE='$((GIT_COMMIT_DATE - 1)) +0000' ;; esac" \
+              -- "${early%% *}^..HEAD"
+          fi
+          git log --reverse --format='%ct %s' -n 45 | awk 'NR <= 12'   # first patch commits
           git log --oneline -3
 
           # GL.iNet's build time (see env): get_source_date_epoch.sh reads
