@@ -108,7 +108,8 @@ env:
   #                     4.4.6 has the wireguard fix of 14 July)
   #   EXTRA_CONFIG      extra .config lines, space-separated ("-": none), for
   #                     options from GL.iNet's private profiles (4.4.5: busybox
-  #                     usleep)
+  #                     usleep; 4.5.0: Samba without AD DC and VFSX, so no
+  #                     Python; no kmod-dm, libcurl without nghttp2)
   #   FEED_REVS         public feed revisions as name=commit, space-separated
   #                     ("-": the profiles' own). From 4.5.0 on the builder
   #                     isn't public; the gl-feeds revisions follow from the
