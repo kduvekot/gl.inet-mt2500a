@@ -35,7 +35,7 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   addresses, home domain). Those stay in local files on the Pi, such as
   `~/.config/dirigera/`.
 
-## Where things stand (2026-10-25)
+## Where things stand (2026-10-26)
 
 - Workflows on `main`: **Build OpenWrt**, **Recovery kit**, **Raspberry Pi
   OS image** (all Node 24 actions). The `recovery-kit` release is
@@ -93,8 +93,18 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   explained. **Validated 2026-10-26** (two runs without ccache, identical);
   Samba and `.pyc` differences proven to be order only (function-by-function
   and code-object comparison, journey chapter 13).
-- **Next:** release by release up to 4.9, starting with 4.2.1 (recipe
-  parametrised per release); phase C (upstream
+- **Release by release (2026-10-26):** one recipe, a row per release in
+  `openwrt/gl-releases.tsv` (workflow input `release`). 4.2.0, 4.2.1 and
+  4.2.3 validated without ccache (kernel byte-identical). 4.4.5 in progress:
+  builder = fork `main` (no tag after 4.4.1); run 23 with 36bdcbf (gl-feeds
+  9654671, as in the image) still differs in a few timestamps, five kmods and
+  busybox `usleep` (next candidate 49eefa6). 4.4.6 values collected (same
+  builder state as 4.4.5). 4.5.0+: no public builder found yet.
+- **Closed binaries:** 11 of 45 byte-identical (private repo `user/`,
+  `results/user/`); origins inventory in the private repo
+  `notes/oss-origins-4.2.0.md`. Further work on them stopped (safety
+  classifier stops). `docs/releases.md` only once all releases are done.
+- **Next:** phase C (upstream
   OpenWrt on the old unit, iperf with the GMKtec). Ask the owner before any
   write to a router.
 - WAN PHY: old unit MaxLinear GPY211C0VC (`glinet_gl-mt2500`; board
