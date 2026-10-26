@@ -1132,7 +1132,13 @@ builder tag `v4.2.3_release5`. Two new effects:
 
 Run 20 (4.2.3): every file present, `status` identical apart from the
 kernel's vermagic, and of the package records only the vermagic hash and
-the accepted `Installed-Size` values differ, as for 4.2.0 and 4.2.1.
+the accepted `Installed-Size` values differ, as for 4.2.0 and 4.2.1. The deeper checks on run 21 (without ccache) hold as well: all 23 differing
+`.pyc` files have identical code objects; of 266 differing ELF files 190
+have identical machine code and Samba's other 75 match function by function,
+apart from 115 functions that call a symbol two Samba libraries export and
+bind it to the other one (114 in the `dcerpc` Python binding), and one
+instruction the comparison tool labels differently (`mov x3, x5` on both
+sides).
 
 **The kernel is byte-identical without ccache.** The validation run
 without ccache (run 16, 43 minutes) gives a root file system identical to
