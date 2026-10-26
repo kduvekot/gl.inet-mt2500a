@@ -453,6 +453,7 @@ jobs:
           if [ "${REBUILT_PACKAGES:--}" != "-" ]; then
             # build these once and clean them (clean keeps pkginfo/*.version),
             # so the main build builds them again, as GL.iNet's tree did (see env)
+            make -j"$(nproc)" BUILD_LOG=1 tools/install toolchain/install   # (done above with ccache)
             for p in $REBUILT_PACKAGES; do make -j"$(nproc)" BUILD_LOG=1 "$p/compile"; done
             for p in $REBUILT_PACKAGES; do make "$p/clean"; done
           fi
