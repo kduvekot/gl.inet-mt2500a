@@ -149,7 +149,7 @@ jobs:
           PY
             sudo chown -R "$(id -u):$(id -g)" ../closed ../closed-image
             # This release's AdGuardHome binary
-            sed -i -e "s/@AGH_VERSION@/$AGH_VERSION/" -e "s/@AGH_SHA256@/$AGH_SHA256/" \
+            sed -i -e "s/@AGH_VERSION@/$AGH_VERSION/g" -e "s/@AGH_SHA256@/$AGH_SHA256/g" \
               ../closed/glinet/gl-sdk4-adguardhome/Makefile
             wc -l ../out/closed-feed.txt
           fi
