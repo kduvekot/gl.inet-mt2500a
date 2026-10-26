@@ -85,6 +85,8 @@ env:
   #   EARLY_PATCHES     number of leading patches committed one second
   #                     earlier (GL.iNet's git am crossed a second boundary;
   #                     visible in SourceDateEpoch, e.g. uboot-envtools in 4.2.1)
+  #   LATE_PATCHES      number of trailing patches committed one second later
+  #                     (dnsmasq and odhcpd in 4.2.3)
   #   REBUILT_PACKAGES  packages GL.iNet's tree had built before ("-": none).
   #                     A package defined before its ABI-versioned sibling in
   #                     the same Makefile (curl/libcurl, libc/libgcc) gets the
@@ -133,7 +135,7 @@ jobs:
           REL="${{ inputs.release }}"
           case "$REL" in ""|false) REL=4.2.0 ;; esac
           awk -F'\t' -v r="$REL" -v q="'" '$1 == r { f = 1
-              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES PRIVATE_NOW", k, " ")
+              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES PRIVATE_NOW LATE_PATCHES", k, " ")
               for (i = 1; i <= n; i++) print k[i] "=" q $i q }
             END { exit !f }' openwrt/gl-releases.tsv > work/release.env \
             || { echo "release $REL not in openwrt/gl-releases.tsv"; exit 1; }
@@ -236,13 +238,18 @@ jobs:
           python3 setup.py -c configs/config-mt798x-7.6.6.1.yml
           unset GIT_COMMITTER_DATE
           cd mt7981
-          if [ "${EARLY_PATCHES:-0}" -gt 0 ]; then
-            # the first EARLY_PATCHES patch commits one second earlier (see env)
-            early=$(git log --reverse --format='%H %ct' \
-              | awk -v d="$GIT_COMMIT_DATE" -v n="$EARLY_PATCHES" '$2 == d && c < n { printf "%s ", $1; c++ }')
+          if [ "${EARLY_PATCHES:-0}" -gt 0 ] || [ "${LATE_PATCHES:-0}" -gt 0 ]; then
+            # the first EARLY_PATCHES patch commits one second earlier, the last
+            # LATE_PATCHES one second later (see env)
+            all=$(git log --reverse --format='%H %ct' | awk -v d="$GIT_COMMIT_DATE" '$2 == d { printf "%s ", $1 }')
+            n=$(echo $all | wc -w)
+            early=$(echo $all | tr ' ' '\n' | awk -v e="${EARLY_PATCHES:-0}" 'NR <= e' | tr '\n' ' ')
+            late=$(echo $all | tr ' ' '\n' | awk -v n="$n" -v l="${LATE_PATCHES:-0}" 'NR > n - l' | tr '\n' ' ')
+            first=$(echo $early $late | awk '{ print $1 }')
             FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --env-filter \
-              "case ' $early ' in *\" \$GIT_COMMIT \"*) export GIT_COMMITTER_DATE='$((GIT_COMMIT_DATE - 1)) +0000' ;; esac" \
-              -- "${early%% *}^..HEAD"
+              "case ' $early ' in *\" \$GIT_COMMIT \"*) export GIT_COMMITTER_DATE='$((GIT_COMMIT_DATE - 1)) +0000' ;; esac
+               case ' $late ' in *\" \$GIT_COMMIT \"*) export GIT_COMMITTER_DATE='$((GIT_COMMIT_DATE + 1)) +0000' ;; esac" \
+              -- "$first^..HEAD"
           fi
           git log --reverse --format='%ct %s' -n 45 | awk 'NR <= 12'   # first patch commits
           git log --oneline -3
