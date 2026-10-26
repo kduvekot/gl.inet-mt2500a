@@ -1,11 +1,12 @@
-name: GL.iNet 4.2.0 recreation (MT2500)
+name: GL.iNet release recreation (MT2500)
 
-# Rebuild GL.iNet's MT2500 firmware 4.2.0 as far as public sources allow,
-# then compare it with GL.iNet's official 4.2.0 image.
+# Rebuild a GL.iNet MT2500 firmware release (input "release", a row of
+# openwrt/gl-releases.tsv; 4.2.0 is validated) as far as public sources
+# allow, then compare it with GL.iNet's official image of that release.
 #
 # Recipe (GL.iNet's own build system, from the fork that survived its
 # removal: https://github.com/spmadden/gl-infra-builder, tag
-# v4.2.0_mt2500_release4):
+# v4.2.0_mt2500_release4 for 4.2.0):
 #   * OpenWrt openwrt-21.02 at bcaabe6d (r16649), set by
 #     configs/config-mt798x-7.6.6.1.yml
 #   * patches-mt798x-7.6.6.1/*.patch applied with "git am -3" by setup.py
@@ -44,6 +45,10 @@ name: GL.iNet 4.2.0 recreation (MT2500)
 on:
   workflow_dispatch:
     inputs:
+      release:
+        description: "GL.iNet release to recreate (a row of openwrt/gl-releases.tsv)"
+        type: string
+        default: "4.2.0"
       ccache:
         description: "Use ccache (wrapped invisibly; off for the final validation run: GL.iNet built without it)"
         type: boolean
@@ -62,15 +67,21 @@ permissions:
 
 env:
   FORK: https://github.com/spmadden/gl-infra-builder.git
-  FORK_TAG: v4.2.0_mt2500_release4
   MTK_FEED_OLD: https://git01.mediatek.com/openwrt/feeds/mtk-openwrt-feeds.git
   MTK_FEED_MIRROR: https://github.com/gl-inet/mtk-openwrt-feeds.git
-  OFFICIAL_URL: https://fw.gl-inet.com/firmware/mt2500/release/openwrt-mt2500-4.2.0-0314-1678763050.bin
-  OFFICIAL_SHA256: 3c13b26fbfe9fe1710b42f90c80a47fe000dd98d899fec2d0ed3b8053ac69348
-  # GL.iNet's build time, from the official kernel banner "Tue Mar 14
-  # 02:16:44 2023" (OpenWrt prints SOURCE_DATE_EPOCH with gmtime); written
-  # to version.date, also used for other build timestamps.
-  SOURCE_DATE_EPOCH: "1678760204"
+  # Everything that differs per release is a row of openwrt/gl-releases.tsv,
+  # loaded into work/release.env by the first step:
+  #   FORK_TAG          the builder tag committed about an hour before the
+  #                     release's build time
+  #   OFFICIAL_URL/_SHA256  the official image (from GL.iNet's firmware API)
+  #   SOURCE_DATE_EPOCH GL.iNet's build time, from the official kernel banner
+  #                     (OpenWrt prints it with gmtime); written to
+  #                     version.date, also used for other build timestamps
+  #   GIT_COMMIT_DATE   commit date of the applied patches (opkg
+  #                     SourceDateEpoch of the OpenWrt-tree packages)
+  #   VERSION_DATE, GL_TYPE  /etc/version.date and gl_metadata's type, as in
+  #                     the official image
+  #   AGH_VERSION, AGH_SHA256  AdGuard's release binary in gl-sdk4-adguardhome
 
 jobs:
   recreate:
@@ -92,16 +103,28 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: work/cache
-          key: gl-recreate-${{ env.FORK_TAG }}-${{ github.run_id }}
-          restore-keys: gl-recreate-${{ env.FORK_TAG }}-
+          key: gl-recreate-${{ inputs.release }}-${{ github.run_id }}
+          restore-keys: |
+            gl-recreate-${{ inputs.release }}-
+            gl-recreate-
 
-      - name: Fetch the official 4.2.0 and list its packages
+      - name: Fetch the official release and list its packages
         timeout-minutes: 20
         env:
           CLOSED: ${{ inputs.closed }}
         run: |
           sudo apt-get install -y -q squashfs-tools > /dev/null
           mkdir -p work/out work/cache/dl work/cache/ccache work/cmp
+          # This release's values (see env), for this and all later steps
+          REL="${{ inputs.release }}"
+          case "$REL" in ""|false) REL=4.2.0 ;; esac
+          awk -F'\t' -v r="$REL" -v q="'" '$1 == r { f = 1
+              split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256", k, " ")
+              for (i = 1; i <= 10; i++) print k[i] "=" q $i q }
+            END { exit !f }' openwrt/gl-releases.tsv > work/release.env \
+            || { echo "release $REL not in openwrt/gl-releases.tsv"; exit 1; }
+          cat work/release.env
+          set -a; . work/release.env; set +a
           cd work/cmp
           curl -fSL --connect-timeout 30 --max-time 600 --retry 5 --retry-delay 10 \
             --retry-all-errors -o official.bin "$OFFICIAL_URL"
@@ -118,10 +141,16 @@ jobs:
           root, out, lst = sys.argv[1:4]
           for rel in open(lst).read().split():
               s, t = os.path.join(root, rel), os.path.join(out, rel)
+              if not os.path.lexists(s):   # the list covers several releases
+                  print("not in this release:", rel)
+                  continue
               os.makedirs(os.path.dirname(t), exist_ok=True)
               os.symlink(os.readlink(s), t) if os.path.islink(s) else shutil.copy2(s, t)
           PY
             sudo chown -R "$(id -u):$(id -g)" ../closed ../closed-image
+            # This release's AdGuardHome binary
+            sed -i -e "s/@AGH_VERSION@/$AGH_VERSION/" -e "s/@AGH_SHA256@/$AGH_SHA256/" \
+              ../closed/glinet/gl-sdk4-adguardhome/Makefile
             wc -l ../out/closed-feed.txt
           fi
           # GL.iNet's public build key (base-files installs it as
@@ -173,6 +202,8 @@ jobs:
           # random order itself can't be reproduced. (OpenWrt's .pyc
           # compilation sets its own seed and is unaffected.)
           export PYTHONHASHSEED=0
+          # This release's values (written by the first step; see env)
+          set -a; . /work/release.env; set +a
           git config --global user.email ci@invalid.invalid
           git config --global user.name ci
           git config --global --add safe.directory '*'
@@ -187,7 +218,7 @@ jobs:
           # GL.iNet's own step: clone OpenWrt, reset to bcaabe6d, git am the patches.
           # Commit date of the applied patches = GL.iNet's (opkg SourceDateEpoch
           # of the OpenWrt-tree packages in the official image).
-          export GIT_COMMITTER_DATE="1678760203 +0000"
+          export GIT_COMMITTER_DATE="$GIT_COMMIT_DATE +0000"
           python3 setup.py -c configs/config-mt798x-7.6.6.1.yml
           unset GIT_COMMITTER_DATE
           cd mt7981
@@ -233,9 +264,9 @@ jobs:
           # gl_metadata.yaml (not in the public recipe) and /etc/version.date
           # from the clock (local time); use GL.iNet's values from the official
           # image.
-          printf 'version: 4.2.0\ntype: release4\n' > gl_metadata.yaml
+          printf 'version: %s\ntype: %s\n' "$RELEASE" "$GL_TYPE" > gl_metadata.yaml
           ./scripts/gen_config.py public_target_mt2500 public_glinet_mt2500
-          echo "2023-03-14 10:33:32" > files/etc/version.date
+          echo "$VERSION_DATE" > files/etc/version.date
 
           # Mirror the official package set: make every feed package
           # selectable, select what the official image has (except GL.iNet's
@@ -450,7 +481,7 @@ jobs:
           # steps that save cache, report and logs.
           set -o pipefail
           timeout 320m docker run --rm -v "$PWD/work:/work" \
-            -e FORK -e FORK_TAG -e MTK_FEED_OLD -e MTK_FEED_MIRROR -e SOURCE_DATE_EPOCH -e USE_CCACHE -e PUBLISH_SDK -e CLOSED \
+            -e FORK -e MTK_FEED_OLD -e MTK_FEED_MIRROR -e USE_CCACHE -e PUBLISH_SDK -e CLOSED \
             ubuntu:20.04 bash /work/build.sh 2>&1 | tee work/out/build.log \
             | grep --line-buffered -E "^ make\[[0-9]+\] |ERROR: |ccache wrapper|^\+ make |Collected errors" \
             | tee work/out/progress.log
@@ -460,9 +491,9 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: work/cache
-          key: gl-recreate-${{ env.FORK_TAG }}-${{ github.run_id }}
+          key: gl-recreate-${{ inputs.release }}-${{ github.run_id }}
 
-      - name: Compare with the official 4.2.0
+      - name: Compare with the official release
         if: always()
         run: |
           cd work/cmp
@@ -496,10 +527,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           ls -l work/out/sdk/
-          tag=gl-4.2.0-sdk
+          tag=gl-${{ inputs.release }}-sdk
           gh release view "$tag" > /dev/null 2>&1 || gh release create "$tag" \
-            --title "GL.iNet 4.2.0 recreation: OpenWrt SDK" --prerelease \
-            --notes "OpenWrt SDK from the GL.iNet 4.2.0 recreation (OpenWrt 21.02 at bcaabe6d plus GL.iNet's public patches; CONFIG_ALL_KMODS). For building kernel modules like GL.iNet's. Updated by every successful run."
+            --title "GL.iNet ${{ inputs.release }} recreation: OpenWrt SDK" --prerelease \
+            --notes "OpenWrt SDK from the GL.iNet ${{ inputs.release }} recreation (OpenWrt 21.02 at bcaabe6d plus GL.iNet's public patches; CONFIG_ALL_KMODS). For building kernel modules like GL.iNet's. Updated by every successful run."
           gh release upload "$tag" work/out/sdk/* --clobber
 
       # A complete image contains GL.iNet's closed files: never published.
@@ -510,7 +541,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: gl-4.2.0-recreation
+          name: gl-${{ inputs.release }}-recreation
           path: |
             work/out/report/
             work/out/images/

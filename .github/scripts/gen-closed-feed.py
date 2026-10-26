@@ -223,7 +223,11 @@ def main():
         (d / "Makefile").write_text("\n".join(lines) + "\n")
         ov = closed / "overrides" / d.relative_to(out) / "Makefile"
         if ov.exists():                  # built from source (files/ from the image)
-            shutil.copy(ov, d / "Makefile")
+            m = ov.read_text()           # with this release's version
+            if ver:
+                m = re.sub(r"^PKG_VERSION:=.*$", f"PKG_VERSION:={ver}", m, count=1, flags=re.M)
+            m = re.sub(r"^PKG_RELEASE:=.*$", f"PKG_RELEASE:={rel}", m, count=1, flags=re.M)
+            (d / "Makefile").write_text(m)
         print(f"{name:40} -> {d.relative_to(out)}{' (override: built from source)' if ov.exists() else ''}")
 
 
