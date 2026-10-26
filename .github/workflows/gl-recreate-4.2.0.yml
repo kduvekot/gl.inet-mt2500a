@@ -92,6 +92,10 @@ env:
   #                     pkginfo file already exists when make reads the
   #                     Makefile: plain in 4.1.1-4.2.0 and 4.5.0-4.8.2, ABI
   #                     names in 4.2.1-4.4.6 and 4.9.0
+  #   PRIVATE_NOW       packages of openwrt/gl-4.2.0-closed/built-from-public.txt
+  #                     that this release's public feeds no longer have
+  #                     ("-": none); taken from the official image instead
+  #                     (gl-sdk4-tertf left gl-feeds after 4.2.1)
 
 jobs:
   recreate:
@@ -129,7 +133,7 @@ jobs:
           REL="${{ inputs.release }}"
           case "$REL" in ""|false) REL=4.2.0 ;; esac
           awk -F'\t' -v r="$REL" -v q="'" '$1 == r { f = 1
-              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES", k, " ")
+              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES PRIVATE_NOW", k, " ")
               for (i = 1; i <= n; i++) print k[i] "=" q $i q }
             END { exit !f }' openwrt/gl-releases.tsv > work/release.env \
             || { echo "release $REL not in openwrt/gl-releases.tsv"; exit 1; }
@@ -145,7 +149,7 @@ jobs:
             # GL.iNet's closed packages and image-level files, from the official
             # image (stays inside the run)
             C="$GITHUB_WORKSPACE/openwrt/gl-4.2.0-closed"
-            sudo python3 -I "$GITHUB_WORKSPACE/.github/scripts/gen-closed-feed.py" off_root ../closed "$C" > ../out/closed-feed.txt
+            sudo python3 -I "$GITHUB_WORKSPACE/.github/scripts/gen-closed-feed.py" off_root ../closed "$C" "--private-now=$PRIVATE_NOW" > ../out/closed-feed.txt
             sudo python3 -I - off_root ../closed-image "$C/image-files.txt" << 'PY'
           import os, shutil, sys
           root, out, lst = sys.argv[1:4]

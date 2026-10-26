@@ -2,7 +2,7 @@
 """Generate OpenWrt package recipes for GL.iNet's closed packages from an
 unpacked official image, so a full build can reproduce them.
 
-    gen-closed-feed.py <official_root> <out_dir> <closed_dir> [package ...]
+    gen-closed-feed.py <official_root> <out_dir> <closed_dir> [--private-now="pkg ..."] [package ...]
 
 <closed_dir> (openwrt/gl-4.2.0-closed in the public repo) holds what isn't
 taken from the image: built-from-public.txt (packages built from public
@@ -72,10 +72,15 @@ def mk_escape(s):
 
 def main():
     root, out, closed = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
-    only = set(sys.argv[4:])
+    opts = [a for a in sys.argv[4:] if a.startswith("--private-now=")]
+    only = set(a for a in sys.argv[4:] if a not in opts)
     # packages verified identical from public source: not part of this feed
     pub = closed / "built-from-public.txt"
     public = {l.strip() for l in pub.read_text().splitlines() if l.strip() and not l.startswith("#")} if pub.exists() else set()
+    # packages of that list this release's public feeds no longer have
+    # (release value PRIVATE_NOW): taken from the image like the others
+    for o in opts:
+        public -= set(o.split("=", 1)[1].split()) - {"-"}
     info = root / "usr/lib/opkg/info"
     # ABI-versioned names (jansson4) -> the name DEPENDS uses (jansson)
     abi = {}
