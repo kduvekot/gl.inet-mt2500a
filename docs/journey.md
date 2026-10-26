@@ -1066,6 +1066,51 @@ sources, plus the whole kernel layer. Run #10 targets most of the rest
 1,100 files, 40.6 MB) come from the private recipe: as originals, except
 AdGuardHome, `sipcalc` and the exFAT tools, which are built from source.
 
+## Chapter 14: Release by release, 4.2.1 (2026-10-26)
+
+**One recipe, a row per release.** Everything that differs between releases
+is a row of `openwrt/gl-releases.tsv`; the recreation's input `release`
+selects it (default 4.2.0). The first step writes the row to
+`work/release.env`, which the later steps and the build container read:
+builder tag, official image, build time, patch commit date, `version.date`,
+release type, the AdGuardHome release, and two values about GL.iNet's build
+environment (below). Built again with the new mechanism, 4.2.0 gives a root
+file system and kernel identical to the previous run.
+
+**4.2.1, four rounds on the M5+.** The first complete build already matched
+in package set, file list, install order and `Auto-Installed`. What
+remained, and what it was:
+
+- **AdGuardHome**: GL.iNet's 4.2.1 file is AdGuard's official v0.107.26
+  release binary after OpenWrt's `sstrip -z`, byte for byte (4.2.0 was
+  v0.107.8 the same way). Upstream names the tarball the same for every
+  version, so the local download name now carries the version.
+- **`uboot-envtools`' `SourceDateEpoch`** one second before the other 115
+  packages from the OpenWrt tree: GL.iNet's `git am` crossed a second
+  boundary. `uboot-envtools` was last touched by patch 2, every other one by
+  patch 9 or later, so the first 2 patch commits get the earlier date
+  (`early_patches`; any boundary from 2 to 8 gives the same image).
+- **`curl` and `libc` depending on `libcurl4`/`libgcc1`** instead of
+  `libcurl`/`libgcc`: OpenWrt's `GetABISuffix` (`include/feeds.mk`) uses a
+  sibling's ABI name once its `BuildPackage` has been read, and otherwise
+  the sibling's `staging_dir/pkginfo/<name>.version`. `curl` and `libc` are
+  defined before their sibling, so a clean build writes the plain name; the
+  ABI name appears only if the sibling was built before. Across all 15
+  releases: plain in 4.1.1–4.2.0 and 4.5.0–4.8.2, ABI names in 4.2.1–4.4.6
+  and 4.9.0, so GL.iNet's build trees in those periods held earlier builds.
+  Reproduced by building those packages once and cleaning them (clean keeps
+  `pkginfo`) before the main build (`rebuilt_packages`).
+
+Run 14 (4.2.1): 466 packages, every file present, `status` identical apart
+from the kernel's vermagic, and of the package records only the vermagic
+hash and the 10 accepted `Installed-Size` values differ. The same checks as
+for 4.2.0 hold: all 22 differing `.pyc` files have identical code objects;
+of 274 differing ELF files 210 have identical machine code and Samba's
+other 62 match function by function (the 4 functions that differ bind a
+symbol exported by two Samba libraries to the other one); `wg` carries
+GL.iNet's tree hash. GL.iNet's vermagic hash is the same in 4.2.0 and 4.2.1,
+and so is ours.
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -1180,3 +1225,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-26 | Second validation run: root file system identical in all 6,078 entries, kernel identical; only the image signature differs (fresh build key). 4.2.0 validated. |
 | 2026-10-26 | Last four `Installed-Size` values solved (empty folders in three closed packages, GL.iNet's modes for 7 base-files overlay files), each checked across releases; run 9 confirms: only the 11 accepted ones remain. |
 | 2026-10-26 | "Same code" proven: all 22 differing `.pyc` files have identical code objects; of the 246 differing ELF files, 174 have identical machine code and Samba's other 71 match function by function (35,453 of 35,455 functions, all 12,507 data objects; the last 2 bind a duplicated symbol to another library). |
+| 2026-10-26 | Recipe per release (`openwrt/gl-releases.tsv`); 4.2.1 recreated to 4.2.0's level (run 14): AdGuardHome v0.107.26 release binary, `early_patches` (patch commits crossing a second), `rebuilt_packages` (ABI names in `Depends` when GL.iNet's tree held earlier builds). |
