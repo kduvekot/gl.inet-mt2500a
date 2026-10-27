@@ -1213,6 +1213,27 @@ of 4.5.0's patch commits are not public; the first builds show where they
 act. (`kmod-gl-sdk4-fan`, new in gl_feed_common in 2024, needs headers of
 GL.iNet's closed `gl-sdk4-utils` and is in no MT2500 image: left out.)
 
+**4.5.0, job 33.** The first complete builds (jobs 29 and 31) showed that
+most of 4.5.0's differences are configuration, not code: GL.iNet's Samba
+lost AD DC and the extended VFS modules (so the image has no Python; 36
+packages and 1,573 files fewer), `kmod-dm` and `kmod-dax` are gone (with
+`DAX=m` the kernel can only build device mapper as a module, so the target
+config's built-in `DM_INIT`/`DM_VERITY` came back once both were left out),
+and libcurl lost HTTP/2. Three of the four missing patch commits were
+found: GL.iNet published two of them for its newer BE-series routers in
+`gl-inet/gl-image` (`opkg` "fix injection vulnerability", `lua5.3`
+"archindependent bytecode"), and the third is the `mtkhnat` warning removal
+of chapter 12, recreated on MediaTek's public source. New release value
+`extra_commits` (`openwrt/gl-extra-commits/`, README with sources). Job 33:
+419 packages and 4,321 files as in the image, `status` order and
+`Auto-Installed` identical, kernel configuration identical, `opkg`,
+`liblua5.3`, `mtkhnat` and `ext4` identical, r15812+884. Left: the 885th
+commit (no trace in the image), `shortcut-fe.ko`'s module info
+(`depends=gl-sdk4-tertf`: GL.iNet built it with the tertf module present),
+`sipcalc` (order fix queued), and build IDs/data sections of `libelf` and
+the Go programs (the ccache class of chapter 14, to be confirmed without
+ccache).
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -1335,3 +1356,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | Job 28: 4.4.5 matches in every kernel module, busybox, kernel config, `SourceDateEpoch` and file count; besides the accepted classes only `ip-full` and `sipcalc` differ: directory-order effects fixed for 4.2.x, but GL.iNet's 4.4.x order is another one (other build machine). |
 | 2026-10-27 | 4.5.0+: the builder went private in August 2023 but stayed the same (r15812, kernel 5.4.211 up to 4.9.0). `release-values.py` reads all releases' values and pins `gl-feeds` by `SourceDateEpoch` (`feed_revs`); 4.5.0 queued. |
 | 2026-10-27 | Build-machine orders read per release from the official binaries (`link-order.py`): iproute2's table order (reproduces 4.2.0's hand-derived list) and part of `sipcalc`'s link order; 4.5.0 settings from job 29: Samba without AD DC/VFSX (no Python), no `kmod-dm`, libcurl without nghttp2. |
+| 2026-10-27 | 4.5.0 job 33: kernel config, `opkg`, `liblua5.3`, `mtkhnat`, `ext4` identical, counts and `status` as official, r15812+884; GL.iNet's opkg/lua5.3 patches found in `gl-inet/gl-image`, release value `extra_commits`. 4.4.5 `ip-full` identical with the per-release order. |
