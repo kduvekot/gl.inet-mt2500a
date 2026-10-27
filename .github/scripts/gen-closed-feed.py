@@ -12,7 +12,7 @@ built programs are installed over it). Run inside the workflow only: the
 output contains GL.iNet's files and is never stored or published.
 
 For every closed package (default: all whose control file names a source in
-feeds/glinet, feeds/mt7981, or a gl-/oui-/libgl prefix) it writes
+feeds/glinet, feeds/mt7981 or mt798x, or a gl-/oui-/libgl prefix) it writes
 <out_dir>/<feed>/<path>/ with
   Makefile      PKG_NAME/VERSION/RELEASE, DEPENDS, SECTION, TITLE and
                 description from the official control file; installs files/
@@ -24,6 +24,7 @@ Kernel modules become KernelPackages, so Depends gets the kernel line.
 import os
 import re
 import shutil
+import struct
 import sys
 from pathlib import Path
 
@@ -55,6 +56,21 @@ def control(path):
         elif key:
             f[key] += "\n" + line
     return f
+
+
+def ko_exports(path):
+    """(symbols, gpl) a kernel module exports: the names in __ksymtab_strings;
+    gpl is True if it has a __ksymtab_gpl section (then the kind of each
+    symbol isn't known from the strings alone)."""
+    d = path.read_bytes()
+    shoff, = struct.unpack_from("<Q", d, 0x28)
+    shentsize, shnum, shstrndx = struct.unpack_from("<HHH", d, 0x3A)
+    secs = [struct.unpack_from("<IIQQQQ", d, shoff + i * shentsize) for i in range(shnum)]
+    stro = secs[shstrndx][4]
+    names = {d[stro + s[0]:d.index(b"\0", stro + s[0])].decode(): s for s in secs}
+    st = names.get("__ksymtab_strings")
+    syms = [x.decode() for x in d[st[4]:st[4] + st[5]].split(b"\0") if x] if st else []
+    return syms, "__ksymtab_gpl" in names
 
 
 def split_version(v, kmod):
@@ -188,8 +204,26 @@ def main():
                       f"define KernelPackage/{pkg}/description", mk_escape(desc), "endef", ""]
             if conf:
                 lines += [f"define KernelPackage/{pkg}/conffiles", *conf, "endef", ""]
+            # Exported symbols, as OpenWrt's collect_module_symvers would write
+            # them for a module built from source: modules built against this
+            # one record it in depends= (shortcut-fe uses tertf's term_update).
+            # No CONFIG_MODVERSIONS, so no checksums.
+            syms = []
+            for k in ko:
+                e, gpl = ko_exports(d / "files" / k)
+                if gpl:
+                    print(f"{name}: {k} has GPL exports, no symvers written", file=sys.stderr)
+                    syms = []
+                    break
+                mod = "/home/glinet/work/" + Path(k).name[:-3]   # only the base name counts
+                syms += [f"0x00000000\t{x}\t{mod}\tEXPORT_SYMBOL\t" for x in e]
+            if syms:
+                (d / "Module.symvers").write_text("\n".join(syms) + "\n")
             lines += ["# GL.iNet's files are final: don't strip them again", "RSTRIP:=:", "",
-                      "define Build/Compile", "endef", "",
+                      "define Build/Compile",
+                      *(["\tmkdir -p $(PKG_SYMVERS_DIR)",
+                         "\t$(CP) ./Module.symvers $(PKG_SYMVERS_DIR)/$(PKG_NAME).symvers"] if syms else []),
+                      "endef", "",
                       f"define KernelPackage/{pkg}/install",
                       *(["\t$(CP) ./files/* $(1)/"] if any((d / "files").iterdir()) else ["\t$(INSTALL_DIR) $(1)"]),
                       "endef", "",

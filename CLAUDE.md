@@ -35,7 +35,7 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   addresses, home domain). Those stay in local files on the Pi, such as
   `~/.config/dirigera/`.
 
-## Where things stand (2026-10-26)
+## Where things stand (2026-10-27)
 
 - Workflows on `main`: **Build OpenWrt**, **Recovery kit**, **Raspberry Pi
   OS image** (all Node 24 actions). The `recovery-kit` release is
@@ -93,13 +93,26 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   explained. **Validated 2026-10-26** (two runs without ccache, identical);
   Samba and `.pyc` differences proven to be order only (function-by-function
   and code-object comparison, journey chapter 13).
-- **Release by release (2026-10-26):** one recipe, a row per release in
-  `openwrt/gl-releases.tsv` (workflow input `release`). 4.2.0, 4.2.1 and
-  4.2.3 validated without ccache (kernel byte-identical). 4.4.5 in progress:
-  builder = fork `main` (no tag after 4.4.1); run 23 with 36bdcbf (gl-feeds
-  9654671, as in the image) still differs in a few timestamps, five kmods and
-  busybox `usleep` (next candidate 49eefa6). 4.4.6 values collected (same
-  builder state as 4.4.5). 4.5.0+: no public builder found yet.
+- **Release by release (2026-10-27, journey chapter 15):** one recipe, a
+  row per release in `openwrt/gl-releases.tsv` (workflow input `release`);
+  release values found so far: `patches_rev` (4.4.x came from a release
+  branch: patch folder of 25 June 2023, 4.4.6 plus the wireguard fix),
+  `extra_config`, `feed_revs` (gl-feeds pinned by `SourceDateEpoch`,
+  `analysis/release-values.py` reads all releases' values in one run),
+  `extra_commits` (`openwrt/gl-extra-commits/`: GL.iNet patches missing
+  from the public set, two of them published in `gl-inet/gl-image`, plus a
+  labelled placeholder for 4.5.x's unidentified 885th commit, kept until a
+  reason to remove it or its real content is found). Build-machine orders
+  are read from the official binaries (`.github/scripts/link-order.py`).
+  4.2.0, 4.2.1, 4.2.3 validated; 4.4.5 at the same level (only accepted
+  classes left); 4.4.6, 4.5.0, 4.5.16 nearly (final jobs running). 4.6.2:
+  first builds; GL.iNet's private MediaTek feed is called `mt798x` from
+  there on. `gl-inet/gl-image` (branch gl-be10000, `versions/4.8.6`) is a
+  complete GPL tree of GL.iNet's 4.8.6 for another model: source for
+  GL.iNet's later generic package patches.
+- **M5+ workflow:** two job workers (`~/queue/`, `~/queue2/`, verdict
+  `~/brief.sh NN`), each keeps its last OpenWrt tree (`~/trees/w1|w2`) for
+  `~/rebuild.sh <w> <package>` (minutes instead of a ~31-minute full run).
 - **Closed binaries:** 11 of 45 byte-identical (private repo `user/`,
   `results/user/`); origins inventory in the private repo
   `notes/oss-origins-4.2.0.md`. Further work on them stopped (safety

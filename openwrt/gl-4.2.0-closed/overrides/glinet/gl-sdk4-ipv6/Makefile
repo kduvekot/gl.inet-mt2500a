@@ -32,8 +32,20 @@ define Package/gl-sdk4-ipv6/description
 glinet SDK4 ipv6 module
 endef
 
+# Link order = GL.iNet's build machine's directory order: 4.2.x sub-output
+# sub-func interface sub; from 4.4.x on the sorted order, interface sub-func
+# sub-output sub (both verified byte-identical, 2026-10-27). Which one is
+# read from the official sipcalc by the position of a string from sub-output
+# and sub-func (link-order.py marks); interface.c has no string of its own.
+# OpenWrt reads this recipe before the sources are unpacked, so it can't
+# look at them.
+GL_SIPCALC_MARKS := $(shell /usr/bin/python3 -I /work/link-order.py marks /work/cmp/off_root/usr/bin/sipcalc \
+	"sub-output.o=Compressed address" "sub-func.o=Aggregatable Global Unicast Addresses" 2>/dev/null)
+GL_SIPCALC_OBJECTS := $(if $(filter sub-func.o,$(firstword $(GL_SIPCALC_MARKS))),\
+	interface.o sub-func.o sub-output.o sub.o,sub-output.o sub-func.o interface.o sub.o)
+
 define Build/Compile
-	$(call Build/Compile/Default,sipcalc_OBJECTS="sub-output.o sub-func.o interface.o sub.o")
+	$(call Build/Compile/Default,sipcalc_OBJECTS="$(GL_SIPCALC_OBJECTS)")
 endef
 
 define Package/gl-sdk4-ipv6/install

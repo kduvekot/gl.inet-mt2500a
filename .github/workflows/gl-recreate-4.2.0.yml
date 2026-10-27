@@ -98,6 +98,27 @@ env:
   #                     that this release's public feeds no longer have
   #                     ("-": none); taken from the official image instead
   #                     (gl-sdk4-tertf left gl-feeds after 4.2.1)
+  #   PATCHES_REV       builder commit whose patches-mt798x-7.6.6.1 folder is
+  #                     used ("-": FORK_TAG's own). GL.iNet built 4.4.5 from a
+  #                     release branch: profiles and feeds of early August, but
+  #                     the kernel and package patches from before 13 July 2023
+  #                     (no modem rework, wireguard fix or kmwan in the image).
+  #                     Further words file=commit take single patch files from
+  #                     another commit (fixes picked onto the release branch:
+  #                     4.4.6 has the wireguard fix of 14 July)
+  #   EXTRA_CONFIG      extra .config lines, space-separated ("-": none), for
+  #                     options from GL.iNet's private profiles (4.4.5: busybox
+  #                     usleep; 4.5.0: Samba without AD DC and VFSX, so no
+  #                     Python; no kmod-dm/kmod-dax (DAX=m would keep device
+  #                     mapper a module), libcurl without nghttp2)
+  #   FEED_REVS         public feed revisions as name=commit, space-separated
+  #                     ("-": the profiles' own). From 4.5.0 on the builder
+  #                     isn't public; the gl-feeds revisions follow from the
+  #                     image (each package's SourceDateEpoch is the last
+  #                     commit to its folder; analysis/release-values.py)
+  #   EXTRA_COMMITS     folders of openwrt/gl-extra-commits ("-": none):
+  #                     GL.iNet patch commits missing from the public patch set
+  #                     (4.5.0+), recreated with the release's patch date
 
 jobs:
   recreate:
@@ -135,7 +156,7 @@ jobs:
           REL="${{ inputs.release }}"
           case "$REL" in ""|false) REL=4.2.0 ;; esac
           awk -F'\t' -v r="$REL" -v q="'" '$1 == r { f = 1
-              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES PRIVATE_NOW LATE_PATCHES", k, " ")
+              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES PRIVATE_NOW LATE_PATCHES PATCHES_REV EXTRA_CONFIG FEED_REVS EXTRA_COMMITS", k, " ")
               for (i = 1; i <= n; i++) print k[i] "=" q $i q }
             END { exit !f }' openwrt/gl-releases.tsv > work/release.env \
             || { echo "release $REL not in openwrt/gl-releases.tsv"; exit 1; }
@@ -147,6 +168,11 @@ jobs:
           echo "${OFFICIAL_SHA256}  official.bin" | sha256sum -c -
           mkdir official && tar -xf official.bin -C official
           sudo unsquashfs -q -d off_root official/*/root > /dev/null
+          # GL.iNet's build-machine order of iproute2's static-syms table, read
+          # from its ip-full (used by openwrt/gl-4.2.0-patches/iproute2)
+          sudo python3 -I "$GITHUB_WORKSPACE/.github/scripts/link-order.py" iproute2 \
+            off_root/usr/libexec/ip-full > ../link-order-ip.txt || : > ../link-order-ip.txt
+          echo "iproute2 table order: $(wc -l < ../link-order-ip.txt) names"
           if [ "$CLOSED" = true ]; then
             # GL.iNet's closed packages and image-level files, from the official
             # image (stays inside the run)
@@ -188,6 +214,8 @@ jobs:
       - name: Write build script
         run: |
           cp -r openwrt/gl-4.2.0-patches work/
+          cp .github/scripts/link-order.py work/   # used by the sipcalc recipe
+          cp -r openwrt/gl-extra-commits work/
           cat > work/build.sh << 'EOF'
           #!/usr/bin/env bash
           # Runs inside ubuntu:20.04 (OpenWrt 21.02 predates newer hosts).
@@ -230,6 +258,18 @@ jobs:
           git clone "$FORK" /home/glinet/work/_github
           cd /home/glinet/work/_github
           git checkout "$FORK_TAG"
+          if [ "${PATCHES_REV:--}" != - ]; then
+            # this release's patch set (see env); files added later go too
+            set -- $PATCHES_REV
+            git rm -rq patches-mt798x-7.6.6.1
+            git checkout "$1" -- patches-mt798x-7.6.6.1
+            shift
+            for p in "$@"; do
+              git checkout "${p#*=}" -- "patches-mt798x-7.6.6.1/${p%%=*}"
+              echo "patch ${p%%=*} from ${p#*=}"
+            done
+            ls patches-mt798x-7.6.6.1 | wc -l
+          fi
 
           # GL.iNet's own step: clone OpenWrt, reset to bcaabe6d, git am the patches.
           # Commit date of the applied patches = GL.iNet's (opkg SourceDateEpoch
@@ -252,6 +292,18 @@ jobs:
               -- "$first^..HEAD"
           fi
           git log --reverse --format='%ct %s' -n 45 | awk 'NR <= 12'   # first patch commits
+          # GL.iNet patch commits missing from the public patch set (see env)
+          for c in ${EXTRA_COMMITS:--}; do
+            [ "$c" = - ] && continue
+            d=/work/gl-extra-commits/$c
+            if [ -d "$d/files" ]; then
+              cp -r "$d/files/." .
+              (cd "$d/files" && find . -type f) | xargs git add
+            fi
+            if [ -f "$d/edit.sh" ]; then sh "$d/edit.sh"; fi
+            GIT_COMMITTER_DATE="$GIT_COMMIT_DATE +0000" GIT_AUTHOR_DATE="$GIT_COMMIT_DATE +0000" \
+              git commit -q -a --allow-empty -m "$(cat "$d/message")"
+          done
           git log --oneline -3
 
           # GL.iNet's build time (see env): get_source_date_epoch.sh reads
@@ -268,8 +320,10 @@ jobs:
           # Public copies of GL.iNet's two MT2500 profiles: drop private feeds
           # and the packages that only exist there.
           python3 - << 'PY'
-          import yaml
-          private_feeds = {"glinet", "mt7981"}
+          import os, yaml
+          private_feeds = {"glinet", "mt7981", "mt798x"}
+          # this release's feed revisions (see env)
+          revs = dict(x.split("=", 1) for x in os.environ.get("FEED_REVS", "-").split() if "=" in x)
           # kmod-gl-sdk4-tertf and -hw-info are public (gl_feed_common at the
           # recipe's commit), so they are built from source.
           private_pkgs = {"fwdd", "kmod-mtfwd", "kmod-mtqos", "mtk-base-files",
@@ -282,10 +336,16 @@ jobs:
                            ("glinet_mt2500", "public_glinet_mt2500")):
               d = yaml.safe_load(open(f"profiles/{src}.yml"))
               d["feeds"] = [f for f in d.get("feeds", []) if f.get("name") not in private_feeds]
+              for f in d["feeds"]:
+                  if f.get("name") in revs:
+                      f.pop("branch", None)
+                      f["revision"] = revs.pop(f["name"])
+                      print(f"feed {f['name']} at {f['revision']}")
               keep = [p for p in d.get("packages", []) if not private(p)]
               removed += [f"{src}: {p}" for p in d.get("packages", []) if private(p)]
               d["packages"] = keep
               yaml.safe_dump(d, open(f"profiles/{dst}.yml", "w"), sort_keys=False)
+          assert not revs, f"FEED_REVS names feeds the profiles don't have: {revs}"
           open("/work/out/removed-packages.txt", "w").write("\n".join(removed) + "\n")
           print(f"{len(removed)} private packages left out")
           PY
@@ -317,16 +377,18 @@ jobs:
             # GL.iNet's closed packages (generated in the run), copied into the
             # tree (src-cpy) so their Source: reads feeds/...; umask 022 as in
             # a normal build environment (folder modes end up in the packages)
+            # One feed per folder the generator wrote (named after the official
+            # Source: glinet, and mt7981 up to 4.5.16, mt798x from 4.6.2 on)
             F=feeds.conf; [ -f "$F" ] || F=feeds.conf.default
-            printf 'src-cpy glinet /work/closed/glinet\nsrc-cpy mt7981 /work/closed/mt7981\n' >> "$F"
-            ( umask 022; ./scripts/feeds update glinet mt7981 > /dev/null )
+            closed_feeds=$(cd /work/closed && ls -d */ | tr -d /)
+            for f in $closed_feeds; do printf 'src-cpy %s /work/closed/%s\n' "$f" "$f" >> "$F"; done
+            ( umask 022; ./scripts/feeds update $closed_feeds > /dev/null )
             # OpenWrt names a source package after its folder: GL.iNet's
             # gl-ui4.0/module/adguardhome (gl-sdk4-ui-adguardhome) clashes with
             # the packages feed's adguardhome (not in the official image), and
             # only the first one gets installed
             ./scripts/feeds uninstall adguardhome > /dev/null
-            ./scripts/feeds install -a -p glinet > /dev/null
-            ./scripts/feeds install -a -p mt7981 > /dev/null
+            for f in $closed_feeds; do ./scripts/feeds install -a -p "$f" > /dev/null; done
             ./scripts/feeds install -a > /dev/null
           fi
           python3 - << 'PY'
@@ -383,6 +445,9 @@ jobs:
                       "CONFIG_BUSYBOX_CONFIG_ADDUSER=y\nCONFIG_BUSYBOX_CONFIG_CHPASSWD=y\n"
                       "CONFIG_BUSYBOX_CONFIG_DELUSER=y\nCONFIG_BUSYBOX_CONFIG_DELGROUP=y\n"
                       "CONFIG_BUSYBOX_CONFIG_FEATURE_DEL_USER_FROM_GROUP=y\n")
+              # this release's extra options (see env)
+              if os.environ.get("EXTRA_CONFIG", "-") != "-":
+                  f.write("".join(l + "\n" for l in os.environ["EXTRA_CONFIG"].split()))
               # nginx as GL.iNet built it (configure arguments in the official
               # binary): Lua and ubus, no naxsi/headers-more, 22 modules off.
               f.write("CONFIG_NGINX_LUA=y\n# CONFIG_NGINX_NAXSI is not set\n"
@@ -400,6 +465,9 @@ jobs:
                         "openvswitch-vxlan-intree", "openvswitch-lisp-intree",
                         "openvswitch-stt-intree"):
                   f.write(f"# CONFIG_PACKAGE_kmod-{k} is not set\n")
+              # gl_feed_common's fan driver (from January 2024) needs headers of
+              # GL.iNet's closed gl-sdk4-utils; no MT2500 image ships it
+              f.write("# CONFIG_PACKAGE_kmod-gl-sdk4-fan is not set\n")
               for p in wanted:
                   f.write(f"CONFIG_PACKAGE_{p}=y\n")
           subprocess.run(["make", "defconfig"], check=True)
@@ -523,7 +591,10 @@ jobs:
           # live log (and progress.log). The time limit leaves room for the
           # steps that save cache, report and logs.
           set -o pipefail
+          # KEEP_TREE (local runs only): an empty host folder for the OpenWrt
+          # tree, kept after the run for quick single-package rebuilds
           timeout 320m docker run --rm -v "$PWD/work:/work" \
+            ${KEEP_TREE:+-v "$KEEP_TREE:/home/glinet/work"} \
             -e FORK -e MTK_FEED_OLD -e MTK_FEED_MIRROR -e USE_CCACHE -e PUBLISH_SDK -e CLOSED \
             ubuntu:20.04 bash /work/build.sh 2>&1 | tee work/out/build.log \
             | grep --line-buffered -E "^ make\[[0-9]+\] |ERROR: |ccache wrapper|^\+ make |Collected errors" \
