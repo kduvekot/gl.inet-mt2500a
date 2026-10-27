@@ -1471,14 +1471,20 @@ is through. The releases already counted as recreated hold up: our 4.5.0 and
 GL.iNet's published `999-5002-export-fib-info-devhash-bucket.patch`: an
 exported function isn't inlined, so five routing functions change code at
 the same size. Extra commit `fib-devhash-export`; in 4.6.2–4.6.8 it takes
-the place of one unidentified placeholder (four left). The two routing functions that differ in size (`fib_create_info`,
-`fib_inetaddr_event`) come from the route-failover/kmwan patch versions:
-our 953/954 reverse cleanly, but GL.iNet's published 922 doesn't apply to
-5.4.211 (one of seven hunks fails; it's written for 5.4.281), so the
-MT2500's 4.6.x version lies between the two and isn't public. Open, like
-iwinfo and usbnet. (A first attempt at this test changed an archived
-tree in place and damaged its kernel source; experiments now run on a
-copy, each step checked.)
+the place of one unidentified placeholder (four left). The rest of the routing group: GL.iNet's published 922 does apply to
+5.4.211 once one context line is adapted (`RT_SCOPE_HOST`, where 5.4.281
+has `RT_SCOPE_LINK`; GL.iNet's change itself is untouched), and 923 applies
+as is. Which version 4.6.2 used was settled by compiling only the routing
+objects on a copy of the kernel source, with OpenWrt's flags
+(`-fno-caller-saves`; without them even the unchanged source doesn't
+reproduce our own vmlinux, so a first round of this test was void): 922/923
+plus `fib-devhash-export` match every routing function of GL.iNet's 4.6.2
+kernel, our 953/954 don't (`fib_sync_down_dev`). The devhash export alone
+explains `fib_create_info`. Extra commit `route-failover-kmwan-update`; in
+4.6.2–4.6.8 it takes another unidentified placeholder's place (three left).
+924 (IPv6) isn't in 4.6.x. (A first attempt at this test changed an
+archived tree in place and damaged its kernel source; experiments now run
+on a copy, each step checked.)
 
 ## Next steps
 
@@ -1617,4 +1623,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | Kernels compared function by function (`vmlinux-to-elf` + `analysis/kernel-functions.py`): 4.6.2, 4.6.4 and 4.6.8 have identical kernel code; 4.7.0 adds USB hub port disabling and changes MPTCP, PCIe and USB power management. |
 | 2026-10-27 | 4.7.0+: GL.iNet's USB hub port power patch (963, published) as an extra commit; 4.6.x: USB port `power_ctl` not public (labelled placeholder). |
 | 2026-10-27 | 4.6.4 and 4.7.4 build completely. 4.6.4+: firewall ubus timeouts (2 → 20 s), AdGuardHome's zoneinfo dependencies, `@early` extra commits. 4.7.4: ChaCha20-Poly1305 package and built-in pstore. |
-| 2026-10-27 | Kernel code compared in every verdict (function by function against GL.iNet's kernel); open groups in 4.6.x/4.7.x: routing (route-failover/kmwan versions), MDIO/PHY, MediaTek Ethernet, MPTCP version, PCIe. |
+| 2026-10-27 | Kernel code compared in every verdict (function by function against GL.iNet's kernel); open groups in 4.6.x/4.7.x: MDIO/PHY, MediaTek Ethernet, MPTCP version, PCIe. |
