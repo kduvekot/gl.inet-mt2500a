@@ -109,7 +109,8 @@ env:
   #   EXTRA_CONFIG      extra .config lines, space-separated ("-": none), for
   #                     options from GL.iNet's private profiles (4.4.5: busybox
   #                     usleep; 4.5.0: Samba without AD DC and VFSX, so no
-  #                     Python; no kmod-dm, libcurl without nghttp2)
+  #                     Python; no kmod-dm/kmod-dax (DAX=m would keep device
+  #                     mapper a module), libcurl without nghttp2)
   #   FEED_REVS         public feed revisions as name=commit, space-separated
   #                     ("-": the profiles' own). From 4.5.0 on the builder
   #                     isn't public; the gl-feeds revisions follow from the
