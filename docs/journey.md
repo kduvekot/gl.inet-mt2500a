@@ -1717,6 +1717,16 @@ image. `system.sh` gains `guest_wifi_macaddr_add` in the package itself, and
 GL.iNet's published 4.9.0 file is byte-identical to the MT2500's: extra
 commit `base-files-guest-wifi-macaddr` (prepared; whether it gives 1447 shows
 once 4.9.0 is built).
+`ubus` release 3: GL.iNet's published 4.9.0 patch
+`0001-Add-auto-subscribe-support.patch` (7 April 2026, client side:
+`libubus-io.c`, `libubus-sub.c`, `libubus.c`, `libubus.h`) with
+`PKG_RELEASE:=3`, built on a copy of job 71b's tree (the as-built rebuild
+first equal to 71b's), gives `libubus`, the `ubus` tool and the Lua module
+byte-identical to the MT2500's 4.9.0 ones: extra commit
+`ubus-auto-subscribe`. `ubusd` does not match: GL.iNet's has 48 bytes more
+code in two places, while ours stays 4.8.2's, and no `ubusd` source
+includes `libubus.h`. So 4.9.0 also has a server-side ubus change that
+GL.iNet hasn't published; it goes on the list of not-public parts.
 
 Job 72b, 4.6.8's first complete build, comes out at r15812+901, the
 official revision, with 440 packages and 5020 files as official, an
@@ -1932,3 +1942,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.6.8 at the official revision (job 72b): all packages and files, kernel configuration identical; 4.9.0's `base-files` change found (`guest_wifi_macaddr_add`, GL.iNet's published file). |
 | 2026-10-27 | 4.7.0 with all fixes (job 77b): all packages and files, kernel configuration identical; `ppp` size solved (upstream `ppp6-up` in the package); `base-files` size in 4.7.x traced to `distfeeds.conf` (GL.iNet's feed list, open). |
 | 2026-10-27 | Worker fix: a commit with `__pycache__` files had blocked w1's `git pull`, so 73p/74a ran on an old checkout; files removed, and a failed pull now puts the job back instead of building. |
+| 2026-10-27 | 4.9.0 `ubus`: GL.iNet's published auto-subscribe patch gives `libubus`, `ubus` and the Lua module byte-identical; `ubusd` has an unpublished server-side change. |
