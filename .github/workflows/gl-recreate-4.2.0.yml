@@ -210,6 +210,7 @@ jobs:
       - name: Write build script
         run: |
           cp -r openwrt/gl-4.2.0-patches work/
+          cp .github/scripts/link-order.py work/   # used by the sipcalc recipe
           cat > work/build.sh << 'EOF'
           #!/usr/bin/env bash
           # Runs inside ubuntu:20.04 (OpenWrt 21.02 predates newer hosts).

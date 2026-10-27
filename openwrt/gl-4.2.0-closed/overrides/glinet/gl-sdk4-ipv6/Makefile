@@ -32,8 +32,16 @@ define Package/gl-sdk4-ipv6/description
 glinet SDK4 ipv6 module
 endef
 
+# Link order = GL.iNet's build machine's directory order (4.2.x: sub-output
+# sub-func interface sub). The order of sub-output and sub-func is read from
+# the official sipcalc (link-order.py: their string literals); interface.c
+# has too few strings to place, so interface and sub keep the 4.2.x order.
+GL_SIPCALC_FIRST=`python3 -I /work/link-order.py objects /work/cmp/off_root/usr/bin/sipcalc \
+	$(PKG_BUILD_DIR)/src/sub-output.c $(PKG_BUILD_DIR)/src/sub-func.c 2>/dev/null \
+	| sed 's|.*/||; s|\.c$$|.o|' | tr '\n' ' ' | grep . || echo sub-output.o sub-func.o`
+
 define Build/Compile
-	$(call Build/Compile/Default,sipcalc_OBJECTS="sub-output.o sub-func.o interface.o sub.o")
+	$(call Build/Compile/Default,sipcalc_OBJECTS="$(GL_SIPCALC_FIRST) interface.o sub.o")
 endef
 
 define Package/gl-sdk4-ipv6/install
