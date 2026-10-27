@@ -77,8 +77,15 @@ def read(root, rel):
         return ""
 
 
+# Feeds outside gl-feeds that GL.iNet added later: name -> (clone next to the
+# gl-feeds clone, URL for feed_revs' name=url^commit)
+OTHER_FEEDS = {"mptcp_feeds": ("mptcp-feeds", "https://github.com/gl-inet/mptcp-feeds.git"),
+               "gl_feed_ovpn_with_dco": ("vpn-extra-feeds", "https://github.com/gl-inet/vpn-extra-feeds.git")}
+REPO = feeds
+
+
 def git(*a):
-    return subprocess.run(["git", "-C", feeds, *a], capture_output=True, text=True).stdout
+    return subprocess.run(["git", "-C", REPO, *a], capture_output=True, text=True).stdout
 
 
 def feed_pins(ctl, built):
@@ -87,11 +94,14 @@ def feed_pins(ctl, built):
     want = collections.defaultdict(dict)
     for c in ctl.values():
         src = c.get("Source", "")
-        if src.startswith("feeds/gl_feed") and "SourceDateEpoch" in c:
+        if (src.startswith("feeds/gl_feed") or src.split("/")[1:2] and src.split("/")[1] in OTHER_FEEDS) \
+                and "SourceDateEpoch" in c and src.count("/") >= 2:
             _, feed, d = src.split("/", 2)
             want[feed][d] = int(c["SourceDateEpoch"])
     res = {}
+    global REPO
     for feed, pk in want.items():
+        REPO = os.path.join(os.path.dirname(os.path.abspath(feeds)), OTHER_FEEDS[feed][0]) if feed in OTHER_FEEDS else feeds
         # a git submodule in the feed (wifidog-ng) dates from its own repository
         sub = {d for d in pk if d.split("/")[0] in SUBMODULES}
         pk = {d: t for d, t in pk.items() if d not in sub}
@@ -130,6 +140,7 @@ def feed_pins(ctl, built):
                          top[0][3], top[-1][2])
         else:
             res[feed] = (len(pk), 0, [], list(pk), "")
+    REPO = feeds
     return res
 
 
@@ -201,7 +212,7 @@ for rel, url, sha in rel_rows:
         "kmod-gl-sdk4-tertf" if tertf and not tertf_public else "-",
         f"? ({len(late)} pkgs late)" if late else "0", "?",
         "CONFIG_BUSYBOX_CONFIG_USLEEP=y" if "usleep" in bb else "-",
-        " ".join(f"{f}={v[4]}" for f, v in pins.items() if v[4])]))
+        " ".join(f"{f}={OTHER_FEEDS[f][1] + '^' if f in OTHER_FEEDS else ''}{v[4]}" for f, v in pins.items() if v[4])]))
     print(f"{rel} done", flush=True)
 
 open(os.path.join(out, "summary.md"), "w").write("\n".join(md) + "\n")
