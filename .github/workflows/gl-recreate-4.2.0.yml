@@ -302,7 +302,7 @@ jobs:
             fi
             if [ -f "$d/edit.sh" ]; then sh "$d/edit.sh"; fi
             GIT_COMMITTER_DATE="$GIT_COMMIT_DATE +0000" GIT_AUTHOR_DATE="$GIT_COMMIT_DATE +0000" \
-              git commit -q -a -m "$(cat "$d/message")"
+              git commit -q -a --allow-empty -m "$(cat "$d/message")"
           done
           git log --oneline -3
 
