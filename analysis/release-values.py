@@ -80,7 +80,9 @@ def read(root, rel):
 # Feeds outside gl-feeds that GL.iNet added later: name -> (clone next to the
 # gl-feeds clone, URL for feed_revs' name=url^commit)
 OTHER_FEEDS = {"mptcp_feeds": ("mptcp-feeds", "https://github.com/gl-inet/mptcp-feeds.git"),
-               "gl_feed_ovpn_with_dco": ("vpn-extra-feeds", "https://github.com/gl-inet/vpn-extra-feeds.git")}
+               "gl_feed_ovpn_with_dco": ("vpn-extra-feeds", "https://github.com/gl-inet/vpn-extra-feeds.git"),
+               # in feeds.conf.default, not in the profiles (GL.iNet's mirror)
+               "mtk_openwrt_feed": ("mtk-feeds", "https://github.com/gl-inet/mtk-openwrt-feeds.git")}
 REPO = feeds
 
 
