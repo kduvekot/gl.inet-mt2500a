@@ -1391,6 +1391,19 @@ router_mt2500/mt7981` instead: a Jenkins job named `router_mt2500`. New
 release value `build_dir` (the builder checkout's path); the host-tools
 cache key now includes the path.
 
+**Two more GL.iNet changes that aren't public (4.6.2+).** `air_en8811h.ko`
+reports MediaTek's v1.2.5, like ours, but GL.iNet changed it: two messages
+(`air_buckpbus_reg_write fail.`, `PHY(0x%x) = %x - %x` instead of
+`PHY = %x - %x`), a flag set in one function (disassembly; every function
+has the same size), and its own package description ("Supports the Airoha
+EN8811H PHY."). None of it is in MediaTek's feed history (v1.1.3 to
+v1.2.7), gl-feeds, the fork, mptcp-feeds, vpn-extra-feeds or gl-image.
+`opkg` (from 4.6.2 to 4.9.0) has an option that calculates the size a
+package and its dependencies need (`opkg_recurse_okgs_size`,
+`uninstall_pkg_total_size`), also in no public source; GL.iNet's published
+4.8.6 opkg patches don't have it. Our `opkg` is exactly 4.5.16's size, so
+the remove-once candidate leaves the binary unchanged and stays unconfirmed.
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -1524,3 +1537,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.7.0+: iproute2 6.3.0 from the MPTCP feed replaces OpenWrt's (`OVERRIDE_PKGS`); the static-syms order patch now reaches it (official 4.7.4 order reproduced). 4.6.4 → 4.6.8 leaves kernel code unchanged. |
 | 2026-10-27 | 4.6.2 and 4.7.0 build completely (all packages and files). 4.6.2: placeholders for its 8 missing commits (owner's choice). 4.7.0: ppp/opkg/uci in the later rows, extra packages GL.iNet built as modules stay `=m` (IPsec kernel options), `base-files-tz-revert`, `wireguard-punch-attribute` (GL.iNet's 952 patch). |
 | 2026-10-27 | From 4.7.0 on GL.iNet built in a Jenkins job (`/work2/jenkins/workspace/router_mt2500`, up to 4.9.0); release value `build_dir`. |
+| 2026-10-27 | Not public (4.6.2+): GL.iNet's changes to the EN8811H driver v1.2.5 (two messages, one flag) and opkg's package-size option. |
