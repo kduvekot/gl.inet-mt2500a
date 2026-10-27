@@ -1,0 +1,1 @@
+firewall: ubus timeouts 2 s -> 20 s (GL.iNet, 4.6.4+)

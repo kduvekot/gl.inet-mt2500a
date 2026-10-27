@@ -123,7 +123,8 @@ env:
   #                     gl_feed_21_02, 4.7.0's gl_feed_common)
   #   EXTRA_COMMITS     folders of openwrt/gl-extra-commits ("-": none):
   #                     GL.iNet patch commits missing from the public patch set
-  #                     (4.5.0+), recreated with the release's patch date
+  #                     (4.5.0+), recreated with the release's patch date;
+  #                     name@early: one second earlier (4.6.4's lua5.3 and uci)
   #   NO_GIT            1: GL.iNet built from a tree without git metadata
   #                     (4.8.2 on: empty revision everywhere, also in the
   #                     toolchain's version string); the tree's .git is removed
@@ -131,6 +132,11 @@ env:
   #                     the mtime of scripts/get_source_date_epoch.sh (try_mtime),
   #                     set to the build time; getver.sh prints an empty
   #                     revision (as GL.iNet's). Feeds keep their git.
+  #   BUILD_DIR         GL.iNet's builder checkout, as compiled into binaries
+  #                     ("-": /home/glinet/work/_github, up to 4.6.8; from 4.7.0
+  #                     on GL.iNet built in a Jenkins job:
+  #                     /work2/jenkins/workspace/router_mt2500); OpenWrt's tree
+  #                     is its mt7981 folder
 
 jobs:
   recreate:
@@ -168,7 +174,7 @@ jobs:
           REL="${{ inputs.release }}"
           case "$REL" in ""|false) REL=4.2.0 ;; esac
           awk -F'\t' -v r="$REL" -v q="'" '$1 == r { f = 1
-              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES PRIVATE_NOW LATE_PATCHES PATCHES_REV EXTRA_CONFIG FEED_REVS EXTRA_COMMITS NO_GIT", k, " ")
+              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES PRIVATE_NOW LATE_PATCHES PATCHES_REV EXTRA_CONFIG FEED_REVS EXTRA_COMMITS NO_GIT BUILD_DIR", k, " ")
               for (i = 1; i <= n; i++) print k[i] "=" q $i q }
             END { exit !f }' openwrt/gl-releases.tsv > work/release.env \
             || { echo "release $REL not in openwrt/gl-releases.tsv"; exit 1; }
@@ -232,6 +238,9 @@ jobs:
           #!/usr/bin/env bash
           # Runs inside ubuntu:20.04 (OpenWrt 21.02 predates newer hosts).
           set -euxo pipefail
+          # GL.iNet's build path (release value BUILD_DIR)
+          GL_DIR=$(sed -n "s/^BUILD_DIR='\(.*\)'$/\1/p" /work/release.env)
+          case "$GL_DIR" in ""|-) GL_DIR=/home/glinet/work/_github ;; esac
           if [ "$(id -u)" = 0 ]; then
             export DEBIAN_FRONTEND=noninteractive
             apt-get update -q
@@ -248,7 +257,8 @@ jobs:
             # User "glinet" (their build path is /home/glinet/...), with the
             # uid that owns /work so outputs stay writable for the runner.
             useradd -m -u "$(stat -c %u /work)" -s /bin/bash glinet
-            mkdir -p /home/glinet/work && chown -R glinet: /home/glinet /work
+            mkdir -p /home/glinet/work "$(dirname "$GL_DIR")"
+            chown -R glinet: /home/glinet /work "$(dirname "$GL_DIR")"
             exec runuser -u glinet -- bash "$0"
           fi
           # Samba's build system (waf) orders libraries via Python sets, so the
@@ -265,10 +275,10 @@ jobs:
           git config --global --add safe.directory '*'
 
           # GL.iNet's build path, as embedded in the official binaries
-          # (/home/glinet/work/_github/mt7981/{build_dir,staging_dir}): paths end
-          # up in binaries, Python bytecode and build IDs.
-          git clone "$FORK" /home/glinet/work/_github
-          cd /home/glinet/work/_github
+          # ($GL_DIR/mt7981/{build_dir,staging_dir}): paths end up in
+          # binaries, Python bytecode and build IDs.
+          git clone "$FORK" "$GL_DIR"
+          cd "$GL_DIR"
           git checkout "$FORK_TAG"
           if [ "${PATCHES_REV:--}" != - ]; then
             # this release's patch set (see env); files added later go too
@@ -307,6 +317,9 @@ jobs:
           # GL.iNet patch commits missing from the public patch set (see env)
           for c in ${EXTRA_COMMITS:--}; do
             [ "$c" = - ] && continue
+            # name@early: dated one second earlier, like the early patches
+            cdate=$GIT_COMMIT_DATE
+            case "$c" in *@early) c=${c%@early}; cdate=$((GIT_COMMIT_DATE - 1)) ;; esac
             d=/work/gl-extra-commits/$c
             if [ -d "$d/files" ]; then
               cp -r "$d/files/." .
@@ -314,7 +327,7 @@ jobs:
             fi
             if [ -f "$d/edit.sh" ]; then sh "$d/edit.sh"; fi
             git add -A -- target package toolchain tools include   # files edit.sh created
-            GIT_COMMITTER_DATE="$GIT_COMMIT_DATE +0000" GIT_AUTHOR_DATE="$GIT_COMMIT_DATE +0000" \
+            GIT_COMMITTER_DATE="$cdate +0000" GIT_AUTHOR_DATE="$cdate +0000" \
               git commit -q -a --allow-empty -m "$(cat "$d/message")"
           done
           git log --oneline -3
@@ -523,9 +536,16 @@ jobs:
           real = set(re.findall(r"^Package: (\S+)$", open("tmp/.packageinfo").read(), re.M))
           extra = sorted((selected - official) & real)
           missing = sorted(p for p in wanted if p not in selected)
+          # GL.iNet's own configuration, as far as it builds packages as
+          # modules (=m: built, not in the image; with ALL_KMODS their kernel
+          # options are =m too): an extra package GL.iNet had as =m goes back
+          # to =m, not off (4.7.0: kmod-ipsec, kmod-crypto-echainiv)
+          offcfg = "/work/cmp/off_root/etc/openwrt.config"
+          offm = set(re.findall(r"^CONFIG_PACKAGE_(\S+)=m$", open(offcfg).read(), re.M)) \
+              if os.path.exists(offcfg) else set()
           with open(".config", "a") as f:
               for p in extra:
-                  f.write(f"# CONFIG_PACKAGE_{p} is not set\n")
+                  f.write(f"CONFIG_PACKAGE_{p}=m\n" if p in offm else f"# CONFIG_PACKAGE_{p} is not set\n")
           subprocess.run(["make", "defconfig"], check=True)
           selected = set(re.findall(r"^CONFIG_PACKAGE_(\S+)=y$", open(".config").read(), re.M))
           open("/work/out/mirror.txt", "w").write(
@@ -594,7 +614,7 @@ jobs:
             # encodes which tools are enabled, so another selection rebuilds.
             # Restored files get the current time: newer than the fresh tree,
             # so make sees them as up to date.
-            tkey=$( { find tools include rules.mk -type f -print0 | sort -z | xargs -0 sha1sum; gcc --version; } | sha1sum | cut -c1-16)
+            tkey=$( { pwd; find tools include rules.mk -type f -print0 | sort -z | xargs -0 sha1sum; gcc --version; } | sha1sum | cut -c1-16)
             tcache=/work/cache/hosttools/$tkey.tar
             if [ -f "$tcache" ]; then
               tar -xf "$tcache" && find staging_dir/host build_dir/host -exec touch -h {} + && echo "host tools from cache $tkey"
@@ -713,9 +733,12 @@ jobs:
           # steps that save cache, report and logs.
           set -o pipefail
           # KEEP_TREE (local runs only): an empty host folder for the OpenWrt
-          # tree, kept after the run for quick single-package rebuilds
+          # tree, kept after the run for quick single-package rebuilds; it
+          # holds the builder checkout (BUILD_DIR's last folder)
+          GL_DIR=$(sed -n "s/^BUILD_DIR='\(.*\)'$/\1/p" work/release.env)
+          case "$GL_DIR" in ""|-) GL_DIR=/home/glinet/work/_github ;; esac
           timeout 320m docker run --rm -v "$PWD/work:/work" \
-            ${KEEP_TREE:+-v "$KEEP_TREE:/home/glinet/work"} \
+            ${KEEP_TREE:+-v "$KEEP_TREE:$(dirname "$GL_DIR")"} \
             -e DRY_RUN -e FORK -e MTK_FEED_OLD -e MTK_FEED_MIRROR -e USE_CCACHE -e PUBLISH_SDK -e CLOSED \
             ubuntu:20.04 bash /work/build.sh 2>&1 | tee work/out/build.log \
             | { grep --line-buffered -E "^ make\[[0-9]+\] |ERROR: |ccache wrapper|^\+ make |Collected errors" || true; } \

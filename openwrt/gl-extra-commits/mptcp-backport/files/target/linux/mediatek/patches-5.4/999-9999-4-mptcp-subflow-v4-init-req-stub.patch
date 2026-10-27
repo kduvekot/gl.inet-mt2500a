@@ -1,0 +1,22 @@
+From: our reconstruction of GL.iNet's 4.6.x-4.8.2 MPTCP backport
+Subject: [PATCH] mptcp: subflow_v4_init_req as GL.iNet's stub
+
+GL.iNet's kernels 4.6.2 to 4.8.2 have subflow_v4_init_req() as a stub: it
+sets is_mptcp and prints "MPTCP: mptcp need to implement this function"
+with __FILE__, __func__ and __LINE__ (1791); their later published backport
+(ours) implements it. Compiled the validated way, this gives GL.iNet's
+14 instructions exactly (line 1791 included).
+
+---
+--- a/net/mptcp/subflow.c
++++ b/net/mptcp/subflow.c
+@@ -1788,8 +1788,7 @@
+ 				struct sk_buff *skb)
+ {
+ 	tcp_rsk(req)->is_mptcp = 1;
+-	tcp_request_sock_ipv4_ops.init_req(req, sk_listener, skb);
+-	subflow_init_req(req, sk_listener);
++	printk(KERN_ERR "MPTCP: mptcp need to implement this function: %s,%s,%d", __FILE__, __func__, __LINE__);
+ }
+ 
+ void __init mptcp_subflow_init(void)

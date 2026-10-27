@@ -35,6 +35,57 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   addresses, home domain). Those stay in local files on the Pi, such as
   `~/.config/dirigera/`.
 
+## How Claude works here (from the owner)
+
+- **Do what you announce.** "Next I'll do X" means doing X in the same
+  turn. End a turn only with the work done or a named blocker (a running
+  build, the owner's decision), and say what you're waiting for.
+- **Keep going.** After each step ask "what's next?" and continue with
+  useful work in scope (prep for later releases, tooling, docs); stop only
+  when nothing is left but waiting. Explicit gates still apply (installs and
+  sudo on the Pi, router writes, the owner's decisions).
+- **Check the journey first.** Before analysing a difference or topic,
+  `grep -n -i` docs/journey.md (chapter 13's accepted differences, the
+  logbook); build on it, and report what's known vs new.
+- **Keep docs current.** Reflect at least every 30 minutes; every real
+  finding or milestone goes into docs/journey.md (chapter text plus a
+  logbook line) in the same turn, also during hourly check-ins.
+- **Never wait in a foreground command** (`sleep`, polling over SSH):
+  waits run as background tasks; act when notified. When a watcher's
+  notification arrives, restart the watcher first, while jobs are still
+  queued or running; otherwise results go unnoticed (2026-10-27: three
+  jobs finished unseen).
+- **Scripts first, few tokens:** bulk work in scripts or workflows that
+  write a short summary; raw output stays in files. Cheap subagents for
+  searches; verify their claims before relaying them.
+- **Commits:** `git -c user.name=Claude -c user.email=noreply@anthropic.com`
+  (no global identity on the Pi); after pushing, check with `git ls-remote`
+  before queueing jobs (jobs pull the branch). Open PRs as needed; the owner
+  merges.
+- **Check scripts and their inputs** before running them: shellcheck the
+  build script (extracted from the workflow), YAML-check workflows, and
+  check what a script will act on (e.g. `rebuild.sh` only on trees of
+  finished builds). For a one-file question, run just that make target.
+  Experiments that change a tree (patch swaps, config edits) run on a
+  copy, and every step's result is checked before the next (2026-10-27: a
+  patch swap in an archived tree failed halfway and damaged its kernel
+  source). Every patch we generate is test-applied the way OpenWrt
+  applies it (`patch -p1` on the source with the preceding patches)
+  before it's committed; new files need `--- /dev/null` (2026-10-27: the
+  musl patch lost its new file and job 70b built without it).
+- **Watching runs:** by run id with the token; never `pkill -f` or
+  `pgrep -f` a pattern that occurs in your own command line (wait on a
+  file or the queue log instead); long builds print progress with
+  `grep --line-buffered`, save logs with `if: always()`, keep a time limit.
+- **Order of work:** a release step only after the previous base is
+  validated; `docs/releases.md` only once all releases are done (collect
+  data meanwhile). No GPL source request to GL.iNet until all firmwares
+  are done (owner, 2026-10-27); keep the list of not-public parts current.
+- **Naming:** GitHub workflow runs by their run number (#N); M5+ jobs by
+  their queue number.
+- **Decompilation** (private repo): one commit per iteration, never
+  squashed.
+
 ## Where things stand (2026-10-27)
 
 - Workflows on `main`: **Build OpenWrt**, **Recovery kit**, **Raspberry Pi
@@ -209,7 +260,9 @@ for line in open(sys.argv[1]):
   (iproute2 order); `openwrt/gl-4.2.0-closed/`: what the closed part needs
   besides the official image (three source-built recipes, image-file paths)
 - `analysis/`: `collect-baseline.sh`, `summarize-baseline.py`,
-  `source-diff.py`, `firmware-versions.py`
+  `source-diff.py`, `firmware-versions.py`, `release-values.py`,
+  `kernel-functions.py` (two kernels function by function, with
+  vmlinux-to-elf for GL.iNet's)
 - `openwrt/packages.txt`: extra packages for the OpenWrt images
 - `recovery/`: `pi-setup.sh`, `uartboot.sh`, `console.sh`, `web-flash.sh`,
   `get-stock-firmware.sh` (GL.iNet's firmware is fetched from GL.iNet, never

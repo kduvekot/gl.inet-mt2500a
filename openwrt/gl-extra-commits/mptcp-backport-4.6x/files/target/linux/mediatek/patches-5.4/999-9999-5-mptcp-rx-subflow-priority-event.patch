@@ -1,0 +1,22 @@
+From: our reconstruction of GL.iNet's 4.6.x MPTCP backport
+Subject: [PATCH] mptcp: report subflow priority changes from the receive path
+
+In GL.iNet's 4.6.2-4.6.8 kernels mptcp_rcv_space_adjust() (inlined into
+mptcp_recvmsg) still calls mptcp_event(MPTCP_EVENT_SUB_PRIORITY, ...) when
+is_set_backup_for_rx() marks a subflow; their later backport (ours, and
+GL.iNet's 4.7.0+ kernels) has the call commented out. With it active,
+mptcp_recvmsg is GL.iNet's 4.6.2 function instruction for instruction
+(578 instructions; single-object compile validated against our vmlinux).
+
+---
+--- a/net/mptcp/protocol.c
++++ b/net/mptcp/protocol.c
+@@ -1964,7 +1964,7 @@
+ 
+ 		if (is_set_backup_for_rx(subflow, rcv_max, tp->bytes_received,
+ 		   tp->rcv_rtt_est.rtt_us, gl_ratio) == 1) {
+-			//mptcp_event(MPTCP_EVENT_SUB_PRIORITY, mptcp_sk(subflow->conn), mptcp_subflow_tcp_sock(subflow), GFP_ATOMIC);
++			mptcp_event(MPTCP_EVENT_SUB_PRIORITY, mptcp_sk(subflow->conn), mptcp_subflow_tcp_sock(subflow), GFP_ATOMIC);
+ 		}
+ 	}
+ 

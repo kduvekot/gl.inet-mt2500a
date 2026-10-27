@@ -1356,9 +1356,286 @@ iproute2 under `package/` and `feeds/`; generating `static-syms.h` from
 6.3.0 with the build container's make 4.2.1 gives official 4.7.4's order
 (47 of 47 names) with the patch and a different one without. Also from the
 official images: 4.6.4 → 4.6.8 changes no kernel code (only the revision
-string and build date); 4.6.2 → 4.6.4 changes code without a visible string,
-configuration or device-tree change, which the 4.6.4 build will have to
-show.
+string and build date). 4.6.2 → 4.6.4 first looked like a code change
+without a visible string, configuration or device-tree change; the
+function-by-function comparison below shows it isn't one.
+
+**Kernels function by function.** `vmlinux-to-elf` (in its own Python
+environment on the M5+) rebuilds a symbol table from a kernel's built-in
+kallsyms; `analysis/kernel-functions.py` then compares two kernels per function, by
+size and by machine code with PC-relative address fields masked. 4.6.2,
+4.6.4 and 4.6.8: all 30,806 functions identical; only the data behind two
+section-end markers differs (the embedded initramfs's timestamps and the
+version string). The earlier "code change" was that data. 4.6.8 → 4.7.0
+shows real changes (cross-check that the method sees them): new USB hub
+functions (`disable_show`/`disable_store`, a sysfs switch to disable a hub
+port, plus `usb_hub_port_status`, `usb_port_is_power_on`), changed
+`mptcp_recvmsg`, `mtk_pcie_probe` and USB link power management. Checked
+against our 4.7.0 build (job 65b's `vmlinux`): MPTCP already matches (our
+backport is GL.iNet's newer one); the USB changes are GL.iNet's published
+`hack-5.4/963-usb-hub-port-add-sysfs-entry-to-switch-port-power.patch`
+(4.8.6 tree), now an extra commit for 4.7.0+; `mtk_pcie_probe` is still
+open (GL.iNet's 4.8.6 PCIe driver is a much newer one for another chip).
+And the 4.6.x kernels have a `power_ctl` sysfs switch in the USB port code
+(`power_ctl_store`) that's in no public source and that the 963 patch
+replaced in 4.7.0: one of 4.6.2's placeholders is now labelled for it. Our
+brief compares kernel configuration and modules but not the kernel's own
+code, which is how this went unnoticed.
+
+**4.6.2 and 4.7.0 complete builds (jobs 64b, 65b).** Both have every
+package and file of the official image (4.6.2: 427 / 4358, 4.7.0: 463 /
+5302). 4.6.2's kernel configuration is identical; what differs is the
+revision (+891 instead of +899), `iwinfo` and `usbnet.ko` (not public),
+`opkg` (ours 480 bytes smaller: the remove-once candidate isn't all of it),
+`air_en8811h.ko` (code and package description) and a few sizes (ppp,
+gl-sdk4-tethering, tor). The 8 missing commits are now placeholders: two
+labelled ones for iwinfo and usbnet, six unidentified (owner's decision;
+they reproduce only the count and can be removed from the row at any
+time). 4.7.0 showed three recipe gaps, all fixed: the ppp, opkg and uci
+commits were missing from the 4.6.4–4.7.4 draft rows (identical in all
+official images from 4.6.2 to 4.7.4); 19 IPsec kernel options were off
+because the mirror step switched "extra" packages off entirely, while
+GL.iNet's configuration has them (`kmod-ipsec`, `kmod-crypto-echainiv`, ...)
+as `=m`, built but not installed, so such packages now go to `=m`; and from
+4.7.0 on GL.iNet's `/etc/init.d/system` lacks upstream's `rm -f /tmp/TZ`
+(OpenWrt 3d62b5d5c6), byte-identical to the file in GL.iNet's published 4.8.6
+tree (extra commit `base-files-tz-revert`). Also new in 4.7.0:
+`libstdc++.so.6.0.25-gdb.py` holds GL.iNet's build path
+(`/work2/jenkins/workspace/router_mt2500/mt7981/...`). `wireguard.ko` is
+64 bytes larger than 4.6.8's with every function the same size: one more
+entry in the peer netlink policy, exactly what GL.iNet's published
+`hack-5.4/952-wireguard-support-punch.patch` (4.8.6 tree) does by adding
+`WGPEER_A_PUNCH`; extra commit `wireguard-punch-attribute`. And GL.iNet changed build machines at 4.7.0: up to 4.6.8 the official
+images hold `/home/glinet/work/_github/mt7981` (201 files in 4.6.8, our path
+since run #9), from 4.7.0 to 4.9.0 none do, and 211 files (nginx, Samba,
+Python, build IDs, the gdb helper) hold `/work2/jenkins/workspace/
+router_mt2500/mt7981` instead: a Jenkins job named `router_mt2500`. New
+release value `build_dir` (the builder checkout's path); the host-tools
+cache key now includes the path.
+
+**Two more GL.iNet changes that aren't public (4.6.2+).** `air_en8811h.ko`
+reports MediaTek's v1.2.5, like ours, but GL.iNet changed it: two messages
+(`air_buckpbus_reg_write fail.`, `PHY(0x%x) = %x - %x` instead of
+`PHY = %x - %x`), a flag set in one function (disassembly; every function
+has the same size), and its own package description ("Supports the Airoha
+EN8811H PHY."). None of it is in MediaTek's feed history (v1.1.3 to
+v1.2.7), gl-feeds, the fork, mptcp-feeds, vpn-extra-feeds or gl-image.
+`opkg` (from 4.6.2 to 4.9.0) has an option that calculates the size a
+package and its dependencies need (`opkg_recurse_okgs_size`,
+`uninstall_pkg_total_size`), also in no public source; GL.iNet's published
+4.8.6 opkg patches don't have it. Our `opkg` is exactly 4.5.16's size, so
+the remove-once candidate leaves the binary unchanged and stays unconfirmed.
+
+**4.6.4 and 4.7.4 complete builds (jobs 66b, 67b).** 4.6.4: all 436
+packages and 4905 files, kernel configuration identical. New: GL.iNet's
+`firewall` is release 1.2 from 4.6.4 on, and `fw3` differs from 4.6.2's in
+exactly two instructions, the timeouts of its two `ubus_invoke` calls (2000
+→ 20000 ms), in no public source (our construction `firewall-ubus-timeout`);
+GL.iNet's `gl-sdk4-adguardhome` depends on `zoneinfo-*` from 4.6.4 on, which
+our source-built override lacked (it now takes the official dependencies,
+which also fixes Auto-Installed and the `status` order); and the lua5.3 and
+uci commits are among the one-second-early ones in 4.6.4 (new suffix
+`@early` for extra commits). 4.7.4: all 458 packages and 5255 files; its
+kernel configuration adds ChaCha20-Poly1305 (`kmod-crypto-chacha20poly1305`,
+GL.iNet's package definition from the published 4.8.6 tree) and built-in
+pstore (`PSTORE_RAM`, `_CONSOLE`, `_PMSG`). `kmod-ramoops` stays `=m` there,
+yet `PSTORE_RAM=y`: OpenWrt merges the module packages' options with
+`kconfig.pl 'm+'`, which never turns a target config's `y` into `m`, so
+three lines in the MT7981 target config give exactly GL.iNet's result. The
+4.6.4–4.6.8 rows now carry 4.6.2's eight placeholders, plus the firewall
+commit (r15812+900 expected for 4.6.4).
+
+**The kernel's own code, now in every verdict.** `kernel-functions.py` now
+compares only the function names both kernels have, each up to the next of
+those, reading across sections (4.6.2 vs 4.6.4: 0 of 30,774 differ), and
+the local runner runs it after every build against GL.iNet's kernel of
+that release (`~/versions/kelf/`, all 15 releases converted with
+vmlinux-to-elf); `brief.sh` shows the counts. Our 4.6.4 and 4.7.0 kernels
+against GL.iNet's show the same groups beyond the ones fixed today:
+IPv4 routing (`fib_create_info`, `fib_sync_down_dev`, `fib_sync_up`,
+`ip_fib_check_default`, ...): our tree has GL.iNet's route-failover and
+kmwan patches in older versions (`953`/`954`; GL.iNet's 4.8.6 tree has
+`922`/`923` plus `924-kmwan-fix-multicast-route-dead-marking`, for kernel
+5.4.281, 329 and 22 changed lines); MDIO/PHY (`of_mdiobus_register`,
+`get_phy_device`, `__mdiobus_register`, `phylink_fixed_state`); MediaTek
+Ethernet (`ethsys_reset`, in 4.7.0 also `mtk_mac_link_up`,
+`mtk_rx_irq_disable`); MPTCP (`tcp_collapse`, `__tcp_close`,
+`subflow_v4_init_req`: GL.iNet's backport in these releases isn't quite the
+4.8.6 one); and `mtk_pcie_probe` in 4.7.0. These go into kernel test builds
+(candidate patch versions, compared function by function) once the queue
+is through. The releases already counted as recreated hold up: our 4.5.0 and
+4.5.16 kernels (jobs 61, 62) match GL.iNet's in every shared function
+(30,232 and 28,925), once the mask also covers sign-extending loads
+(`ldrsw`; one global variable's address had looked like a code change). First result of the kernel groups: from 4.6.2 on GL.iNet's kernels have
+`fib_info_devhash_bucket` as a real function (4.5.16's don't), which is
+GL.iNet's published `999-5002-export-fib-info-devhash-bucket.patch`: an
+exported function isn't inlined, so five routing functions change code at
+the same size. Extra commit `fib-devhash-export`; in 4.6.2–4.6.8 it takes
+the place of one unidentified placeholder (four left). The rest of the routing group: GL.iNet's published 922 does apply to
+5.4.211 once one context line is adapted (`RT_SCOPE_HOST`, where 5.4.281
+has `RT_SCOPE_LINK`; GL.iNet's change itself is untouched), and 923 applies
+as is. Which version 4.6.2 used was settled by compiling only the routing
+objects on a copy of the kernel source, with OpenWrt's flags
+(`-fno-caller-saves`; without them even the unchanged source doesn't
+reproduce our own vmlinux, so a first round of this test was void): 922/923
+plus `fib-devhash-export` match every routing function of GL.iNet's 4.6.2
+kernel, our 953/954 don't (`fib_sync_down_dev`). The devhash export alone
+explains `fib_create_info`. Extra commit `route-failover-kmwan-update`; in
+4.6.2–4.6.8 it takes another unidentified placeholder's place (three left).
+924 (IPv6) isn't in 4.6.x. Job 70b (4.6.4) then showed that GL.iNet's
+version is a mix: `fib_table_lookup` and `nf_nat.ko` differed with 922.
+Compiling each file where 922 and 953 differ, in both versions: GL.iNet's
+4.6.2-4.7.4 kernels have 953's `fib_trie.c` part (`fib_table_lookup` 976
+bytes) and 953's `nf_nat_masquerade.c` part (`nf_nat_masquerade_ipv4` 420
+bytes; 922 doesn't touch that file), with 922's `fib_semantics.c`;
+`fib_frontend.c` and `route.c` compile the same either way (their remaining
+differences, `ip_valid_fib_dump_req` and a few in `route.c`, have another
+cause, still open). The extra commit now carries that combination, applied
+cleanly in the right order on a copy of the kernel source. 4.8.2 has 922's
+`nf_nat_masquerade` (344 bytes) but still 953's `fib_trie`. (A first attempt at this test changed an
+archived tree in place and damaged its kernel source; experiments now run
+on a copy, each step checked.)
+
+**"Not public", checked again.** After the routing patches turned out to
+be public after all, every remaining "not public" claim was searched again
+the same way: all four of GL.iNet's published source trees (gl-image:
+4.8.6 for the BE10000, 4.8.7 and 4.9.0 for the MT3600BE, 4.9.1 for the
+BE14000), including the complete patched kernel sources they carry
+(`offline-sources/linux-5.4.281`), MediaTek's feed history, all gl-feeds
+branches and the fork, with fixed-string searches for the exact strings of
+GL.iNet's binaries. All five still hold, some more precisely now:
+`usbnet`'s `rm500u_5gnet` interface name (GL.iNet's modem patch 960 touches
+`qmi_wwan`, `option`, `qcserial`, `usb_wwan`, not `usbnet`); the 4.6.x USB
+port `power_ctl`; the EN8811H driver changes (in none of the trees' driver
+copies, v1.0.5 to v1.3.3); opkg's size option (GL.iNet's other opkg
+patches, database and conffile output, are already in our build since
+4.4.x); and iwinfo, whose upstream version is the same in every release
+(`2022-04-26-dc6847eb`): GL.iNet extended its MediaTek patch (HE rate
+table, `htmode`, `@wifi-device` lookups); the MT3600BE's published htmode
+patch is a different one, for `nl80211`.
+
+**MPTCP: GL.iNet's `__tcp_close()` split.** Of the MPTCP group, `__tcp_close`
+is 8 bytes larger in our kernel. Its machine code differs in exactly two
+instructions: ours stores `SHUTDOWN_MASK` into `sk->sk_shutdown` at the
+start, GL.iNet's has no such store anywhere in the function (nor in
+`tcp_close()`), although upstream's split (77c3c95637, also in 5.4.281)
+keeps that line. Without it, the single-object compile (validated against
+our vmlinux) gives exactly GL.iNet's sizes for `__tcp_close` and
+`tcp_close`. Our split patch now leaves the line out, as GL.iNet's does.
+`tcp_collapse` is 68 bytes larger in GL.iNet's kernel: it moves the
+MPTCP skb extension (`active_extensions`, `extensions`, a WARN), upstream
+MPTCP's `mptcp_skb_ext_move()` call, which GL.iNet's later published compat
+patch no longer has. Adding that one line gives exactly GL.iNet's size,
+with no other function in `tcp_input.o` changing (patch `999-9999-3`). Our MPTCP files
+(GL.iNet's 4.8.6 backport) are Linux 5.15's with GL.iNet's compat changes
+(30, 149 and 27 lines differ in `subflow.c`, `protocol.c`, `protocol.h`;
+every other upstream version from 5.7 to 6.1 differs far more).
+`subflow_v4_init_req` in GL.iNet's 4.6.2 to 4.8.2 kernels is a stub: it
+sets `is_mptcp` and calls `printk(KERN_ERR "MPTCP: mptcp need to implement
+this function: %s,%s,%d", __FILE__, __func__, __LINE__)` with line 1791,
+nothing else (the message is in every kernel from 4.6.2 to 4.8.2, gone in
+4.9.0). Replacing the function's two calls with that line puts it exactly
+on line 1791 of our file, and the compiled function is GL.iNet's
+instruction for instruction (patch `999-9999-4`). `mptcp_stream_accept`
+differs only in data addresses. `mptcp_recvmsg`: GL.iNet's 4.6.2 version
+is larger, not smaller; it keeps two values on the stack, which a call
+inside the inlined `mptcp_rcv_space_adjust()` loop forces, and our file has
+exactly one call there commented out: `mptcp_event(MPTCP_EVENT_SUB_PRIORITY,
+...)` after GL.iNet's `is_set_backup_for_rx()`. Active, it gives GL.iNet's
+`mptcp_recvmsg` instruction for instruction (578); `mptcp_finish_join` is
+identical too. Only 4.6.2-4.6.8 have it (2312 bytes; 2256 from 4.7.0 on,
+like ours), so the 4.6.x rows use `mptcp-backport-4.6x`, the same commit
+with that patch (`999-9999-5`). With that, every MPTCP difference is
+explained; GL.iNet's 4.8.7 MPTCP files differ
+from 4.8.6's only in `compat.h`, the `Makefile` and a compat patch that
+also exports `fib_info_devhash_bucket`.
+
+**4.6.2 at r15812+899 (job 68b), and musl's `pthread_getname_np`.** With
+the placeholders, 4.6.2's revision is GL.iNet's, and what still differs is
+almost only the not-public set (`iwinfo`, `usbnet`, `air_en8811h`, opkg's
+size option), plus `libc.so`: GL.iNet's exports `pthread_getname_np`,
+which musl only got in 1.2.3. GL.iNet's published 4.8.6 tree has musl
+1.2.3's tarball in its downloads (checked against their `dl.sha256`); its
+`pthread_getname_np.c`, compiled in a copy of our musl 1.1.24 build with
+its own flags, is identical to the function in GL.iNet's libc (addresses
+masked; an existing function compiled the same way is identical too).
+Extra commit `musl-pthread-getname-np` (patch `910`), 4.6.2+; in 4.6.x it
+takes the place of another unidentified placeholder (two left). (The first version of
+that patch lacked the new file, because `diff` writes nothing for a file
+whose folder is missing on the old side; job 70b built musl without the
+function. The patch now creates it from `/dev/null` and was test-applied.)
+
+**MDIO: the kernel side of the PHY reset.** GL.iNet's `__mdiobus_register`
+waits after releasing the MDIO bus reset: `__udelay()` with a field after
+`reset_delay_us` in `struct mii_bus`, if it is greater than 0, which is the
+`reset-post-delay-us` property their 4.6.2 device tree sets (100 ms). Linux
+got that in 5.9 ("net: mdiobus: add reset-post-delay-us handling"; there
+with `fsleep()`, which 5.4 lacks). Our backport for 5.4 (field, reading the
+property in `of_mdio.c`, the wait) gives exactly GL.iNet's sizes for
+`__mdiobus_register` and `of_mdiobus_register` (single-object compiles of
+`mdio_bus.o`, `of_mdio.o`, `phy_device.o`, `phylink.o`, all 170 functions
+validated against our vmlinux first). It goes with the device tree in
+`mt2500-dts-phy-reset`. `get_phy_device`: GL.iNet's does one more register
+read in the clause-45 identification (the Airoha PHY's path); upstream
+5.4.211 and 5.4.281 have the same code there, and no published patch
+(GL.iNet's four trees, MediaTek's feed history) touches it, so it is not
+public either, probably part of GL.iNet's Airoha support. `phylink_fixed_state`
+turned out to be GL.iNet's own function in the MediaTek Ethernet driver
+(the fork's patch `3003`, polling the GPY211's state register): in 4.6.2
+it is 712 bytes with 16 MDIO reads and writes instead of 176 with one
+read, extended for the Airoha EN8811H after the fork went private, and in
+no public source. One of 4.6.x's last two unidentified placeholders now
+carries that label (one left).
+Two MediaTek Ethernet "differences" (`mtk_mac_link_up`,
+`mtk_rx_irq_disable`) were artifacts of compiler-generated names, and the
+driver's larger functions (`mtk_open`, `mtk_hw_init`, `mtk_pending_work`,
+`mtk_stop`) differ only in data addresses; apart from GL.iNet's link
+polling (below), only `ethsys_reset` differs: one load scheduled a few
+instructions later, with the same instructions otherwise.
+
+**4.7.0 at GL.iNet's Jenkins path (job 69b).** The first build at
+`/work2/jenkins/workspace/router_mt2500` leaves no build-path differences
+at all (417 differing files, 430 in 65b, nearly all from the revision
+string), and the kernel configuration is now identical (extra packages
+GL.iNet built as modules stay `=m`). New: GL.iNet's `busybox` (1.33.2-3,
+dated at 4.7.0's patch time), `dnsmasq-full` (2.85-12) and `odhcpd`
+(bc9d317f-6) have higher `AUTORELEASE` numbers than ours (-2, -10, -4):
+their folders had more commits. GL.iNet's published 4.8.6 tree has extra
+patches for exactly these three (odhcpd 2, dnsmasq 5 plus its init script,
+busybox 2); of them, only dnsmasq's `302-support-log-level-config` leaves
+strings, and those are in 4.7.0 and not in 4.6.8. Package rebuilds on a copy of
+69b's tree (each package built directly with its own Makefile and
+OpenWrt's `SOURCE_DATE_EPOCH`, first validated to give 69b's own binary)
+settle it: busybox with GL.iNet's 531 (crond log line) and dnsmasq with 302
+and 303 are byte-identical to GL.iNet's 4.7.0 binaries, odhcpd with 01 and
+the `odhcpd.c` half of 02; 4.7.4's odhcpd has the whole 02 (one byte,
+`LOG_ERR` to `LOG_DEBUG`, at the same release number: GL.iNet's builder
+recreates its patch commits, so a patch can change in place). Busybox's 531
+is already in 4.6.8 (release 3). The commits per package now give exactly
+GL.iNet's release numbers (busybox 3, dnsmasq 12/13, odhcpd 6). PCIe in 4.7.0:
+GL.iNet's `mtk_pcie_probe` sleeps twice after enabling the clocks, ours
+once. Every historical version of `pcie-mediatek-gen3.c` in MediaTek's
+feed, compiled the validated way, fits GL.iNet's 4.7.0 worse than or as
+badly as ours (the closest still differ in `mtk_pcie_probe` and
+`mtk_msi_bottom_domain_free`; MediaTek's 2024 file in eight functions), so
+it is GL.iNet's own change to the 2022 SDK driver, not public. And one closed package, `gl-sdk4-arp-scan`, names `LicenseFiles` and a
+`Maintainer` from 4.7.0 on; the closed-feed generator now carries both
+fields over (before, only `License`).
+
+**4.6.4 at GL.iNet's revision, 4.7.4 complete (jobs 70b, 71b), the first
+verdicts with the kernel comparison.** 4.6.4 comes out at r15812+900, the
+official revision, with every package, file and `status` field as
+official and an identical kernel configuration; the kernel comparison
+confirms today's firewall, MDIO, `__tcp_close` and `tcp_collapse` fixes in
+a full build. It also showed that GL.iNet's 4.6.x routing code is a mix:
+the FIB core matches their 922/923, but `fib_table_lookup`,
+`ip_valid_fib_dump_req` and `nf_nat.ko` matched our older 953/954 (66b);
+to be looked into. And `libc.so` still differed: the musl patch had lost
+its new file (fixed, see above). 4.7.4 builds completely (458 packages,
+5255 files, kernel configuration identical); new there, only noted so far:
+a group of reboot functions (`psci_sys_reset`, `emergency_restart`, the
+restart handlers), `copy_creds`, `partition_split`, and `libpcre`'s
+Auto-Installed flag.
 
 ## Next steps
 
@@ -1491,3 +1768,21 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.6.2: zstd (`UBIFS_FS_ZSTD`) and device tree recreated; iwinfo and the `usbnet` RM500U entry found but not public; about 6 commits probably only for other boards. |
 | 2026-10-27 | 4.5.0 and 4.5.16 recreated to the level of 4.2.x (jobs 61, 62): only Samba order, `wg` tree hash and vermagic remain. |
 | 2026-10-27 | 4.7.0+: iproute2 6.3.0 from the MPTCP feed replaces OpenWrt's (`OVERRIDE_PKGS`); the static-syms order patch now reaches it (official 4.7.4 order reproduced). 4.6.4 → 4.6.8 leaves kernel code unchanged. |
+| 2026-10-27 | 4.6.2 and 4.7.0 build completely (all packages and files). 4.6.2: placeholders for its 8 missing commits (owner's choice). 4.7.0: ppp/opkg/uci in the later rows, extra packages GL.iNet built as modules stay `=m` (IPsec kernel options), `base-files-tz-revert`, `wireguard-punch-attribute` (GL.iNet's 952 patch). |
+| 2026-10-27 | From 4.7.0 on GL.iNet built in a Jenkins job (`/work2/jenkins/workspace/router_mt2500`, up to 4.9.0); release value `build_dir`. |
+| 2026-10-27 | Not public (4.6.2+): GL.iNet's changes to the EN8811H driver v1.2.5 (two messages, one flag) and opkg's package-size option. |
+| 2026-10-27 | Kernels compared function by function (`vmlinux-to-elf` + `analysis/kernel-functions.py`): 4.6.2, 4.6.4 and 4.6.8 have identical kernel code; 4.7.0 adds USB hub port disabling and changes MPTCP, PCIe and USB power management. |
+| 2026-10-27 | 4.7.0+: GL.iNet's USB hub port power patch (963, published) as an extra commit; 4.6.x: USB port `power_ctl` not public (labelled placeholder). |
+| 2026-10-27 | 4.6.4 and 4.7.4 build completely. 4.6.4+: firewall ubus timeouts (2 → 20 s), AdGuardHome's zoneinfo dependencies, `@early` extra commits. 4.7.4: ChaCha20-Poly1305 package and built-in pstore. |
+| 2026-10-27 | Kernel code compared in every verdict (function by function against GL.iNet's kernel); open groups in 4.6.x/4.7.x: MDIO/PHY, MediaTek Ethernet, MPTCP version, PCIe. |
+| 2026-10-27 | 4.6.2+ routing solved: GL.iNet's published 922/923 (one context line adapted to 5.4.211) plus the devhash export match every routing function; validated single-object compiles with OpenWrt's flags. |
+| 2026-10-27 | All five remaining "not public" claims re-checked against GL.iNet's four published trees (incl. full kernel sources), MediaTek's feed history and gl-feeds: they hold. |
+| 2026-10-27 | MPTCP: GL.iNet's `__tcp_close()` split doesn't set `sk_shutdown`, and their `tcp_collapse()` moves the MPTCP skb extension; both now match (validated single-object compiles). |
+| 2026-10-27 | MPTCP: our backport is Linux 5.15's; GL.iNet's 4.6.2-4.8.2 `subflow_v4_init_req` is a "need to implement this function" stub, now reproduced instruction for instruction. |
+| 2026-10-27 | MPTCP complete: 4.6.x's receive path still reported subflow priority events (`mptcp_recvmsg` identical with that call active); `mptcp-backport-4.6x` for the 4.6.x rows. |
+| 2026-10-27 | busybox (531, 4.6.8+), dnsmasq (302, 303) and odhcpd (01, 02) from GL.iNet's published tree, byte-identical to GL.iNet's 4.7.0 binaries; release numbers match. |
+| 2026-10-27 | 4.6.4 at GL.iNet's revision r15812+900 (job 70b); 4.7.4 complete (71b); first verdicts with the kernel comparison. |
+| 2026-10-27 | GL.iNet's 4.6.2-4.7.4 route-failover is 922 with 953's `fib_trie.c` and `nf_nat_masquerade.c` parts (validated compiles); extra commit updated. |
+| 2026-10-27 | 4.6.2 at GL.iNet's revision (job 68b); musl `pthread_getname_np` backport found (identical code), two unidentified placeholders left. |
+| 2026-10-27 | MDIO `reset-post-delay-us` backported (kernel side of GL.iNet's PHY reset on the MDIO bus); exact sizes, validated. |
+| 2026-10-27 | 4.7.0 at GL.iNet's Jenkins path (job 69b): no build-path differences left, kernel configuration identical; busybox/dnsmasq/odhcpd carry GL.iNet patches (4.8.6 tree has them). |
