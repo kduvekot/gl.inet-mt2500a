@@ -1445,6 +1445,26 @@ three lines in the MT7981 target config give exactly GL.iNet's result. The
 4.6.4–4.6.8 rows now carry 4.6.2's eight placeholders, plus the firewall
 commit (r15812+900 expected for 4.6.4).
 
+**The kernel's own code, now in every verdict.** `kernel-functions.py` now
+compares only the function names both kernels have, each up to the next of
+those, reading across sections (4.6.2 vs 4.6.4: 0 of 30,774 differ), and
+the local runner runs it after every build against GL.iNet's kernel of
+that release (`~/versions/kelf/`, all 15 releases converted with
+vmlinux-to-elf); `brief.sh` shows the counts. Our 4.6.4 and 4.7.0 kernels
+against GL.iNet's show the same groups beyond the ones fixed today:
+IPv4 routing (`fib_create_info`, `fib_sync_down_dev`, `fib_sync_up`,
+`ip_fib_check_default`, ...): our tree has GL.iNet's route-failover and
+kmwan patches in older versions (`953`/`954`; GL.iNet's 4.8.6 tree has
+`922`/`923` plus `924-kmwan-fix-multicast-route-dead-marking`, for kernel
+5.4.281, 329 and 22 changed lines); MDIO/PHY (`of_mdiobus_register`,
+`get_phy_device`, `__mdiobus_register`, `phylink_fixed_state`); MediaTek
+Ethernet (`ethsys_reset`, in 4.7.0 also `mtk_mac_link_up`,
+`mtk_rx_irq_disable`); MPTCP (`tcp_collapse`, `__tcp_close`,
+`subflow_v4_init_req`: GL.iNet's backport in these releases isn't quite the
+4.8.6 one); and `mtk_pcie_probe` in 4.7.0. These go into kernel test builds
+(candidate patch versions, compared function by function) once the queue
+is through.
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -1582,3 +1602,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | Kernels compared function by function (`vmlinux-to-elf` + `analysis/kernel-functions.py`): 4.6.2, 4.6.4 and 4.6.8 have identical kernel code; 4.7.0 adds USB hub port disabling and changes MPTCP, PCIe and USB power management. |
 | 2026-10-27 | 4.7.0+: GL.iNet's USB hub port power patch (963, published) as an extra commit; 4.6.x: USB port `power_ctl` not public (labelled placeholder). |
 | 2026-10-27 | 4.6.4 and 4.7.4 build completely. 4.6.4+: firewall ubus timeouts (2 → 20 s), AdGuardHome's zoneinfo dependencies, `@early` extra commits. 4.7.4: ChaCha20-Poly1305 package and built-in pstore. |
+| 2026-10-27 | Kernel code compared in every verdict (function by function against GL.iNet's kernel); open groups in 4.6.x/4.7.x: routing (route-failover/kmwan versions), MDIO/PHY, MediaTek Ethernet, MPTCP version, PCIe. |
