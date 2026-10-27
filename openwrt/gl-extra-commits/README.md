@@ -13,3 +13,7 @@ with the release's patch date and the subject in `message`.
 | `lua5.3-archindependent-bytecode` | GL.iNet's own patch, same source (`package/utils/lua5.3/patches{,-host}/`) | `liblua5.3` has "bad size" / "format mismatch in"; its `SourceDateEpoch` is the patch date |
 | `mtkhnat-no-unknown-dp-warning` | our construction: removes the "Unknown case of dp" warning from MediaTek's public hnat source | the string is gone from GL.iNet's `mtkhnat.ko`; the analysis of 4.7.4 found this the only change (journey, chapter 12) |
 | `unidentified-commit` | our construction: an empty commit | 4.5.x has one GL.iNet patch commit more than the public set plus the three above, with no trace in the image except the revision count (r15812+885). The count is compiled into the toolchain's version string ("OpenWrt GCC 8.4.0 r15812+885-46b6ee7ffc" in every binary's `.comment`, and so in build IDs), so it changes real files. This commit reproduces only the count, not GL.iNet's change. |
+
+The placeholder stays until there is a good reason to remove it, or until
+the content of GL.iNet's actual commit is found (owner's decision,
+2026-10-27).
