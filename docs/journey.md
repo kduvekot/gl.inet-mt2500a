@@ -1559,8 +1559,11 @@ read, extended for the Airoha EN8811H after the fork went private, and in
 no public source. One of 4.6.x's last two unidentified placeholders now
 carries that label (one left).
 Two MediaTek Ethernet "differences" (`mtk_mac_link_up`,
-`mtk_rx_irq_disable`) were artifacts of compiler-generated names; only
-`ethsys_reset` differs (one load scheduled elsewhere).
+`mtk_rx_irq_disable`) were artifacts of compiler-generated names, and the
+driver's larger functions (`mtk_open`, `mtk_hw_init`, `mtk_pending_work`,
+`mtk_stop`) differ only in data addresses; apart from GL.iNet's link
+polling (below), only `ethsys_reset` differs: one load scheduled a few
+instructions later, with the same instructions otherwise.
 
 **4.7.0 at GL.iNet's Jenkins path (job 69b).** The first build at
 `/work2/jenkins/workspace/router_mt2500` leaves no build-path differences
