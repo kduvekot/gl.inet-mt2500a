@@ -1612,6 +1612,21 @@ it is GL.iNet's own change to the 2022 SDK driver, not public. And one closed pa
 `Maintainer` from 4.7.0 on; the closed-feed generator now carries both
 fields over (before, only `License`).
 
+**4.6.4 at GL.iNet's revision, 4.7.4 complete (jobs 70b, 71b), the first
+verdicts with the kernel comparison.** 4.6.4 comes out at r15812+900, the
+official revision, with every package, file and `status` field as
+official and an identical kernel configuration; the kernel comparison
+confirms today's firewall, MDIO, `__tcp_close` and `tcp_collapse` fixes in
+a full build. It also showed that GL.iNet's 4.6.x routing code is a mix:
+the FIB core matches their 922/923, but `fib_table_lookup`,
+`ip_valid_fib_dump_req` and `nf_nat.ko` matched our older 953/954 (66b);
+to be looked into. And `libc.so` still differed: the musl patch had lost
+its new file (fixed, see above). 4.7.4 builds completely (458 packages,
+5255 files, kernel configuration identical); new there, only noted so far:
+a group of reboot functions (`psci_sys_reset`, `emergency_restart`, the
+restart handlers), `copy_creds`, `partition_split`, and `libpcre`'s
+Auto-Installed flag.
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -1756,6 +1771,7 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | MPTCP: our backport is Linux 5.15's; GL.iNet's 4.6.2-4.8.2 `subflow_v4_init_req` is a "need to implement this function" stub, now reproduced instruction for instruction. |
 | 2026-10-27 | MPTCP complete: 4.6.x's receive path still reported subflow priority events (`mptcp_recvmsg` identical with that call active); `mptcp-backport-4.6x` for the 4.6.x rows. |
 | 2026-10-27 | busybox (531, 4.6.8+), dnsmasq (302, 303) and odhcpd (01, 02) from GL.iNet's published tree, byte-identical to GL.iNet's 4.7.0 binaries; release numbers match. |
+| 2026-10-27 | 4.6.4 at GL.iNet's revision r15812+900 (job 70b); 4.7.4 complete (71b); first verdicts with the kernel comparison. |
 | 2026-10-27 | 4.6.2 at GL.iNet's revision (job 68b); musl `pthread_getname_np` backport found (identical code), two unidentified placeholders left. |
 | 2026-10-27 | MDIO `reset-post-delay-us` backported (kernel side of GL.iNet's PHY reset on the MDIO bus); exact sizes, validated. |
 | 2026-10-27 | 4.7.0 at GL.iNet's Jenkins path (job 69b): no build-path differences left, kernel configuration identical; busybox/dnsmasq/odhcpd carry GL.iNet patches (4.8.6 tree has them). |
