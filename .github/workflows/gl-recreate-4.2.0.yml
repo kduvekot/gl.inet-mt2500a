@@ -637,6 +637,14 @@ jobs:
             for p in $REBUILT_PACKAGES; do make -j"$(nproc)" BUILD_LOG=1 "$p/compile"; done
             for p in $REBUILT_PACKAGES; do make "$p/clean"; done
           fi
+          # bpftools runs the build's host Python, which a parallel build may
+          # still be installing ("Fatal Python error: init_fs_encoding", jobs
+          # 25 and 57): build host Python first. (Host-only; target package
+          # metadata is unaffected, unlike a retry, whose second make reads the
+          # recipes with more packages built: ABI names in Depends, job 57.)
+          if [ -d package/feeds/packages/python3 ]; then
+            make -j"$(nproc)" BUILD_LOG=1 package/feeds/packages/python3/host/compile
+          fi
           build_retry() {
             # a package that failed (e.g. a parallel-build race, job 25's
             # bpftools) is built once more single-threaded before giving up
