@@ -16,6 +16,7 @@ import calendar, collections, glob, gzip, lzma, os, re, struct, subprocess, sys,
 
 lst, roots, kernels, feeds, out = sys.argv[1:6]
 only = sys.argv[6:]
+SUBMODULES = {"wifidog-ng"}   # gl-feeds submodules (own repository and dates)
 AGH_SHA = {   # AdGuardHome release tarballs already in the table
     "v0.107.8": "77a678e8beaa7978b950d3d8dff9e54c9bd50ae43495a9ad478f59ef73bced67",
     "v0.107.26": "709eefbefe18ca8d2bd3578eb9923a8ea7382c59920e6565f386898f0c64b91e",
@@ -91,6 +92,22 @@ def feed_pins(ctl, built):
             want[feed][d] = int(c["SourceDateEpoch"])
     res = {}
     for feed, pk in want.items():
+        # a git submodule in the feed (wifidog-ng) dates from its own repository
+        sub = {d for d in pk if d.split("/")[0] in SUBMODULES}
+        pk = {d: t for d, t in pk.items() if d not in sub}
+        if not pk:
+            continue
+        # fetched by branch (depth-1 clone): every package has the head's time
+        times = set(pk.values())
+        if len(times) == 1:
+            heads = git("log", "--all", "--format=%H %ct").split()
+            hs = [heads[i] for i in range(0, len(heads), 2) if heads[i + 1] == str(next(iter(times)))]
+            if hs and (len(pk) > 1 or not any(
+                    git("log", "-1", "--format=%ct", h, "--", d).strip() == str(t)
+                    for h in hs for d, t in pk.items())):
+                res[feed] = (len(pk), len(pk), [(h[:10], "shallow", git("branch", "-r", "--contains", h).split()[:3]) for h in hs],
+                             sorted(sub), hs[-1] + "~shallow")
+                continue
         newest = max(pk.values())
         cands = [l.split() for l in git("log", "--all", "--format=%H %ct",
                                          f"--since={newest - 1}", f"--until={built}").splitlines()]
