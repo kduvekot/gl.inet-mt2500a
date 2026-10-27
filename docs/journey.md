@@ -1548,7 +1548,13 @@ property in `of_mdio.c`, the wait) gives exactly GL.iNet's sizes for
 `mdio_bus.o`, `of_mdio.o`, `phy_device.o`, `phylink.o`, all 170 functions
 validated against our vmlinux first). It goes with the device tree in
 `mt2500-dts-phy-reset`. Still open there: `get_phy_device` (GL.iNet's does
-one more register read while identifying the PHY) and `phylink_fixed_state`.
+one more register read while identifying the PHY). `phylink_fixed_state`
+turned out to be GL.iNet's own function in the MediaTek Ethernet driver
+(the fork's patch `3003`, polling the GPY211's state register): in 4.6.2
+it is 712 bytes with 16 MDIO reads and writes instead of 176 with one
+read, extended for the Airoha EN8811H after the fork went private, and in
+no public source. One of 4.6.x's last two unidentified placeholders now
+carries that label (one left).
 Two MediaTek Ethernet "differences" (`mtk_mac_link_up`,
 `mtk_rx_irq_disable`) were artifacts of compiler-generated names; only
 `ethsys_reset` differs (one load scheduled elsewhere).
