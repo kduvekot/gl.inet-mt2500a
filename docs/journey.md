@@ -1838,6 +1838,27 @@ exports SDK=1, so the kmods stay. GL.iNet's 4.8.2 has kmods too, so their
 CI must also have set SDK=1 only after the scan; a rescan during the build
 would drop them.
 
+**Not public so far (kept current; for the source request once all
+firmwares are done).** Each is in the official binaries but in none of
+GL.iNet's published trees, gl-feeds, the fork, gl-image or MediaTek's
+feeds; in the recipe it is a labelled placeholder commit or simply left
+different.
+
+| Part | Releases | Where it shows |
+|---|---|---|
+| MediaTek iwinfo support (HE rate table, HT mode, country) | 4.6.2+ | `iwinfo`, `libiwinfo`, the Lua module |
+| RM500U 5G modem entry (`rm500u_5gnet`) | 4.6.2+ | `usbnet.ko` |
+| USB port power control (`power_ctl`) | 4.6.x | `usb_port_shutdown` |
+| EN8811H (Airoha) PHY driver changes | 4.6.2+ | `air_en8811h.ko` |
+| Airoha link-state polling | 4.6.2+ | `phylink_fixed_state`, `mtk_mac_link_up`, `mtk_rx_irq_disable` |
+| C45 read in `get_phy_device` | 4.6.2+ | `get_phy_device` |
+| opkg size option | 4.5.0+ | `opkg` (about 480 bytes) |
+| PCIe probe (one more sleep) | 4.7.0+ | `mtk_pcie_probe` |
+| Emergency-reboot flag | 4.7.4 | `psci_sys_reset`, `emergency_restart`, restart handlers |
+| Earlier version of dnsmasq patch 304 | 4.7.4 | `dnsmasq` layout (size and strings equal) |
+| Server side of ubus auto-subscribe | 4.9.0 | `ubusd` (48 bytes) |
+| Unidentified commits (count only) | 4.5.x: 1, 4.6.x: 2, 4.7.x: 1 | the revision number |
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
