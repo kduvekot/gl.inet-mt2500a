@@ -1,0 +1,47 @@
+From: our backport of upstream 77c3c95637526f1e4330cc9a4b2065f668c2c4fe
+Subject: [PATCH] tcp: factor out __tcp_close() helper
+
+Needed by the MPTCP backport (written for 5.4.281, where 5.4 stable already
+has this split); the split alone, for 5.4.211.
+
+---
+--- a/include/net/tcp.h
++++ b/include/net/tcp.h
+@@ -387,6 +387,7 @@
+ void tcp_metrics_init(void);
+ bool tcp_peer_is_proven(struct request_sock *req, struct dst_entry *dst);
+ void tcp_close(struct sock *sk, long timeout);
++void __tcp_close(struct sock *sk, long timeout);
+ void tcp_init_sock(struct sock *sk);
+ void tcp_init_transfer(struct sock *sk, int bpf_op);
+ __poll_t tcp_poll(struct file *file, struct socket *sock,
+--- a/net/ipv4/tcp.c
++++ b/net/ipv4/tcp.c
+@@ -2349,13 +2349,12 @@
+ 	return too_many_orphans || out_of_socket_memory;
+ }
+ 
+-void tcp_close(struct sock *sk, long timeout)
++void __tcp_close(struct sock *sk, long timeout)
+ {
+ 	struct sk_buff *skb;
+ 	int data_was_unread = 0;
+ 	int state;
+ 
+-	lock_sock(sk);
+ 	sk->sk_shutdown = SHUTDOWN_MASK;
+ 
+ 	if (sk->sk_state == TCP_LISTEN) {
+@@ -2519,6 +2518,12 @@
+ out:
+ 	bh_unlock_sock(sk);
+ 	local_bh_enable();
++}
++
++void tcp_close(struct sock *sk, long timeout)
++{
++	lock_sock(sk);
++	__tcp_close(sk, timeout);
+ 	release_sock(sk);
+ 	sock_put(sk);
+ }

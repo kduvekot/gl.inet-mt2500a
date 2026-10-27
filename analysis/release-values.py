@@ -16,6 +16,7 @@ import calendar, collections, glob, gzip, lzma, os, re, struct, subprocess, sys,
 
 lst, roots, kernels, feeds, out = sys.argv[1:6]
 only = sys.argv[6:]
+SUBMODULES = {"wifidog-ng"}   # gl-feeds submodules (own repository and dates)
 AGH_SHA = {   # AdGuardHome release tarballs already in the table
     "v0.107.8": "77a678e8beaa7978b950d3d8dff9e54c9bd50ae43495a9ad478f59ef73bced67",
     "v0.107.26": "709eefbefe18ca8d2bd3578eb9923a8ea7382c59920e6565f386898f0c64b91e",
@@ -76,8 +77,17 @@ def read(root, rel):
         return ""
 
 
+# Feeds outside gl-feeds that GL.iNet added later: name -> (clone next to the
+# gl-feeds clone, URL for feed_revs' name=url^commit)
+OTHER_FEEDS = {"mptcp_feeds": ("mptcp-feeds", "https://github.com/gl-inet/mptcp-feeds.git"),
+               "gl_feed_ovpn_with_dco": ("vpn-extra-feeds", "https://github.com/gl-inet/vpn-extra-feeds.git"),
+               # in feeds.conf.default, not in the profiles (GL.iNet's mirror)
+               "mtk_openwrt_feed": ("mtk-feeds", "https://github.com/gl-inet/mtk-openwrt-feeds.git")}
+REPO = feeds
+
+
 def git(*a):
-    return subprocess.run(["git", "-C", feeds, *a], capture_output=True, text=True).stdout
+    return subprocess.run(["git", "-C", REPO, *a], capture_output=True, text=True).stdout
 
 
 def feed_pins(ctl, built):
@@ -86,11 +96,30 @@ def feed_pins(ctl, built):
     want = collections.defaultdict(dict)
     for c in ctl.values():
         src = c.get("Source", "")
-        if src.startswith("feeds/gl_feed") and "SourceDateEpoch" in c:
+        if (src.startswith("feeds/gl_feed") or src.split("/")[1:2] and src.split("/")[1] in OTHER_FEEDS) \
+                and "SourceDateEpoch" in c and src.count("/") >= 2:
             _, feed, d = src.split("/", 2)
             want[feed][d] = int(c["SourceDateEpoch"])
     res = {}
+    global REPO
     for feed, pk in want.items():
+        REPO = os.path.join(os.path.dirname(os.path.abspath(feeds)), OTHER_FEEDS[feed][0]) if feed in OTHER_FEEDS else feeds
+        # a git submodule in the feed (wifidog-ng) dates from its own repository
+        sub = {d for d in pk if d.split("/")[0] in SUBMODULES}
+        pk = {d: t for d, t in pk.items() if d not in sub}
+        if not pk:
+            continue
+        # fetched by branch (depth-1 clone): every package has the head's time
+        times = set(pk.values())
+        if len(times) == 1:
+            heads = git("log", "--all", "--format=%H %ct").split()
+            hs = [heads[i] for i in range(0, len(heads), 2) if heads[i + 1] == str(next(iter(times)))]
+            if hs and (len(pk) > 1 or not any(
+                    git("log", "-1", "--format=%ct", h, "--", d).strip() == str(t)
+                    for h in hs for d, t in pk.items())):
+                res[feed] = (len(pk), len(pk), [(h[:10], "shallow", git("branch", "-r", "--contains", h).split()[:3]) for h in hs],
+                             sorted(sub), hs[-1] + "~shallow")
+                continue
         newest = max(pk.values())
         cands = [l.split() for l in git("log", "--all", "--format=%H %ct",
                                          f"--since={newest - 1}", f"--until={built}").splitlines()]
@@ -113,6 +142,7 @@ def feed_pins(ctl, built):
                          top[0][3], top[-1][2])
         else:
             res[feed] = (len(pk), 0, [], list(pk), "")
+    REPO = feeds
     return res
 
 
@@ -184,7 +214,7 @@ for rel, url, sha in rel_rows:
         "kmod-gl-sdk4-tertf" if tertf and not tertf_public else "-",
         f"? ({len(late)} pkgs late)" if late else "0", "?",
         "CONFIG_BUSYBOX_CONFIG_USLEEP=y" if "usleep" in bb else "-",
-        " ".join(f"{f}={v[4]}" for f, v in pins.items() if v[4])]))
+        " ".join(f"{f}={OTHER_FEEDS[f][1] + '^' if f in OTHER_FEEDS else ''}{v[4]}" for f, v in pins.items() if v[4])]))
     print(f"{rel} done", flush=True)
 
 open(os.path.join(out, "summary.md"), "w").write("\n".join(md) + "\n")

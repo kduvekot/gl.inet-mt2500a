@@ -1251,6 +1251,115 @@ sources are unpacked. `link-order.py marks` needs no sources: it orders
 the objects by the position of one known string from each in GL.iNet's
 `sipcalc` (4.2.x `sub-output` first, 4.4.5 to 4.7.4 `sub-func` first).
 
+**Feeds fetched by branch, and feeds outside gl-feeds.** Some releases'
+feed packages all carry one commit's time: GL.iNet fetched those feeds by
+branch, which OpenWrt's feeds script clones with depth 1, so `git log` on
+any package folder returns the head (4.6.2's `shortcut-fe` has the time of
+gl_feed_21_02's `02702ea`, a commit that doesn't touch it). Writing the
+pinned head into the feed's `.git/shallow` reproduces that offline (tested:
+1716438772 as in the image, 1691135655 from a full clone); release value
+suffix `~shallow`. `release-values.py` now pins every feed of 4.5.0 to
+4.8.2: gl-feeds (by branch for 4.6.x/4.7.0), `mptcp-feeds` (4.7.0 on),
+4.8.2's OpenVPN feed (`gl-inet/vpn-extra-feeds`) and MediaTek's feed
+(unchanged since 2022 except in 4.7.0: November 2024). `wifidog-ng` is a
+submodule of gl-feeds with its own dates. GL.iNet's private MediaTek feed
+is called `mt798x` from 4.6.2 on, and `ddns-scripts` is gone there (our
+reconstructed `gl-sdk4-ddns` install script now only moves files the
+release's package lists). Only 4.5.16 was built without all kernel modules;
+4.6.2 to 4.7.4 again with them (about 910 options as modules), 4.8.2/4.9.0
+without LuCI English.
+
+**`shortcut-fe` and tertf's exports.** `shortcut-fe` (from 4.5.0) uses
+tertf's exported `term_update`, so GL.iNet's module has
+`depends=gl-sdk4-tertf`; ours takes tertf from the image. Placing a
+`.symvers` in `$(PKG_SYMVERS_DIR)` didn't help: OpenWrt's
+`collect_module_symvers` hook runs after every kernel package's compile and
+rewrites that file from `$(PKG_BUILD_DIR)/Module.symvers` (empty for a
+prebuilt module). The closed recipe now writes the exports there, with the
+module path in the build directory, and the hook carries them over.
+
+**4.8.2 was built without git.** Its revision is empty everywhere
+(`DISTRIB_REVISION=''`, `base-files` version `1446-`, the toolchain's
+version string "OpenWrt GCC 8.4.0 " in every binary): OpenWrt's `getver.sh`
+returns nothing outside a git repository, so GL.iNet built 4.8.2 from an
+exported tree, like the offline tree in `gl-image`; its CI build number is
+in the new `/etc/version.build` (845; 4.9.0: 1048). The 222 OpenWrt-tree
+packages share the build second as `SourceDateEpoch`, and missing patch
+commits no longer show in the revision. AdGuardHome is built from source
+from 4.8.2 on (`adguardhome-conntrack` in gl_feed_common). To do for 4.8.2:
+a release value that removes the tree's git metadata before the build.
+
+**4.6.2's kernel commits, and the sibling models.** Compared with 4.5.0
+(both with all kernel modules), 4.6.2's kernel config changes in only ten
+options: the Airoha EN8811H PHY, MPTCP and zstd. The EN8811H driver
+(GL.iNet's module reports v1.2.5) is MediaTek's: v1.2.5 was in MediaTek's
+feed from 1 April 2024, with the PHY firmware byte-identical; extra commit
+`airoha-en8811h` fetches it (SHA256-checked; MediaTek's Makefile hunk needed
+our 2022 SDK tree's context). MPTCP is GL.iNet's backport of upstream MPTCP
+to 5.4, published in their BE10000 GPL tree (25 files, one kernel patch,
+`kmod-mptcp`); written for 5.4.281, three hunks needed 5.4.211's context
+(`mptcp-backport`). GL.iNet's 4.8.6 tree also had 4.6.2's `ppp.sh` (PPPoE
+retry delay; byte-identical with ppp 2.4.8's plugin name) and candidate
+opkg/uci patches. GL.iNet's firmware for its other MT798x routers, built
+with the same builder, shows: the MT3000 (Beryl AX) is the MT2500's twin
+(same patch count and kernel features every release; 4.2.3 to 4.4.6 even
+built in the same second, so both models came from one build run); the
+X3000/XE3000 stayed on the 4.4 release branch until late 2024 (+879, +880,
++882); the MT6000 (MT7986) had EN8811H by April 2024 but MPTCP only from
+4.6.2, and zstd is built in only on MT7981 models.
+
+**4.6.2: 10 of 18 missing commits.** GL.iNet's 4.6.2 is r15812+899; the
+fork's last state gives 881. Recreated: the three of 4.5.0, Airoha, MPTCP,
+ppp, opkg (remove once), uci (lua iteration), `UBIFS_FS_ZSTD=y` in the
+MT7981 target config (the only zstd option that changes by itself; it
+selects the others, which is why they are built in despite
+`kmod-lib-zstd`), and the device tree (decompiled: only the WAN PHY's reset
+moves to the MDIO bus and its compatible becomes generic C45, as
+driver-analysis.md describes; our edit keeps GL.iNet's property order).
+Found but not public: GL.iNet's newer MediaTek iwinfo support (HE rate
+table, HT mode, country) and an RM500U 5G modem entry in `usbnet.ko`
+(`rm500u_5gnet`); neither is in gl-feeds, the fork, gl-image or MediaTek's
+feed. The rest most likely touches only other boards built from the same
+tree (MT3000, X3000, MT6000) and shows only in the revision count.
+
+**`shortcut-fe` solved, and the bpftools race.** Job 57 (4.5.0): tertf's
+exports reach `shortcut-fe` through OpenWrt's own symvers hook, `depends=`
+matches. The same job hit the bpftools race again; the new retry saved it
+but changed the result: its second `make` reads the recipes with more
+packages built, so `curl` and `libc` got ABI names in `Depends` (the
+mechanism of `rebuilt_packages`). The race itself is gone now: host Python
+is built before the parallel build.
+
+**Fewer wasted builds.** Most failed jobs could have been caught early or
+were races. `DRY_RUN=1` (local `dry=true`) stops after the configuration
+(builder, patches, extra commits, feeds, closed feed, defconfig) and fails
+if official packages can't be selected; a package that fails is built once
+more single-threaded before the build gives up; the end of the build log is
+kept with every result. A second job worker uses the M5+'s idle cores, and
+each worker keeps its last tree for single-package rebuilds.
+
+**4.5.0 and 4.5.16 recreated.** The final jobs (61, 62; with the
+placeholder commit, `sipcalc` order, tertf exports and host Python first)
+leave only the accepted classes: Samba (library order, so also the
+`Installed-Size` of its three packages), `wg`/`wireguard-tools` (tree hash),
+and the vermagic hash in the kernel and kmod entries. Packages (419 and 423),
+files (4321 and 4353), `Auto-Installed` and the `status` order are as
+official, kernel config identical, revision r15812+885 in both.
+
+**4.7.0's iproute2 comes from the MPTCP feed.** From 4.7.0 on, the
+official configuration has `CONFIG_OVERRIDE_PKGS="iproute2"`: GL.iNet's
+builder installs every profile feed with `feeds install -a -f`, so
+`gl-inet/mptcp-feeds`' iproute2 6.3.0 replaces OpenWrt's 5.11 (`ip-full`
+6.3.0-1 in 4.7.0, 5.11.0-3 in 4.6.8). Our recipe got that right, but our
+static-syms order patch only reached OpenWrt's copy. It now goes to every
+iproute2 under `package/` and `feeds/`; generating `static-syms.h` from
+6.3.0 with the build container's make 4.2.1 gives official 4.7.4's order
+(47 of 47 names) with the patch and a different one without. Also from the
+official images: 4.6.4 → 4.6.8 changes no kernel code (only the revision
+string and build date); 4.6.2 → 4.6.4 changes code without a visible string,
+configuration or device-tree change, which the 4.6.4 build will have to
+show.
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -1377,3 +1486,8 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | Revision count compiled into every binary (toolchain version string): labelled placeholder commit for 4.5.x's unidentified 885th commit. 4.5.16: no `ALL_KMODS`, LuCI English again. `sipcalc` order via marker strings (OpenWrt evaluates package recipes before unpacking). |
 | 2026-10-27 | 4.4.5 recreated to the level of 4.2.x (job 40): only the accepted classes remain (`.pyc`, `python3` Depends order, `wg`, vermagic). `sipcalc`: from 4.4.x on GL.iNet's link order is the sorted one (byte-identical by direct compilation). 4.5.0 (job 39): r15812+885 with the placeholder, `sipcalc`, `libelf`, Go programs identical; closed kernel modules now provide their exports (`.symvers`) for `shortcut-fe`. |
 | 2026-10-27 | 4.4.6 recreated to the level of 4.2.x (job 41): only the accepted classes remain. Second job worker on the M5+ (one build leaves ~90 % of the CPU idle); each worker keeps its last tree for single-package rebuilds. `gl-inet/gl-image` holds GL.iNet's complete 4.8.6 GPL tree for the BE10000. |
+| 2026-10-27 | 4.5.16 at 4.5.0's level (r15812+885). All feeds of 4.5.0-4.8.2 pinned, incl. depth-1 feeds (`~shallow`) and those outside gl-feeds; 4.6.2: `mt798x` feed, no `ddns-scripts`. tertf exports via OpenWrt's symvers hook. Preflight (`dry=true`) and a single-package retry. |
+| 2026-10-27 | `shortcut-fe` matches (tertf exports via OpenWrt's symvers hook). 4.6.2 kernel: Airoha EN8811H from MediaTek's feed, MPTCP from GL.iNet's published 5.4 backport (both as extra commits). Sibling firmware: MT3000 is the MT2500's twin, X3000/XE3000 on the 4.4 branch until late 2024. Host Python built first (bpftools race). |
+| 2026-10-27 | 4.6.2: zstd (`UBIFS_FS_ZSTD`) and device tree recreated; iwinfo and the `usbnet` RM500U entry found but not public; about 6 commits probably only for other boards. |
+| 2026-10-27 | 4.5.0 and 4.5.16 recreated to the level of 4.2.x (jobs 61, 62): only Samba order, `wg` tree hash and vermagic remain. |
+| 2026-10-27 | 4.7.0+: iproute2 6.3.0 from the MPTCP feed replaces OpenWrt's (`OVERRIDE_PKGS`); the static-syms order patch now reaches it (official 4.7.4 order reproduced). 4.6.4 → 4.6.8 leaves kernel code unchanged. |

@@ -105,7 +105,7 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   reason to remove it or its real content is found). Build-machine orders
   are read from the official binaries (`.github/scripts/link-order.py`).
   4.2.0, 4.2.1, 4.2.3 validated; 4.4.5 at the same level (only accepted
-  classes left); 4.4.6, 4.5.0, 4.5.16 nearly (final jobs running). 4.6.2:
+  classes left); 4.4.6, 4.5.0 and 4.5.16 too (jobs 41, 61, 62). 4.6.2:
   first builds; GL.iNet's private MediaTek feed is called `mt798x` from
   there on. `gl-inet/gl-image` (branch gl-be10000, `versions/4.8.6`) is a
   complete GPL tree of GL.iNet's 4.8.6 for another model: source for

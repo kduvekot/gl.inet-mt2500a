@@ -115,10 +115,22 @@ env:
   #                     ("-": the profiles' own). From 4.5.0 on the builder
   #                     isn't public; the gl-feeds revisions follow from the
   #                     image (each package's SourceDateEpoch is the last
-  #                     commit to its folder; analysis/release-values.py)
+  #                     commit to its folder; analysis/release-values.py);
+  #                     name=url^commit adds a feed the profiles don't have
+  #                     (mptcp_feeds from 4.7.0 on); a ~shallow suffix: GL.iNet
+  #                     fetched that feed by branch (depth 1), so all its
+  #                     packages carry the head commit's date (4.6.2's
+  #                     gl_feed_21_02, 4.7.0's gl_feed_common)
   #   EXTRA_COMMITS     folders of openwrt/gl-extra-commits ("-": none):
   #                     GL.iNet patch commits missing from the public patch set
   #                     (4.5.0+), recreated with the release's patch date
+  #   NO_GIT            1: GL.iNet built from a tree without git metadata
+  #                     (4.8.2 on: empty revision everywhere, also in the
+  #                     toolchain's version string); the tree's .git is removed
+  #                     before compiling, and OpenWrt then dates its packages by
+  #                     the mtime of scripts/get_source_date_epoch.sh (try_mtime),
+  #                     set to the build time; getver.sh prints an empty
+  #                     revision (as GL.iNet's). Feeds keep their git.
 
 jobs:
   recreate:
@@ -156,7 +168,7 @@ jobs:
           REL="${{ inputs.release }}"
           case "$REL" in ""|false) REL=4.2.0 ;; esac
           awk -F'\t' -v r="$REL" -v q="'" '$1 == r { f = 1
-              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES PRIVATE_NOW LATE_PATCHES PATCHES_REV EXTRA_CONFIG FEED_REVS EXTRA_COMMITS", k, " ")
+              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES PRIVATE_NOW LATE_PATCHES PATCHES_REV EXTRA_CONFIG FEED_REVS EXTRA_COMMITS NO_GIT", k, " ")
               for (i = 1; i <= n; i++) print k[i] "=" q $i q }
             END { exit !f }' openwrt/gl-releases.tsv > work/release.env \
             || { echo "release $REL not in openwrt/gl-releases.tsv"; exit 1; }
@@ -301,6 +313,7 @@ jobs:
               (cd "$d/files" && find . -type f) | xargs git add
             fi
             if [ -f "$d/edit.sh" ]; then sh "$d/edit.sh"; fi
+            git add -A -- target package toolchain tools include   # files edit.sh created
             GIT_COMMITTER_DATE="$GIT_COMMIT_DATE +0000" GIT_AUTHOR_DATE="$GIT_COMMIT_DATE +0000" \
               git commit -q -a --allow-empty -m "$(cat "$d/message")"
           done
@@ -315,6 +328,17 @@ jobs:
 
           # MediaTek's feed moved behind a login; same commit from GL.iNet's mirror.
           sed -i "s#${MTK_FEED_OLD}#${MTK_FEED_MIRROR}#" feeds.conf.default
+          # FEED_REVS entries for feeds of feeds.conf.default (MediaTek's: 4.7.0
+          # was built with its November 2024 state) are set there; the rest
+          # go to the profiles below
+          rest=""
+          for x in ${FEED_REVS:--}; do
+            n=${x%%=*}; v=${x#*=}
+            if grep -q "^src-git[a-z-]* $n " feeds.conf.default; then
+              sed -i -E "s#^(src-git[a-z-]* $n ).*#\1${v%%~*}#" feeds.conf.default
+            else rest="$rest $x"; fi
+          done
+          export FEED_REVS="${rest# }"
           cat feeds.conf.default
 
           # Public copies of GL.iNet's two MT2500 profiles: drop private feeds
@@ -339,8 +363,14 @@ jobs:
               for f in d["feeds"]:
                   if f.get("name") in revs:
                       f.pop("branch", None)
-                      f["revision"] = revs.pop(f["name"])
+                      f["revision"] = revs.pop(f["name"]).split("~")[0]
                       print(f"feed {f['name']} at {f['revision']}")
+              if src.startswith("target_"):
+                  # feeds GL.iNet added after the public builder (name=url^commit)
+                  for name in [n for n, v in revs.items() if "^" in v]:
+                      uri, rev = revs.pop(name).split("~")[0].rsplit("^", 1)
+                      d["feeds"].append({"name": name, "uri": uri, "revision": rev})
+                      print(f"feed {name} added: {uri} at {rev}")
               keep = [p for p in d.get("packages", []) if not private(p)]
               removed += [f"{src}: {p}" for p in d.get("packages", []) if private(p)]
               d["packages"] = keep
@@ -356,6 +386,17 @@ jobs:
           # image.
           printf 'version: %s\ntype: %s\n' "$RELEASE" "$GL_TYPE" > gl_metadata.yaml
           ./scripts/gen_config.py public_target_mt2500 public_glinet_mt2500
+          # Feeds GL.iNet fetched by branch (FEED_REVS ...~shallow): OpenWrt's
+          # feeds script clones those with depth 1, so every package's
+          # SourceDateEpoch is the head commit's time. Same effect offline: mark
+          # the pinned head as the history's root.
+          for x in ${FEED_REVS:--}; do
+            case "$x" in *~shallow)
+              n=${x%%=*}
+              git -C "feeds/$n" rev-parse HEAD > "feeds/$n/.git/shallow"
+              echo "feed $n shallow at $(cat "feeds/$n/.git/shallow")" ;;
+            esac
+          done
           echo "$VERSION_DATE" > files/etc/version.date
 
           # Mirror the official package set: make every feed package
@@ -369,9 +410,13 @@ jobs:
           # key still signs the package index, which isn't in the image)
           sed -i '/etc\/opkg\/keys\//s#$(BUILD_KEY)\.pub#/work/gl-build-key.pub#g' package/base-files/Makefile
           grep -n 'opkg/keys/' package/base-files/Makefile
+          # Every copy of the package gets them: from 4.7.0 on, the MPTCP
+          # feed's iproute2 6.3.0 replaces OpenWrt's (CONFIG_OVERRIDE_PKGS)
           for d in /work/gl-4.2.0-patches/*/; do
-            t="$(dirname "$(find package -path "*/$(basename "$d")/Makefile" | head -1)")/patches"
-            mkdir -p "$t" && cp "$d"*.patch "$t/" && echo "patches for $(basename "$d") -> $t"
+            find package feeds -path "*/$(basename "$d")/Makefile" | while read -r m; do
+              t="$(dirname "$m")/patches"
+              mkdir -p "$t" && cp "$d"*.patch "$t/" && echo "patches for $(basename "$d") -> $t"
+            done
           done
           if [ "${CLOSED:-}" = true ]; then
             # GL.iNet's closed packages (generated in the run), copied into the
@@ -497,6 +542,17 @@ jobs:
           fi
           cp .config /work/out/config.txt
           grep -E "^CONFIG_(DEVEL|CCACHE|ALL_KMODS)=" .config
+          if [ "${DRY_RUN:-}" = 1 ]; then
+            # Preflight (local runs): everything up to the configuration ran
+            # (builder, patches, extra commits, feeds, closed feed); stop before
+            # compiling. Fails if official packages can't be selected, which
+            # would otherwise only show at package/install, at the very end.
+            # (the kernel pseudo-package has no CONFIG_PACKAGE_ option: always listed)
+            n=$(sed -n '3p' /work/out/mirror.txt | tr ' ' '\n' | grep -c -v -x -e kernel -e '' || true)
+            { echo "preflight: $([ "$n" = 0 ] && echo OK || echo FAILED)"; cat /work/out/mirror.txt
+              echo "revision: $(./scripts/getver.sh 2>/dev/null)"; } | tee /work/out/preflight.txt
+            [ "$n" = 0 ]; exit
+          fi
           # Logs per package (BUILD_LOG) and a summary of failed packages are
           # saved even when the build fails.
           save_logs() {
@@ -510,6 +566,17 @@ jobs:
             } > /work/out/failed.txt || true
           }
           trap save_logs EXIT
+          if [ "${NO_GIT:-0}" = 1 ]; then
+            # (see env) after every patch and edit, right before compiling
+            rm -rf .git
+            # git must not find the builder's repository around the tree
+            GIT_CEILING_DIRECTORIES="$(dirname "$PWD")"; export GIT_CEILING_DIRECTORIES
+            touch -d "@$SOURCE_DATE_EPOCH" scripts/get_source_date_epoch.sh
+            # GL.iNet's revision is empty, not getver.sh's "unknown" (as with
+            # SDK=1 or an empty REVISION; our construction, same effect)
+            sed -i 's/REV="unknown"$/REV=""/' scripts/getver.sh
+            echo "tree without git: revision '$(./scripts/getver.sh)'"
+          fi
           make download -j8 || make download -j1 V=s
           if [ "$USE_CCACHE" = "true" ]; then
             # ccache in disguise: after building the toolchain, each compiler
@@ -520,7 +587,36 @@ jobs:
             # the compiler by content instead, or every run misses the cache.
             export CCACHE_DIR=/work/cache/ccache-glpath CCACHE_MAXSIZE=5G CCACHE_COMPILERCHECK=content
             rm -rf /work/cache/ccache
-            make -j"$(nproc)" BUILD_LOG=1 tools/install toolchain/install
+            # Host tools cache (ccache runs only, so never in validation runs):
+            # the tools don't depend on the release, only on tools/, include/
+            # and rules.mk (hashed into the key, so GL.iNet's patches to tools
+            # give a new key) and the host compiler. OpenWrt's own stamp name
+            # encodes which tools are enabled, so another selection rebuilds.
+            # Restored files get the current time: newer than the fresh tree,
+            # so make sees them as up to date.
+            tkey=$( { find tools include rules.mk -type f -print0 | sort -z | xargs -0 sha1sum; gcc --version; } | sha1sum | cut -c1-16)
+            tcache=/work/cache/hosttools/$tkey.tar
+            if [ -f "$tcache" ]; then
+              tar -xf "$tcache" && find staging_dir/host build_dir/host -exec touch -h {} + && echo "host tools from cache $tkey"
+            fi
+            make -j"$(nproc)" BUILD_LOG=1 tools/install
+            if [ ! -f "$tcache" ]; then
+              mkdir -p /work/cache/hosttools && rm -f /work/cache/hosttools/*.tar
+              tar -cf "$tcache.tmp" staging_dir/host build_dir/host && mv "$tcache.tmp" "$tcache" && echo "host tools cached as $tkey"
+            fi
+            # Toolchain cache (ccache runs only), for reruns of a release: the
+            # key covers the host tools key, the revision (in GCC's version
+            # string), version.date, the whole .config and the content of
+            # toolchain/ and target/linux/ (kernel headers, GL.iNet's kernel
+            # patches, our extra commits). Saved after the ccache wrappers.
+            ckey=$( { echo "$tkey"; ./scripts/getver.sh; cat version.date; sha1sum .config
+                      find toolchain target/linux -type f -print0 | sort -z | xargs -0 sha1sum; } | sha1sum | cut -c1-16)
+            ccache_tc=/work/cache/toolchain/$ckey.tar
+            if [ -f "$ccache_tc" ]; then
+              tar -xf "$ccache_tc" && find staging_dir/toolchain-* build_dir/toolchain-* -exec touch -h {} + \
+                && echo "toolchain from cache $ckey"
+            fi
+            make -j"$(nproc)" BUILD_LOG=1 toolchain/install
             for c in staging_dir/toolchain-*/bin/aarch64-openwrt-linux-musl-{gcc,g++,c++,cpp} \
                      staging_dir/toolchain-*/bin/aarch64-openwrt-linux-{gcc,g++,c++,cpp}; do
               [ -f "$c" ] && [ ! -L "$c" ] && [ ! -e "$(dirname "$c")/.$(basename "$c").real" ] || continue
@@ -530,6 +626,13 @@ jobs:
               printf '#!/bin/sh\nr="$(dirname "$0")/.%s.real"\ncommand -v ccache >/dev/null && exec ccache "$r" "$@"\nexec "$r" "$@"\n' "$(basename "$c")" > "$c"
               chmod +x "$c"; echo "ccache wrapper: $c"
             done
+            if [ ! -f "$ccache_tc" ]; then
+              # keep the 4 most recent toolchains of this worker
+              mkdir -p /work/cache/toolchain
+              { ls -t /work/cache/toolchain/*.tar 2>/dev/null || true; } | tail -n +4 | xargs -r rm -f
+              tar -cf "$ccache_tc.tmp" staging_dir/toolchain-* build_dir/toolchain-* \
+                && mv "$ccache_tc.tmp" "$ccache_tc" && echo "toolchain cached as $ckey"
+            fi
           fi
           if [ "${REBUILT_PACKAGES:--}" != "-" ]; then
             # build these once and clean them (clean keeps pkginfo/*.version),
@@ -538,7 +641,25 @@ jobs:
             for p in $REBUILT_PACKAGES; do make -j"$(nproc)" BUILD_LOG=1 "$p/compile"; done
             for p in $REBUILT_PACKAGES; do make "$p/clean"; done
           fi
-          make -j"$(nproc)" BUILD_LOG=1 || {
+          # bpftools runs the build's host Python, which a parallel build may
+          # still be installing ("Fatal Python error: init_fs_encoding", jobs
+          # 25 and 57): build host Python first. (Host-only; target package
+          # metadata is unaffected, unlike a retry, whose second make reads the
+          # recipes with more packages built: ABI names in Depends, job 57.)
+          if [ -d package/feeds/packages/python3 ]; then
+            make -j"$(nproc)" BUILD_LOG=1 package/feeds/packages/python3/host/compile
+          fi
+          build_retry() {
+            # a package that failed (e.g. a parallel-build race, job 25's
+            # bpftools) is built once more single-threaded before giving up
+            make -j"$(nproc)" BUILD_LOG=1 && return
+            failed=$(grep -h -o "ERROR: package/[^ ]* failed to build" /work/out/progress.log | awk '{print $2}' | sort -u)
+            [ -n "$failed" ] || return 1
+            echo "retrying once, single-threaded: $failed"
+            for p in $failed; do make -j1 BUILD_LOG=1 "$p/compile" || return 1; done
+            make -j"$(nproc)" BUILD_LOG=1
+          }
+          build_retry || {
             # package/install writes no log with BUILD_LOG: keep opkg's error lines
             make package/install V=s 2>&1 | grep -i -E "error|cannot|collide|clash|satisf|unknown package|not found" \
               | sort -u | head -60 > /work/out/install-errors.txt || true
@@ -595,9 +716,9 @@ jobs:
           # tree, kept after the run for quick single-package rebuilds
           timeout 320m docker run --rm -v "$PWD/work:/work" \
             ${KEEP_TREE:+-v "$KEEP_TREE:/home/glinet/work"} \
-            -e FORK -e MTK_FEED_OLD -e MTK_FEED_MIRROR -e USE_CCACHE -e PUBLISH_SDK -e CLOSED \
+            -e DRY_RUN -e FORK -e MTK_FEED_OLD -e MTK_FEED_MIRROR -e USE_CCACHE -e PUBLISH_SDK -e CLOSED \
             ubuntu:20.04 bash /work/build.sh 2>&1 | tee work/out/build.log \
-            | grep --line-buffered -E "^ make\[[0-9]+\] |ERROR: |ccache wrapper|^\+ make |Collected errors" \
+            | { grep --line-buffered -E "^ make\[[0-9]+\] |ERROR: |ccache wrapper|^\+ make |Collected errors" || true; } \
             | tee work/out/progress.log
 
       - name: Save cache
