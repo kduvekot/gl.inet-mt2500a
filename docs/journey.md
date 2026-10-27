@@ -1308,6 +1308,20 @@ X3000/XE3000 stayed on the 4.4 release branch until late 2024 (+879, +880,
 +882); the MT6000 (MT7986) had EN8811H by April 2024 but MPTCP only from
 4.6.2, and zstd is built in only on MT7981 models.
 
+**4.6.2: 10 of 18 missing commits.** GL.iNet's 4.6.2 is r15812+899; the
+fork's last state gives 881. Recreated: the three of 4.5.0, Airoha, MPTCP,
+ppp, opkg (remove once), uci (lua iteration), `UBIFS_FS_ZSTD=y` in the
+MT7981 target config (the only zstd option that changes by itself; it
+selects the others, which is why they are built in despite
+`kmod-lib-zstd`), and the device tree (decompiled: only the WAN PHY's reset
+moves to the MDIO bus and its compatible becomes generic C45, as
+driver-analysis.md describes; our edit keeps GL.iNet's property order).
+Found but not public: GL.iNet's newer MediaTek iwinfo support (HE rate
+table, HT mode, country) and an RM500U 5G modem entry in `usbnet.ko`
+(`rm500u_5gnet`); neither is in gl-feeds, the fork, gl-image or MediaTek's
+feed. The rest most likely touches only other boards built from the same
+tree (MT3000, X3000, MT6000) and shows only in the revision count.
+
 **`shortcut-fe` solved, and the bpftools race.** Job 57 (4.5.0): tertf's
 exports reach `shortcut-fe` through OpenWrt's own symvers hook, `depends=`
 matches. The same job hit the bpftools race again; the new retry saved it
@@ -1452,3 +1466,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.4.6 recreated to the level of 4.2.x (job 41): only the accepted classes remain. Second job worker on the M5+ (one build leaves ~90 % of the CPU idle); each worker keeps its last tree for single-package rebuilds. `gl-inet/gl-image` holds GL.iNet's complete 4.8.6 GPL tree for the BE10000. |
 | 2026-10-27 | 4.5.16 at 4.5.0's level (r15812+885). All feeds of 4.5.0-4.8.2 pinned, incl. depth-1 feeds (`~shallow`) and those outside gl-feeds; 4.6.2: `mt798x` feed, no `ddns-scripts`. tertf exports via OpenWrt's symvers hook. Preflight (`dry=true`) and a single-package retry. |
 | 2026-10-27 | `shortcut-fe` matches (tertf exports via OpenWrt's symvers hook). 4.6.2 kernel: Airoha EN8811H from MediaTek's feed, MPTCP from GL.iNet's published 5.4 backport (both as extra commits). Sibling firmware: MT3000 is the MT2500's twin, X3000/XE3000 on the 4.4 branch until late 2024. Host Python built first (bpftools race). |
+| 2026-10-27 | 4.6.2: zstd (`UBIFS_FS_ZSTD`) and device tree recreated; iwinfo and the `usbnet` RM500U entry found but not public; about 6 commits probably only for other boards. |
