@@ -158,11 +158,19 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   reason to remove it or its real content is found). Build-machine orders
   are read from the official binaries (`.github/scripts/link-order.py`).
   4.2.0, 4.2.1, 4.2.3 validated; 4.4.5 at the same level (only accepted
-  classes left); 4.4.6, 4.5.0 and 4.5.16 too (jobs 41, 61, 62). 4.6.2:
-  first builds; GL.iNet's private MediaTek feed is called `mt798x` from
-  there on. `gl-inet/gl-image` (branch gl-be10000, `versions/4.8.6`) is a
-  complete GPL tree of GL.iNet's 4.8.6 for another model: source for
-  GL.iNet's later generic package patches.
+  classes left); 4.4.6, 4.5.0 and 4.5.16 too (jobs 41, 61, 62).
+  4.6.2–4.7.4 (2026-10-27): every release builds completely at GL.iNet's
+  revision with all packages and files (jobs 72b, 74b, 78/80 pending, 79b);
+  left: the not-public parts (journey ch. 15 keeps the list: iwinfo,
+  usbnet, Airoha PHY, PCIe probe, emergency reboot, 4.7.4's dnsmasq 304,
+  4.9.0's ubusd), a few `Installed-Size` values and `ethsys_reset`. More
+  release values: `sdk_mode` (4.8.2+ built with SDK=1, empty revision),
+  `build_dir` (Jenkins path from 4.7.0), `umask` (002 from 4.7.0).
+  GL.iNet's private MediaTek feed is called `mt798x` from 4.6.2 on.
+  4.8.2 (preflight passes) and 4.9.0 are prepared: built once 4.7.4 is
+  validated. `gl-inet/gl-image` holds complete GPL trees of later GL.iNet
+  releases for other models (gl-be10000 `versions/4.8.6`, gl-mt3600be
+  `versions/4.9.0`): source for GL.iNet's generic package patches.
 - **M5+ workflow:** two job workers (`~/queue/`, `~/queue2/`, verdict
   `~/brief.sh NN`), each keeps its last OpenWrt tree (`~/trees/w1|w2`) for
   `~/rebuild.sh <w> <package>` (minutes instead of a ~31-minute full run).
