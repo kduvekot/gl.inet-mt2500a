@@ -2046,3 +2046,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.7.4 with all fixes (job 79b): r15812+912 as GL.iNet's, all packages and files; `libpcre` traced to a feed pin one commit too late (fixed, and `release-values.py` now avoids such pins). |
 | 2026-10-27 | GL.iNet's Jenkins builds (4.7.0+) use umask 002 (group-writable folders in the images, ~100 `Installed-Size` values); new release value `umask`. |
 | 2026-10-27 | Not-public list re-checked across all gl-feeds and gl-image branches and MediaTek's history, plus the MT3600BE tree's PHY backports on a validated kernel copy: all items hold. |
+| 2026-10-27 | 4.6.2 with every fix (job 78b): r15812+899, all packages and files, kernel configuration identical, `ppp` and `ip_valid_fib_dump_req` now as GL.iNet's; left: the not-public parts, `ethsys_reset`, `gl-sdk4-tethering` and `gl-sdk4-base-files` sizes (2 bytes). |
