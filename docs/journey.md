@@ -1346,6 +1346,20 @@ and the vermagic hash in the kernel and kmod entries. Packages (419 and 423),
 files (4321 and 4353), `Auto-Installed` and the `status` order are as
 official, kernel config identical, revision r15812+885 in both.
 
+**4.7.0's iproute2 comes from the MPTCP feed.** From 4.7.0 on, the
+official configuration has `CONFIG_OVERRIDE_PKGS="iproute2"`: GL.iNet's
+builder installs every profile feed with `feeds install -a -f`, so
+`gl-inet/mptcp-feeds`' iproute2 6.3.0 replaces OpenWrt's 5.11 (`ip-full`
+6.3.0-1 in 4.7.0, 5.11.0-3 in 4.6.8). Our recipe got that right, but our
+static-syms order patch only reached OpenWrt's copy. It now goes to every
+iproute2 under `package/` and `feeds/`; generating `static-syms.h` from
+6.3.0 with the build container's make 4.2.1 gives official 4.7.4's order
+(47 of 47 names) with the patch and a different one without. Also from the
+official images: 4.6.4 → 4.6.8 changes no kernel code (only the revision
+string and build date); 4.6.2 → 4.6.4 changes code without a visible string,
+configuration or device-tree change, which the 4.6.4 build will have to
+show.
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -1476,3 +1490,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | `shortcut-fe` matches (tertf exports via OpenWrt's symvers hook). 4.6.2 kernel: Airoha EN8811H from MediaTek's feed, MPTCP from GL.iNet's published 5.4 backport (both as extra commits). Sibling firmware: MT3000 is the MT2500's twin, X3000/XE3000 on the 4.4 branch until late 2024. Host Python built first (bpftools race). |
 | 2026-10-27 | 4.6.2: zstd (`UBIFS_FS_ZSTD`) and device tree recreated; iwinfo and the `usbnet` RM500U entry found but not public; about 6 commits probably only for other boards. |
 | 2026-10-27 | 4.5.0 and 4.5.16 recreated to the level of 4.2.x (jobs 61, 62): only Samba order, `wg` tree hash and vermagic remain. |
+| 2026-10-27 | 4.7.0+: iproute2 6.3.0 from the MPTCP feed replaces OpenWrt's (`OVERRIDE_PKGS`); the static-syms order patch now reaches it (official 4.7.4 order reproduced). 4.6.4 → 4.6.8 leaves kernel code unchanged. |
