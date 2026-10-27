@@ -59,8 +59,10 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   write a short summary; raw output stays in files. Cheap subagents for
   searches; verify their claims before relaying them.
 - **Commits:** `git -c user.name=Claude -c user.email=noreply@anthropic.com`
-  (no global identity on the Pi); after pushing, check with `git ls-remote`
-  before queueing jobs (jobs pull the branch). Open PRs as needed; the owner
+  (no global identity on the Pi); stage files by name or `-u`, never
+  `git add -A` (2026-10-27 it committed `__pycache__` files, which then
+  blocked the M5+ worker's `git pull`); after pushing, check with
+  `git ls-remote` before queueing jobs (jobs pull the branch). Open PRs as needed; the owner
   merges.
 - **Check scripts and their inputs** before running them: shellcheck the
   build script (extracted from the workflow), YAML-check workflows, and
