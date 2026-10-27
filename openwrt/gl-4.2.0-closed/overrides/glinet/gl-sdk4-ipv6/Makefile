@@ -36,9 +36,11 @@ endef
 # sub-func interface sub). The order of sub-output and sub-func is read from
 # the official sipcalc (link-order.py: their string literals); interface.c
 # has too few strings to place, so interface and sub keep the 4.2.x order.
-GL_SIPCALC_FIRST=`python3 -I /work/link-order.py objects /work/cmp/off_root/usr/bin/sipcalc \
+# (make's $(shell) in a recursive variable: runs when the compile step
+# expands it, after the sources are unpacked)
+GL_SIPCALC_FIRST = $(or $(shell python3 -I /work/link-order.py objects /work/cmp/off_root/usr/bin/sipcalc \
 	$(PKG_BUILD_DIR)/src/sub-output.c $(PKG_BUILD_DIR)/src/sub-func.c 2>/dev/null \
-	| sed 's|.*/||; s|\.c$$|.o|' | tr '\n' ' ' | grep . || echo sub-output.o sub-func.o`
+	| sed "s|.*/||; s|\.c$$|.o|"),sub-output.o sub-func.o)
 
 define Build/Compile
 	$(call Build/Compile/Default,sipcalc_OBJECTS="$(GL_SIPCALC_FIRST) interface.o sub.o")
