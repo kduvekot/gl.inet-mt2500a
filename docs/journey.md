@@ -1707,6 +1707,36 @@ signed regulatory database, RSA and asymmetric keys built in), although the
 MT2500 has no Wi-Fi of its own, and `NET_SCH_PRIO` built in; the MPTCP stub
 in `subflow_v4_init_req` is gone (implemented, as in GL.iNet's published
 4.8.6 backport).
+`base-files` 1447: of the files the package installs, official 4.8.2 and
+4.9.0 differ in `sysupgrade`, `rc.local` and `lib/functions/system.sh`
+(plus `passwd`/`group`/`shadow`, which follow the installed packages:
+chrony in, stubby out). `sysupgrade` (a UBI split for the BE3600) and
+`rc.local` (`drop_caches`) are GL.iNet's overlay copies from
+`gl-sdk4-base-files`, which the closed part already takes from the official
+image. `system.sh` gains `guest_wifi_macaddr_add` in the package itself, and
+GL.iNet's published 4.9.0 file is byte-identical to the MT2500's: extra
+commit `base-files-guest-wifi-macaddr` (prepared; whether it gives 1447 shows
+once 4.9.0 is built).
+
+Job 72b, 4.6.8's first complete build, comes out at r15812+901, the
+official revision, with 440 packages and 5020 files as official, an
+identical kernel configuration and the same Auto-Installed flags. It
+started before the routing mix was fixed, so `fib_table_lookup` and
+`nf_nat.ko` still differ as in 70b; the rest are the known not-public parts
+(iwinfo, `usbnet.ko`, the Airoha PHY and link polling, `opkg`'s size option)
+and the `Installed-Size` values of `ppp` and `gl-sdk4-tethering`, in every
+release from 4.6.2 on with every file identical. `ppp` is solved: GL.iNet's
+`ppp` package still has upstream's `ppp6-up`; their own `ppp6-up` reaches
+the image only through the `gl-sdk4-base-files` overlay (it is one of the
+seven overlay files whose modes were found earlier). Repacked the way
+`ipkg-build` packs, our package with upstream's `ppp6-up` comes out at
+GL.iNet's size (136512 plus the repack's 9-byte offset; official 136518 to
+136520 by release), so `ppp-pppoe-retry-delay` now changes only `ppp.sh`.
+`gl-sdk4-tethering` (ours 72 bytes smaller in 4.6.x, 18 in 4.7.x) is still
+open: no empty folder or mode change among the usual candidates fits. The 4.8.2 preflight 73p failed
+in the fetch step; a fetch-only rerun passed (461 official packages, 112
+closed packages, AdGuardHome skipped), so it is queued again (73q), and the
+local runner now keeps a failed step's log with the results.
 
 ## Next steps
 
@@ -1861,3 +1891,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.6.2 at GL.iNet's revision (job 68b); musl `pthread_getname_np` backport found (identical code), two unidentified placeholders left. |
 | 2026-10-27 | MDIO `reset-post-delay-us` backported (kernel side of GL.iNet's PHY reset on the MDIO bus); exact sizes, validated. |
 | 2026-10-27 | 4.7.0 at GL.iNet's Jenkins path (job 69b): no build-path differences left, kernel configuration identical; busybox/dnsmasq/odhcpd carry GL.iNet patches (4.8.6 tree has them). |
+| 2026-10-27 | 4.6.8 at the official revision (job 72b): all packages and files, kernel configuration identical; 4.9.0's `base-files` change found (`guest_wifi_macaddr_add`, GL.iNet's published file). |
