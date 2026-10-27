@@ -530,6 +530,16 @@ jobs:
           fi
           cp .config /work/out/config.txt
           grep -E "^CONFIG_(DEVEL|CCACHE|ALL_KMODS)=" .config
+          if [ "${DRY_RUN:-}" = 1 ]; then
+            # Preflight (local runs): everything up to the configuration ran
+            # (builder, patches, extra commits, feeds, closed feed); stop before
+            # compiling. Fails if official packages can't be selected, which
+            # would otherwise only show at package/install, at the very end.
+            n=$(sed -n 's/^not selectable (no such package in the public feeds): //p' /work/out/mirror.txt)
+            { echo "preflight: $([ "$n" = 0 ] && echo OK || echo FAILED)"; cat /work/out/mirror.txt
+              echo "revision: r$(git rev-list --count HEAD)"; } | tee /work/out/preflight.txt
+            [ "$n" = 0 ]; exit
+          fi
           # Logs per package (BUILD_LOG) and a summary of failed packages are
           # saved even when the build fails.
           save_logs() {
@@ -571,7 +581,17 @@ jobs:
             for p in $REBUILT_PACKAGES; do make -j"$(nproc)" BUILD_LOG=1 "$p/compile"; done
             for p in $REBUILT_PACKAGES; do make "$p/clean"; done
           fi
-          make -j"$(nproc)" BUILD_LOG=1 || {
+          build_retry() {
+            # a package that failed (e.g. a parallel-build race, job 25's
+            # bpftools) is built once more single-threaded before giving up
+            make -j"$(nproc)" BUILD_LOG=1 && return
+            failed=$(grep -h -o "ERROR: package/[^ ]* failed to build" /work/out/progress.log | awk '{print $2}' | sort -u)
+            [ -n "$failed" ] || return 1
+            echo "retrying once, single-threaded: $failed"
+            for p in $failed; do make -j1 BUILD_LOG=1 "$p/compile" || return 1; done
+            make -j"$(nproc)" BUILD_LOG=1
+          }
+          build_retry || {
             # package/install writes no log with BUILD_LOG: keep opkg's error lines
             make package/install V=s 2>&1 | grep -i -E "error|cannot|collide|clash|satisf|unknown package|not found" \
               | sort -u | head -60 > /work/out/install-errors.txt || true
@@ -628,7 +648,7 @@ jobs:
           # tree, kept after the run for quick single-package rebuilds
           timeout 320m docker run --rm -v "$PWD/work:/work" \
             ${KEEP_TREE:+-v "$KEEP_TREE:/home/glinet/work"} \
-            -e FORK -e MTK_FEED_OLD -e MTK_FEED_MIRROR -e USE_CCACHE -e PUBLISH_SDK -e CLOSED \
+            -e DRY_RUN -e FORK -e MTK_FEED_OLD -e MTK_FEED_MIRROR -e USE_CCACHE -e PUBLISH_SDK -e CLOSED \
             ubuntu:20.04 bash /work/build.sh 2>&1 | tee work/out/build.log \
             | grep --line-buffered -E "^ make\[[0-9]+\] |ERROR: |ccache wrapper|^\+ make |Collected errors" \
             | tee work/out/progress.log
