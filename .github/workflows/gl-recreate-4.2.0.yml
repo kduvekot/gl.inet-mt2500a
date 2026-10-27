@@ -598,6 +598,18 @@ jobs:
               mkdir -p /work/cache/hosttools && rm -f /work/cache/hosttools/*.tar
               tar -cf "$tcache.tmp" staging_dir/host build_dir/host && mv "$tcache.tmp" "$tcache" && echo "host tools cached as $tkey"
             fi
+            # Toolchain cache (ccache runs only), for reruns of a release: the
+            # key covers the host tools key, the revision (in GCC's version
+            # string), version.date, the whole .config and the content of
+            # toolchain/ and target/linux/ (kernel headers, GL.iNet's kernel
+            # patches, our extra commits). Saved after the ccache wrappers.
+            ckey=$( { echo "$tkey"; ./scripts/getver.sh; cat version.date; sha1sum .config
+                      find toolchain target/linux -type f -print0 | sort -z | xargs -0 sha1sum; } | sha1sum | cut -c1-16)
+            ccache_tc=/work/cache/toolchain/$ckey.tar
+            if [ -f "$ccache_tc" ]; then
+              tar -xf "$ccache_tc" && find staging_dir/toolchain-* build_dir/toolchain-* -exec touch -h {} + \
+                && echo "toolchain from cache $ckey"
+            fi
             make -j"$(nproc)" BUILD_LOG=1 toolchain/install
             for c in staging_dir/toolchain-*/bin/aarch64-openwrt-linux-musl-{gcc,g++,c++,cpp} \
                      staging_dir/toolchain-*/bin/aarch64-openwrt-linux-{gcc,g++,c++,cpp}; do
@@ -608,6 +620,13 @@ jobs:
               printf '#!/bin/sh\nr="$(dirname "$0")/.%s.real"\ncommand -v ccache >/dev/null && exec ccache "$r" "$@"\nexec "$r" "$@"\n' "$(basename "$c")" > "$c"
               chmod +x "$c"; echo "ccache wrapper: $c"
             done
+            if [ ! -f "$ccache_tc" ]; then
+              # keep the 4 most recent toolchains of this worker
+              mkdir -p /work/cache/toolchain
+              ls -t /work/cache/toolchain/*.tar 2>/dev/null | tail -n +4 | xargs -r rm -f
+              tar -cf "$ccache_tc.tmp" staging_dir/toolchain-* build_dir/toolchain-* \
+                && mv "$ccache_tc.tmp" "$ccache_tc" && echo "toolchain cached as $ckey"
+            fi
           fi
           if [ "${REBUILT_PACKAGES:--}" != "-" ]; then
             # build these once and clean them (clean keeps pkginfo/*.version),
