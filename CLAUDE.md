@@ -66,6 +66,10 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   build script (extracted from the workflow), YAML-check workflows, and
   check what a script will act on (e.g. `rebuild.sh` only on trees of
   finished builds). For a one-file question, run just that make target.
+  Experiments that change a tree (patch swaps, config edits) run on a
+  copy, and every step's result is checked before the next (2026-10-27: a
+  patch swap in an archived tree failed halfway and damaged its kernel
+  source).
 - **Watching runs:** by run id with the token; never `pkill -f` or
   `pgrep -f` a pattern that occurs in your own command line (wait on a
   file or the queue log instead); long builds print progress with
