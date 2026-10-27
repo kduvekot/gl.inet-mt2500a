@@ -1289,6 +1289,33 @@ commits no longer show in the revision. AdGuardHome is built from source
 from 4.8.2 on (`adguardhome-conntrack` in gl_feed_common). To do for 4.8.2:
 a release value that removes the tree's git metadata before the build.
 
+**4.6.2's kernel commits, and the sibling models.** Compared with 4.5.0
+(both with all kernel modules), 4.6.2's kernel config changes in only ten
+options: the Airoha EN8811H PHY, MPTCP and zstd. The EN8811H driver
+(GL.iNet's module reports v1.2.5) is MediaTek's: v1.2.5 was in MediaTek's
+feed from 1 April 2024, with the PHY firmware byte-identical; extra commit
+`airoha-en8811h` fetches it (SHA256-checked; MediaTek's Makefile hunk needed
+our 2022 SDK tree's context). MPTCP is GL.iNet's backport of upstream MPTCP
+to 5.4, published in their BE10000 GPL tree (25 files, one kernel patch,
+`kmod-mptcp`); written for 5.4.281, three hunks needed 5.4.211's context
+(`mptcp-backport`). GL.iNet's 4.8.6 tree also had 4.6.2's `ppp.sh` (PPPoE
+retry delay; byte-identical with ppp 2.4.8's plugin name) and candidate
+opkg/uci patches. GL.iNet's firmware for its other MT798x routers, built
+with the same builder, shows: the MT3000 (Beryl AX) is the MT2500's twin
+(same patch count and kernel features every release; 4.2.3 to 4.4.6 even
+built in the same second, so both models came from one build run); the
+X3000/XE3000 stayed on the 4.4 release branch until late 2024 (+879, +880,
++882); the MT6000 (MT7986) had EN8811H by April 2024 but MPTCP only from
+4.6.2, and zstd is built in only on MT7981 models.
+
+**`shortcut-fe` solved, and the bpftools race.** Job 57 (4.5.0): tertf's
+exports reach `shortcut-fe` through OpenWrt's own symvers hook, `depends=`
+matches. The same job hit the bpftools race again; the new retry saved it
+but changed the result: its second `make` reads the recipes with more
+packages built, so `curl` and `libc` got ABI names in `Depends` (the
+mechanism of `rebuilt_packages`). The race itself is gone now: host Python
+is built before the parallel build.
+
 **Fewer wasted builds.** Most failed jobs could have been caught early or
 were races. `DRY_RUN=1` (local `dry=true`) stops after the configuration
 (builder, patches, extra commits, feeds, closed feed, defconfig) and fails
@@ -1424,3 +1451,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.4.5 recreated to the level of 4.2.x (job 40): only the accepted classes remain (`.pyc`, `python3` Depends order, `wg`, vermagic). `sipcalc`: from 4.4.x on GL.iNet's link order is the sorted one (byte-identical by direct compilation). 4.5.0 (job 39): r15812+885 with the placeholder, `sipcalc`, `libelf`, Go programs identical; closed kernel modules now provide their exports (`.symvers`) for `shortcut-fe`. |
 | 2026-10-27 | 4.4.6 recreated to the level of 4.2.x (job 41): only the accepted classes remain. Second job worker on the M5+ (one build leaves ~90 % of the CPU idle); each worker keeps its last tree for single-package rebuilds. `gl-inet/gl-image` holds GL.iNet's complete 4.8.6 GPL tree for the BE10000. |
 | 2026-10-27 | 4.5.16 at 4.5.0's level (r15812+885). All feeds of 4.5.0-4.8.2 pinned, incl. depth-1 feeds (`~shallow`) and those outside gl-feeds; 4.6.2: `mt798x` feed, no `ddns-scripts`. tertf exports via OpenWrt's symvers hook. Preflight (`dry=true`) and a single-package retry. |
+| 2026-10-27 | `shortcut-fe` matches (tertf exports via OpenWrt's symvers hook). 4.6.2 kernel: Airoha EN8811H from MediaTek's feed, MPTCP from GL.iNet's published 5.4 backport (both as extra commits). Sibling firmware: MT3000 is the MT2500's twin, X3000/XE3000 on the 4.4 branch until late 2024. Host Python built first (bpftools race). |
