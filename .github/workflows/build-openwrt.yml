@@ -29,11 +29,15 @@ on:
     branches: ["**"]
     tags: ["v*"]
     paths:
-      - "openwrt/**"
+      # only what this build uses (openwrt/ also holds the GL.iNet recreation)
+      - "openwrt/packages.txt"
+      - "openwrt/files/**"
       - ".github/workflows/build-openwrt.yml"
   pull_request:
     paths:
-      - "openwrt/**"
+      # only what this build uses (openwrt/ also holds the GL.iNet recreation)
+      - "openwrt/packages.txt"
+      - "openwrt/files/**"
       - ".github/workflows/build-openwrt.yml"
 
 permissions:
