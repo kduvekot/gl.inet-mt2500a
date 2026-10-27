@@ -706,7 +706,7 @@ jobs:
             ${KEEP_TREE:+-v "$KEEP_TREE:/home/glinet/work"} \
             -e DRY_RUN -e FORK -e MTK_FEED_OLD -e MTK_FEED_MIRROR -e USE_CCACHE -e PUBLISH_SDK -e CLOSED \
             ubuntu:20.04 bash /work/build.sh 2>&1 | tee work/out/build.log \
-            | grep --line-buffered -E "^ make\[[0-9]+\] |ERROR: |ccache wrapper|^\+ make |Collected errors" \
+            | { grep --line-buffered -E "^ make\[[0-9]+\] |ERROR: |ccache wrapper|^\+ make |Collected errors" || true; } \
             | tee work/out/progress.log
 
       - name: Save cache
