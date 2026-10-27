@@ -1859,6 +1859,25 @@ different.
 | Server side of ubus auto-subscribe | 4.9.0 | `ubusd` (48 bytes) |
 | Unidentified commits (count only) | 4.5.x: 1, 4.6.x: 2, 4.7.x: 1 | the revision number |
 
+Re-checked on 2026-10-27 with a wider net: key strings of every item
+searched in all 70 `gl-feeds` branches (not only the pinned ones, e.g.
+`support_rm500u`, `mtk-wifi-7.6.7.0`), every `gl-image` branch (now also
+gl-be14000's 4.9.1) and MediaTek's feed history. Nothing new turned up:
+RM500U appears only in the serial `option` driver of GL.iNet's 5.4.281
+kernels, not in `usbnet`; 4.9.1's ubus patch is the same file as 4.9.0's
+(no `ubusd` part); the named gl-feeds branches hold no iwinfo, usbnet or
+kernel changes. The MT3600BE tree's MediaTek SDK backports (`999-1600`
+MDIO C45, `999-17xx` phylink) were tried for `get_phy_device` and the
+link polling on a validated copy of 68b's kernel: the key ones don't apply
+to 5.4.211, and those that do change nothing there. The link polling is
+`phylink_fixed_state` in `mtk_eth_soc.c`: our version (from the 4.2.0-era
+fork) reads the GPY211's status register at MDIO address 5; GL.iNet's 4.6.2+
+version is four times larger, presumably handling the EN8811H too, and
+this polling code appears nowhere in MediaTek's history or gl-image: GL.iNet's
+own code. Not searched yet: third-party copies of the old
+`gl-infra-builder`, and the vendors' own sources (Airoha's EN8811H driver
+releases, Quectel's RM500U patches).
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -2021,3 +2040,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | `ip_valid_fib_dump_req` explained: GL.iNet's `fib_frontend.c` part is 953's (two blank lines fewer than 922's, so `ASSERT_RTNL()`'s line number is 928, not 930); our 922 now has it, test-applied. |
 | 2026-10-27 | 4.7.4 with all fixes (job 79b): r15812+912 as GL.iNet's, all packages and files; `libpcre` traced to a feed pin one commit too late (fixed, and `release-values.py` now avoids such pins). |
 | 2026-10-27 | GL.iNet's Jenkins builds (4.7.0+) use umask 002 (group-writable folders in the images, ~100 `Installed-Size` values); new release value `umask`. |
+| 2026-10-27 | Not-public list re-checked across all gl-feeds and gl-image branches and MediaTek's history, plus the MT3600BE tree's PHY backports on a validated kernel copy: all items hold. |
