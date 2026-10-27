@@ -19,6 +19,27 @@ fetch files-5.4/drivers/net/phy/air_en8811h_api.c $T/files-5.4/drivers/net/phy/a
 fetch files-5.4/drivers/net/phy/air_en8811h_api.h $T/files-5.4/drivers/net/phy/air_en8811h_api.h 18965e180c466337ca54e93b8c5ac74a4b2aca1a8f51fe2241fb43b3de687be9
 fetch files-5.4/drivers/net/phy/air_en8811h_main.c $T/files-5.4/drivers/net/phy/air_en8811h_main.c b21ad67fa277e372fa57803609946d16a72fdc710fe4171d2e7ada33cf03b09d
 fetch patches-5.4/999-2704-en8811h-2p5gphy-support.patch $T/patches-5.4/999-2704-en8811h-2p5gphy-support.patch 5dad7d41de61acfd1cc44231086f4934053981e4895ce489676e2836e06c3cc0
+# MediaTek's Makefile hunk expects aquantia after the HWMON block; our 2022
+# SDK tree has the EN8801S/SC lines there (our construction: same two lines,
+# placed after EN8801SC; the module doesn't depend on the position)
+python3 - $T/patches-5.4/999-2704-en8811h-2p5gphy-support.patch << 'PYP'
+import sys
+p = sys.argv[1]; s = open(p).read()
+old = """ ifdef CONFIG_HWMON
+ aquantia-objs			+= aquantia_hwmon.o
+ endif
++air_en8811h-y := air_en8811h_main.o air_en8811h_api.o
++obj-$(CONFIG_AIROHA_EN8811H_PHY)	+= air_en8811h.o
+ obj-$(CONFIG_AQUANTIA_PHY)	+= aquantia.o"""
+new = """ endif
+ obj-$(CONFIG_AIROHA_EN8801S_PHY)	+= en8801s.o
+ obj-$(CONFIG_AIROHA_EN8801SC_PHY)	+= en8801sc.o
++air_en8811h-y := air_en8811h_main.o air_en8811h_api.o
++obj-$(CONFIG_AIROHA_EN8811H_PHY)	+= air_en8811h.o
+ obj-$(CONFIG_AQUANTIA_PHY)	+= aquantia.o"""
+assert s.count(old) == 1, "Makefile hunk not found"
+open(p, "w").write(s.replace(old, new))
+PYP
 fetch mt7981/base-files/lib/firmware/EthMD32.dm.bin $T/en8811h-firmware/EthMD32.dm.bin c4212623112b7e55fe677d56ca77c859ad30d34619984d881e2225a92bdbcd72
 fetch mt7981/base-files/lib/firmware/EthMD32.DSP.bin $T/en8811h-firmware/EthMD32.DSP.bin 05c4abe35d3838a2d106db796c5a7058d4c2edd74ac545bbef256382459828fd
 grep -q "CONFIG_AIROHA_EN8811H_PHY" $T/mt7981/config-5.4 || \
