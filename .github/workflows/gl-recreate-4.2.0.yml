@@ -117,7 +117,10 @@ env:
   #                     image (each package's SourceDateEpoch is the last
   #                     commit to its folder; analysis/release-values.py);
   #                     name=url^commit adds a feed the profiles don't have
-  #                     (mptcp_feeds from 4.7.0 on)
+  #                     (mptcp_feeds from 4.7.0 on); a ~shallow suffix: GL.iNet
+  #                     fetched that feed by branch (depth 1), so all its
+  #                     packages carry the head commit's date (4.6.2's
+  #                     gl_feed_21_02, 4.7.0's gl_feed_common)
   #   EXTRA_COMMITS     folders of openwrt/gl-extra-commits ("-": none):
   #                     GL.iNet patch commits missing from the public patch set
   #                     (4.5.0+), recreated with the release's patch date
@@ -341,12 +344,12 @@ jobs:
               for f in d["feeds"]:
                   if f.get("name") in revs:
                       f.pop("branch", None)
-                      f["revision"] = revs.pop(f["name"])
+                      f["revision"] = revs.pop(f["name"]).split("~")[0]
                       print(f"feed {f['name']} at {f['revision']}")
               if src.startswith("target_"):
                   # feeds GL.iNet added after the public builder (name=url^commit)
                   for name in [n for n, v in revs.items() if "^" in v]:
-                      uri, rev = revs.pop(name).rsplit("^", 1)
+                      uri, rev = revs.pop(name).split("~")[0].rsplit("^", 1)
                       d["feeds"].append({"name": name, "uri": uri, "revision": rev})
                       print(f"feed {name} added: {uri} at {rev}")
               keep = [p for p in d.get("packages", []) if not private(p)]
@@ -364,6 +367,17 @@ jobs:
           # image.
           printf 'version: %s\ntype: %s\n' "$RELEASE" "$GL_TYPE" > gl_metadata.yaml
           ./scripts/gen_config.py public_target_mt2500 public_glinet_mt2500
+          # Feeds GL.iNet fetched by branch (FEED_REVS ...~shallow): OpenWrt's
+          # feeds script clones those with depth 1, so every package's
+          # SourceDateEpoch is the head commit's time. Same effect offline: mark
+          # the pinned head as the history's root.
+          for x in ${FEED_REVS:--}; do
+            case "$x" in *~shallow)
+              n=${x%%=*}
+              git -C "feeds/$n" rev-parse HEAD > "feeds/$n/.git/shallow"
+              echo "feed $n shallow at $(cat "feeds/$n/.git/shallow")" ;;
+            esac
+          done
           echo "$VERSION_DATE" > files/etc/version.date
 
           # Mirror the official package set: make every feed package
