@@ -1360,6 +1360,28 @@ string and build date); 4.6.2 → 4.6.4 changes code without a visible string,
 configuration or device-tree change, which the 4.6.4 build will have to
 show.
 
+**4.6.2 and 4.7.0 complete builds (jobs 64b, 65b).** Both have every
+package and file of the official image (4.6.2: 427 / 4358, 4.7.0: 463 /
+5302). 4.6.2's kernel configuration is identical; what differs is the
+revision (+891 instead of +899), `iwinfo` and `usbnet.ko` (not public),
+`opkg` (ours 480 bytes smaller: the remove-once candidate isn't all of it),
+`air_en8811h.ko` (code and package description) and a few sizes (ppp,
+gl-sdk4-tethering, tor). The 8 missing commits are now placeholders: two
+labelled ones for iwinfo and usbnet, six unidentified (owner's decision;
+they reproduce only the count and can be removed from the row at any
+time). 4.7.0 showed three recipe gaps, all fixed: the ppp, opkg and uci
+commits were missing from the 4.6.4–4.7.4 draft rows (identical in all
+official images from 4.6.2 to 4.7.4); 19 IPsec kernel options were off
+because the mirror step switched "extra" packages off entirely, while
+GL.iNet's configuration has them (`kmod-ipsec`, `kmod-crypto-echainiv`, ...)
+as `=m`, built but not installed, so such packages now go to `=m`; and from
+4.7.0 on GL.iNet's `/etc/init.d/system` lacks upstream's `rm -f /tmp/TZ`
+(OpenWrt 3d62b5d5c6), byte-identical to the file in GL.iNet's published 4.8.6
+tree (extra commit `base-files-tz-revert`). Also new in 4.7.0:
+`libstdc++.so.6.0.25-gdb.py` holds GL.iNet's build path
+(`/work2/jenkins/workspace/router_mt2500/mt7981/...`), and `wireguard.ko`
+differs in code.
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -1491,3 +1513,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.6.2: zstd (`UBIFS_FS_ZSTD`) and device tree recreated; iwinfo and the `usbnet` RM500U entry found but not public; about 6 commits probably only for other boards. |
 | 2026-10-27 | 4.5.0 and 4.5.16 recreated to the level of 4.2.x (jobs 61, 62): only Samba order, `wg` tree hash and vermagic remain. |
 | 2026-10-27 | 4.7.0+: iproute2 6.3.0 from the MPTCP feed replaces OpenWrt's (`OVERRIDE_PKGS`); the static-syms order patch now reaches it (official 4.7.4 order reproduced). 4.6.4 → 4.6.8 leaves kernel code unchanged. |
+| 2026-10-27 | 4.6.2 and 4.7.0 build completely (all packages and files). 4.6.2: placeholders for its 8 missing commits (owner's choice). 4.7.0: ppp/opkg/uci in the later rows, extra packages GL.iNet built as modules stay `=m` (IPsec kernel options), `base-files-tz-revert`. |
