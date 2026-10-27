@@ -543,7 +543,8 @@ jobs:
             # (builder, patches, extra commits, feeds, closed feed); stop before
             # compiling. Fails if official packages can't be selected, which
             # would otherwise only show at package/install, at the very end.
-            n=$(sed -n 's/^not selectable (no such package in the public feeds): //p' /work/out/mirror.txt)
+            # (the kernel pseudo-package has no CONFIG_PACKAGE_ option: always listed)
+            n=$(sed -n '3p' /work/out/mirror.txt | tr ' ' '\n' | grep -c -v -x -e kernel -e '' || true)
             { echo "preflight: $([ "$n" = 0 ] && echo OK || echo FAILED)"; cat /work/out/mirror.txt
               echo "revision: $(./scripts/getver.sh 2>/dev/null)"; } | tee /work/out/preflight.txt
             [ "$n" = 0 ]; exit
