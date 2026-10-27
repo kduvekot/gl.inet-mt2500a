@@ -1370,7 +1370,17 @@ version string). The earlier "code change" was that data. 4.6.8 → 4.7.0
 shows real changes (cross-check that the method sees them): new USB hub
 functions (`disable_show`/`disable_store`, a sysfs switch to disable a hub
 port, plus `usb_hub_port_status`, `usb_port_is_power_on`), changed
-`mptcp_recvmsg`, `mtk_pcie_probe` and USB link power management.
+`mptcp_recvmsg`, `mtk_pcie_probe` and USB link power management. Checked
+against our 4.7.0 build (job 65b's `vmlinux`): MPTCP already matches (our
+backport is GL.iNet's newer one); the USB changes are GL.iNet's published
+`hack-5.4/963-usb-hub-port-add-sysfs-entry-to-switch-port-power.patch`
+(4.8.6 tree), now an extra commit for 4.7.0+; `mtk_pcie_probe` is still
+open (GL.iNet's 4.8.6 PCIe driver is a much newer one for another chip).
+And the 4.6.x kernels have a `power_ctl` sysfs switch in the USB port code
+(`power_ctl_store`) that's in no public source and that the 963 patch
+replaced in 4.7.0: one of 4.6.2's placeholders is now labelled for it. Our
+brief compares kernel configuration and modules but not the kernel's own
+code, which is how this went unnoticed.
 
 **4.6.2 and 4.7.0 complete builds (jobs 64b, 65b).** Both have every
 package and file of the official image (4.6.2: 427 / 4358, 4.7.0: 463 /
@@ -1551,3 +1561,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | From 4.7.0 on GL.iNet built in a Jenkins job (`/work2/jenkins/workspace/router_mt2500`, up to 4.9.0); release value `build_dir`. |
 | 2026-10-27 | Not public (4.6.2+): GL.iNet's changes to the EN8811H driver v1.2.5 (two messages, one flag) and opkg's package-size option. |
 | 2026-10-27 | Kernels compared function by function (`vmlinux-to-elf` + `analysis/kernel-functions.py`): 4.6.2, 4.6.4 and 4.6.8 have identical kernel code; 4.7.0 adds USB hub port disabling and changes MPTCP, PCIe and USB power management. |
+| 2026-10-27 | 4.7.0+: GL.iNet's USB hub port power patch (963, published) as an extra commit; 4.6.x: USB port `power_ctl` not public (labelled placeholder). |

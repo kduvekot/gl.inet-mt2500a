@@ -1,0 +1,20 @@
+--- a/ubus.c
++++ b/ubus.c
+@@ -53,7 +53,7 @@
+ 	if (ubus_lookup_id(ctx, "network.interface", &id))
+ 		goto out;
+ 
+-	if (ubus_invoke(ctx, id, "dump", b.head, dump_cb, NULL, 2000))
++	if (ubus_invoke(ctx, id, "dump", b.head, dump_cb, NULL, 20000))
+ 		goto out;
+ 
+ 	status = true;
+@@ -62,7 +62,7 @@
+ 		goto out;
+ 
+ 	blobmsg_add_string(&b, "type", "firewall");
+-	ubus_invoke(ctx, id, "get_data", b.head, procd_data_cb, NULL, 2000);
++	ubus_invoke(ctx, id, "get_data", b.head, procd_data_cb, NULL, 20000);
+ 
+ out:
+ 	blob_buf_free(&b);

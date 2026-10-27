@@ -22,11 +22,13 @@ with the release's patch date and the subject in `message`.
 | `mt2500-dts-phy-reset` | our construction: the MT2500 device tree as GL.iNet's 4.6.2 (decompiled, source order) | 4.6.2+: one device tree for both WAN PHYs: reset on the MDIO bus (GPIO 14, 100 ms/100 ms), PHY node `ethernet-phy-ieee802.3-c45` (see docs/driver-analysis.md) |
 | `base-files-tz-revert` | GL.iNet's published 4.8.6 tree (gl-inet/gl-image, branch gl-be10000, commit bfe99df8): `package/base-files/files/etc/init.d/system` | 4.7.0+: `/etc/init.d/system` byte-identical to this file; it lacks upstream's `rm -f /tmp/TZ` (OpenWrt 3d62b5d5c6, "fix /tmp/TZ when zoneinfo not installed"), which 4.6.8 still had |
 | `wireguard-punch-attribute` | GL.iNet's published 4.8.6 tree (gl-inet/gl-image, branch gl-be10000, commit bfe99df8): `target/linux/generic/hack-5.4/952-wireguard-support-punch.patch` (adds only `WGPEER_A_PUNCH` to the UAPI enum) | 4.7.0+: `wireguard.ko` is 64 bytes larger than 4.6.8's with identical functions; only `.rodata` grows by 16 bytes, one more entry in the peer netlink policy table |
+| `usb-hub-port-power-switch` | GL.iNet's published 4.8.6 tree (gl-inet/gl-image, branch gl-be10000, commit bfe99df8): `target/linux/generic/hack-5.4/963-usb-hub-port-add-sysfs-entry-to-switch-port-power.patch` | 4.7.0+: the kernel has `disable_show`/`disable_store`, `usb_port_is_power_on`, `hub_get`/`hub_put`, `usb_hub_port_status` and changed hub/LPM functions (function-by-function comparison, `analysis/kernel-functions.py`); 4.6.x's `power_ctl_store` is gone |
+| `usb-port-power-ctl-not-public` | our construction: an empty, labelled commit | 4.6.2–4.6.8: the kernel has a `power_ctl` sysfs switch in `drivers/usb/core/port.c` (`power_ctl_store`), in no public source; replaced by the 963 patch in 4.7.0. Reproduces only the revision count; the kernel will differ there |
 | `iwinfo-mediatek-not-public` | our construction: an empty, labelled commit | 4.6.2+: GL.iNet's `iwinfo` has newer MediaTek support (HE rate table, HT mode, country) found in no public source (gl-feeds, the fork, gl-image, MediaTek's feed). Reproduces only the revision count; `iwinfo` itself will differ |
 | `usbnet-rm500u-not-public` | our construction: an empty, labelled commit | 4.6.2+: `usbnet.ko` has an RM500U 5G modem entry (`rm500u_5gnet`) found in no public source. Reproduces only the revision count; `usbnet.ko` will differ |
 
-In 4.6.2 `unidentified-commit` is used six times: GL.iNet's 4.6.2 is
-r15812+899, the public set plus the folders above give 893, and the rest
+In 4.6.2 `unidentified-commit` is used five times: GL.iNet's 4.6.2 is
+r15812+899, the public set plus the folders above give 894, and the rest
 most likely only touches other boards built from the same tree (MT3000,
 X3000, MT6000).
 
