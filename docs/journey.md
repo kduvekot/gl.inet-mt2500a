@@ -1547,8 +1547,11 @@ property in `of_mdio.c`, the wait) gives exactly GL.iNet's sizes for
 `__mdiobus_register` and `of_mdiobus_register` (single-object compiles of
 `mdio_bus.o`, `of_mdio.o`, `phy_device.o`, `phylink.o`, all 170 functions
 validated against our vmlinux first). It goes with the device tree in
-`mt2500-dts-phy-reset`. Still open there: `get_phy_device` (GL.iNet's does
-one more register read while identifying the PHY). `phylink_fixed_state`
+`mt2500-dts-phy-reset`. `get_phy_device`: GL.iNet's does one more register
+read in the clause-45 identification (the Airoha PHY's path); upstream
+5.4.211 and 5.4.281 have the same code there, and no published patch
+(GL.iNet's four trees, MediaTek's feed history) touches it, so it is not
+public either, probably part of GL.iNet's Airoha support. `phylink_fixed_state`
 turned out to be GL.iNet's own function in the MediaTek Ethernet driver
 (the fork's patch `3003`, polling the GPY211's state register): in 4.6.2
 it is 712 bytes with 16 MDIO reads and writes instead of 176 with one
