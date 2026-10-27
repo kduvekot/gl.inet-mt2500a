@@ -410,9 +410,13 @@ jobs:
           # key still signs the package index, which isn't in the image)
           sed -i '/etc\/opkg\/keys\//s#$(BUILD_KEY)\.pub#/work/gl-build-key.pub#g' package/base-files/Makefile
           grep -n 'opkg/keys/' package/base-files/Makefile
+          # Every copy of the package gets them: from 4.7.0 on, the MPTCP
+          # feed's iproute2 6.3.0 replaces OpenWrt's (CONFIG_OVERRIDE_PKGS)
           for d in /work/gl-4.2.0-patches/*/; do
-            t="$(dirname "$(find package -path "*/$(basename "$d")/Makefile" | head -1)")/patches"
-            mkdir -p "$t" && cp "$d"*.patch "$t/" && echo "patches for $(basename "$d") -> $t"
+            find package feeds -path "*/$(basename "$d")/Makefile" | while read -r m; do
+              t="$(dirname "$m")/patches"
+              mkdir -p "$t" && cp "$d"*.patch "$t/" && echo "patches for $(basename "$d") -> $t"
+            done
           done
           if [ "${CLOSED:-}" = true ]; then
             # GL.iNet's closed packages (generated in the run), copied into the
@@ -566,7 +570,7 @@ jobs:
             # (see env) after every patch and edit, right before compiling
             rm -rf .git
             # git must not find the builder's repository around the tree
-            export GIT_CEILING_DIRECTORIES="$(dirname "$PWD")"
+            GIT_CEILING_DIRECTORIES="$(dirname "$PWD")"; export GIT_CEILING_DIRECTORIES
             touch -d "@$SOURCE_DATE_EPOCH" scripts/get_source_date_epoch.sh
             # GL.iNet's revision is empty, not getver.sh's "unknown" (as with
             # SDK=1 or an empty REVISION; our construction, same effect)

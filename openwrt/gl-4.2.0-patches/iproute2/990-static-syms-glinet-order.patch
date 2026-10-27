@@ -1,7 +1,6 @@
 --- a/ip/Makefile
 +++ b/ip/Makefile
-@@ -22,7 +22,25 @@
-   STATIC_SYM_FILTER:=iplink_can.c iplink_ipoib.c iplink_vxlan.c
+@@ -23,5 +23,23 @@
    CFLAGS += -DIPROUTE2_TINY
  endif
 -STATIC_SYM_SOURCES:=$(filter-out $(STATIC_SYM_FILTER),$(wildcard *.c))
@@ -26,4 +25,3 @@
 +	$(sort $(filter-out $(GL_STATIC_SYM_ORDER),$(wildcard *.c))))
  
  ALLOBJ=$(IPOBJ) $(RTMONOBJ)
- SCRIPTS=ifcfg rtpr routel routef
