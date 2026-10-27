@@ -18,6 +18,7 @@ with the release's patch date and the subject in `message`.
 | `opkg-remove-once` | GL.iNet's published 4.8.6 tree (gl-inet/gl-image, branch gl-be10000, commit bfe99df8): `0001-opkg_remove-avoid-remove-pkg-repeatly...patch` (upstream cherry-pick) | 4.6.2: `opkg` 477 bytes larger than 4.5.x (candidate, to be confirmed) |
 | `uci-lua-iteration` | GL.iNet's published 4.8.6 tree (gl-inet/gl-image, branch gl-be10000, commit bfe99df8): `001-lua-support-for-iteration.patch` | 4.6.2: uci/libuci-lua dated at the patch date, `uci.so` differs (candidate, to be confirmed) |
 | `mptcp-backport` | GL.iNet's MPTCP backport for kernel 5.4 as published in gl-inet/gl-image (gl-be10000, bfe99df8, versions/4.8.6): 25 files under `target/linux/mediatek/files-5.4`, patch `999-9999-2-compat-mptcp-proto.patch`, `kmod-mptcp` definition; fetched and checked at build time (`files.sha256`) | 4.6.2+: `MPTCP=y`, `MPTCP_IPV6=y`; 4.7.0+: package `kmod-mptcp` (4.7.0's preflight). The backport differs slightly between GL.iNet's trees: the MT2500's may be older |
+| `mt7981-ubifs-zstd` | our construction: `CONFIG_UBIFS_FS_ZSTD=y` in the MT7981 target config | 4.6.2+: the only zstd option that changes on its own (4.5.0: not set); it selects `CRYPTO_ZSTD`, `ZSTD_COMPRESS`/`DECOMPRESS` and `XXHASH`, built in from 4.6.2 on; zstd built in only on MT7981 models |
 
 The placeholder stays until there is a good reason to remove it, or until
 the content of GL.iNet's actual commit is found (owner's decision,
