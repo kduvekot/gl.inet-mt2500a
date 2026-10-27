@@ -1757,9 +1757,13 @@ only 5 to 18 bytes, so GL.iNet's 4.7.0 tree had several more feeds, or
 other feed URLs, without any of their packages in the image. Sizes alone
 can't tell which; open.
  The 4.8.2 preflight 73p failed
-in the fetch step; a fetch-only rerun passed (461 official packages, 112
-closed packages, AdGuardHome skipped), so it is queued again (73q), and the
-local runner now keeps a failed step's log with the results.
+in the fetch step because it ran on an old checkout: a commit had included
+Python bytecode (`__pycache__`) by accident, and the worker's `git pull`
+then stopped on its own local copies (logged as a warning, but the job ran
+anyway). Removed; a fetch-only run on the current recipe passes (461
+official packages, 112 closed packages, AdGuardHome skipped), and 73q
+repeats the preflight. The local runner now keeps a failed step's log with
+the results.
 
 ## Next steps
 
