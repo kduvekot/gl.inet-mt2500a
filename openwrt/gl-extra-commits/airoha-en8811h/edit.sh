@@ -11,7 +11,7 @@ R=https://raw.githubusercontent.com/gl-inet/mtk-openwrt-feeds/3d921e11b1eb7cd918
 T=target/linux/mediatek
 fetch() {   # <path below $R> <destination> <sha256>
 	mkdir -p "$(dirname "$2")"
-	curl -fsSL --retry 5 --retry-all-errors -o "$2" "$R/$1"
+	curl -fsSL --retry 5 -o "$2" "$R/$1"
 	echo "$3  $2" | sha256sum -c -
 }
 fetch files-5.4/drivers/net/phy/air_en8811h.h $T/files-5.4/drivers/net/phy/air_en8811h.h 9641a129b13f2c5bd7b0145e3330a9b3955a24e5bba1b139d0f9dbb883d05c21
