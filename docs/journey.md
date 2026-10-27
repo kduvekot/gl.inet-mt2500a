@@ -1516,12 +1516,18 @@ our vmlinux) gives exactly GL.iNet's sizes for `__tcp_close` and
 MPTCP skb extension (`active_extensions`, `extensions`, a WARN), upstream
 MPTCP's `mptcp_skb_ext_move()` call, which GL.iNet's later published compat
 patch no longer has. Adding that one line gives exactly GL.iNet's size,
-with no other function in `tcp_input.o` changing (patch `999-9999-3`). Still
-open: `mptcp_recvmsg` (another version of the receive-space calculation)
-and `subflow_v4_init_req` (GL.iNet's calls the subflow setup directly, ours
-through a function pointer): GL.iNet's 4.6.x/4.7.x use an older version of
-the MPTCP core files (`net/mptcp/*.c`) than their published 4.8.6 ones,
-which needs matching against upstream kernel versions (research item); GL.iNet's 4.8.7 MPTCP files differ
+with no other function in `tcp_input.o` changing (patch `999-9999-3`). Our MPTCP files
+(GL.iNet's 4.8.6 backport) are Linux 5.15's with GL.iNet's compat changes
+(30, 149 and 27 lines differ in `subflow.c`, `protocol.c`, `protocol.h`;
+every other upstream version from 5.7 to 6.1 differs far more).
+`subflow_v4_init_req` in GL.iNet's 4.6.2 to 4.8.2 kernels is a stub: it
+sets `is_mptcp` and calls `printk(KERN_ERR "MPTCP: mptcp need to implement
+this function: %s,%s,%d", __FILE__, __func__, __LINE__)` with line 1791,
+nothing else (the message is in every kernel from 4.6.2 to 4.8.2, gone in
+4.9.0). Replacing the function's two calls with that line puts it exactly
+on line 1791 of our file, and the compiled function is GL.iNet's
+instruction for instruction (patch `999-9999-4`). Still open:
+`mptcp_recvmsg` and `mptcp_stream_accept`; GL.iNet's 4.8.7 MPTCP files differ
 from 4.8.6's only in `compat.h`, the `Makefile` and a compat patch that
 also exports `fib_info_devhash_bucket`.
 
@@ -1727,6 +1733,7 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.6.2+ routing solved: GL.iNet's published 922/923 (one context line adapted to 5.4.211) plus the devhash export match every routing function; validated single-object compiles with OpenWrt's flags. |
 | 2026-10-27 | All five remaining "not public" claims re-checked against GL.iNet's four published trees (incl. full kernel sources), MediaTek's feed history and gl-feeds: they hold. |
 | 2026-10-27 | MPTCP: GL.iNet's `__tcp_close()` split doesn't set `sk_shutdown`, and their `tcp_collapse()` moves the MPTCP skb extension; both now match (validated single-object compiles). |
+| 2026-10-27 | MPTCP: our backport is Linux 5.15's; GL.iNet's 4.6.2-4.8.2 `subflow_v4_init_req` is a "need to implement this function" stub, now reproduced instruction for instruction. |
 | 2026-10-27 | 4.6.2 at GL.iNet's revision (job 68b); musl `pthread_getname_np` backport found (identical code), two unidentified placeholders left. |
 | 2026-10-27 | MDIO `reset-post-delay-us` backported (kernel side of GL.iNet's PHY reset on the MDIO bus); exact sizes, validated. |
 | 2026-10-27 | 4.7.0 at GL.iNet's Jenkins path (job 69b): no build-path differences left, kernel configuration identical; busybox/dnsmasq/odhcpd carry GL.iNet patches (4.8.6 tree has them). |
