@@ -1763,7 +1763,18 @@ then stopped on its own local copies (logged as a warning, but the job ran
 anyway). Removed; a fetch-only run on the current recipe passes (461
 official packages, 112 closed packages, AdGuardHome skipped), and 73q
 repeats the preflight. The local runner now keeps a failed step's log with
-the results.
+the results. 73q passes: all 461 official packages are available
+from the 4.8.2 pins (only `kernel`, which is never a selectable package,
+is listed, as in every release). Its `revision` line is `getver.sh`'s
+(+908), which SDK=1 doesn't affect; the build itself gets an empty one.
+A point to watch in the full 4.8.2 build: SDK=1 sets
+`IGNORE_PACKAGES = linux`, which would remove every `kmod-*` (all defined
+in `package/kernel/linux`). It only takes effect when
+`tmp/.config-package.in` is regenerated, i.e. when `.packageinfo` is newer
+(`include/toplevel.mk`). Our build script scans and configures before it
+exports SDK=1, so the kmods stay. GL.iNet's 4.8.2 has kmods too, so their
+CI must also have set SDK=1 only after the scan; a rescan during the build
+would drop them.
 
 ## Next steps
 
