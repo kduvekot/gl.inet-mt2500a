@@ -1517,7 +1517,11 @@ MPTCP skb extension (`active_extensions`, `extensions`, a WARN), upstream
 MPTCP's `mptcp_skb_ext_move()` call, which GL.iNet's later published compat
 patch no longer has. Adding that one line gives exactly GL.iNet's size,
 with no other function in `tcp_input.o` changing (patch `999-9999-3`). Still
-open: `mptcp_recvmsg`, `subflow_v4_init_req`; GL.iNet's 4.8.7 MPTCP files differ
+open: `mptcp_recvmsg` (another version of the receive-space calculation)
+and `subflow_v4_init_req` (GL.iNet's calls the subflow setup directly, ours
+through a function pointer): GL.iNet's 4.6.x/4.7.x use an older version of
+the MPTCP core files (`net/mptcp/*.c`) than their published 4.8.6 ones,
+which needs matching against upstream kernel versions (research item); GL.iNet's 4.8.7 MPTCP files differ
 from 4.8.6's only in `compat.h`, the `Makefile` and a compat patch that
 also exports `fib_info_devhash_bucket`.
 
