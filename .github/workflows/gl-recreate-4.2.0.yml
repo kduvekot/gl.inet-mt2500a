@@ -589,7 +589,10 @@ jobs:
           # live log (and progress.log). The time limit leaves room for the
           # steps that save cache, report and logs.
           set -o pipefail
+          # KEEP_TREE (local runs only): an empty host folder for the OpenWrt
+          # tree, kept after the run for quick single-package rebuilds
           timeout 320m docker run --rm -v "$PWD/work:/work" \
+            ${KEEP_TREE:+-v "$KEEP_TREE:/home/glinet/work"} \
             -e FORK -e MTK_FEED_OLD -e MTK_FEED_MIRROR -e USE_CCACHE -e PUBLISH_SDK -e CLOSED \
             ubuntu:20.04 bash /work/build.sh 2>&1 | tee work/out/build.log \
             | grep --line-buffered -E "^ make\[[0-9]+\] |ERROR: |ccache wrapper|^\+ make |Collected errors" \
