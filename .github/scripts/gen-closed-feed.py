@@ -204,10 +204,14 @@ def main():
                       f"define KernelPackage/{pkg}/description", mk_escape(desc), "endef", ""]
             if conf:
                 lines += [f"define KernelPackage/{pkg}/conffiles", *conf, "endef", ""]
-            # Exported symbols, as OpenWrt's collect_module_symvers would write
-            # them for a module built from source: modules built against this
-            # one record it in depends= (shortcut-fe uses tertf's term_update).
-            # No CONFIG_MODVERSIONS, so no checksums.
+            # Exported symbols, so modules built against this one record it in
+            # depends= (shortcut-fe uses tertf's term_update). Written as the
+            # module's build would leave them, in $(PKG_BUILD_DIR)/Module.symvers
+            # with the module path in the build dir: OpenWrt's
+            # collect_module_symvers hook (after Build/Compile of every
+            # KernelPackage) keeps those lines and writes
+            # $(PKG_SYMVERS_DIR)/$(PKG_NAME).symvers, so a file placed there
+            # directly is overwritten (empty). No CONFIG_MODVERSIONS: no checksums.
             syms = []
             for k in ko:
                 e, gpl = ko_exports(d / "files" / k)
@@ -215,14 +219,15 @@ def main():
                     print(f"{name}: {k} has GPL exports, no symvers written", file=sys.stderr)
                     syms = []
                     break
-                mod = "/home/glinet/work/" + Path(k).name[:-3]   # only the base name counts
+                mod = "@PKG_BUILD_DIR@/" + Path(k).name[:-3]   # only the base name counts
                 syms += [f"0x00000000\t{x}\t{mod}\tEXPORT_SYMBOL\t" for x in e]
             if syms:
                 (d / "Module.symvers").write_text("\n".join(syms) + "\n")
             lines += ["# GL.iNet's files are final: don't strip them again", "RSTRIP:=:", "",
                       "define Build/Compile",
-                      *(["\tmkdir -p $(PKG_SYMVERS_DIR)",
-                         "\t$(CP) ./Module.symvers $(PKG_SYMVERS_DIR)/$(PKG_NAME).symvers"] if syms else []),
+                      *(["\tmkdir -p $(PKG_BUILD_DIR)",
+                         "\tsed 's#@PKG_BUILD_DIR@#$(PKG_BUILD_DIR)#' ./Module.symvers > $(PKG_BUILD_DIR)/Module.symvers"]
+                        if syms else []),
                       "endef", "",
                       f"define KernelPackage/{pkg}/install",
                       *(["\t$(CP) ./files/* $(1)/"] if any((d / "files").iterdir()) else ["\t$(INSTALL_DIR) $(1)"]),
