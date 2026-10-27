@@ -1681,6 +1681,22 @@ applies cleanly here). Extra commits `mt7981-arm64-crypto` and
 `gl-hw-check`. Open until the first build: dnsmasq is release 14 (one more
 commit than 4.7.4, probably patch 305).
 
+**4.9.0 (beta3), values collected for later.** Built 4 July 2026 at
+GL.iNet's Jenkins path with `SDK=1` (empty revision, CI build 1048), patch
+commits one second before the build; early: the same six source packages
+as before plus `busybox` and `firewall`, late: `uboot-envtools`; `curl`
+gets ABI names in `Depends` again (as in 4.2.1-4.4.6: `rebuilt_packages`).
+483 packages (4.8.2: 461). Feeds: `gl_feed_common` `0bd8fb4` (branch
+`common_v4.9`), `mptcp-feeds` `612196d`, a new `gl_feed_smstools3`
+(`08b281f`), no OpenVPN feed any more; `gl_feed_21_02` and MediaTek's feed
+as before. Package changes against 4.8.2: dnsmasq 2.85 to **2.92** (a new
+upstream version: GL.iNet's dnsmasq patches need checking against it) and
+AdGuardHome 0.107.73. Kernel: wireless as modules (`CFG80211=m` with the
+signed regulatory database, RSA and asymmetric keys built in), although the
+MT2500 has no Wi-Fi of its own, and `NET_SCH_PRIO` built in; the MPTCP stub
+in `subflow_v4_init_req` is gone (implemented, as in GL.iNet's published
+4.8.6 backport).
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -1830,6 +1846,7 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.7.x placeholders as for 4.6.x: iwinfo, usbnet, Airoha link polling, PCIe (4.7.0+), emergency reboot (4.7.4), one unidentified each (to +908 and +912). |
 | 2026-10-27 | 4.8.2 prepared (row, AdGuardHome as its own package, routing variant); built once 4.7.4 is validated. |
 | 2026-10-27 | 4.8.2/4.9.0 were built with `SDK=1` (empty revision via `version.mk`), not without git: packages keep git dates. Release value `no_git` replaced by `sdk_mode`. 4.8.2's 42 kernel options: ARMv8 crypto and GL.iNet's hardware check, both published. |
+| 2026-10-27 | 4.9.0's values collected (feeds incl. a new smstools3 feed, dnsmasq 2.92, wireless modules in the kernel); built after 4.8.2. |
 | 2026-10-27 | 4.6.2 at GL.iNet's revision (job 68b); musl `pthread_getname_np` backport found (identical code), two unidentified placeholders left. |
 | 2026-10-27 | MDIO `reset-post-delay-us` backported (kernel side of GL.iNet's PHY reset on the MDIO bus); exact sizes, validated. |
 | 2026-10-27 | 4.7.0 at GL.iNet's Jenkins path (job 69b): no build-path differences left, kernel configuration identical; busybox/dnsmasq/odhcpd carry GL.iNet patches (4.8.6 tree has them). |
