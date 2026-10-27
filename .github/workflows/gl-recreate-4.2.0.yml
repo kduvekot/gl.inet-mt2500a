@@ -116,6 +116,9 @@ env:
   #                     isn't public; the gl-feeds revisions follow from the
   #                     image (each package's SourceDateEpoch is the last
   #                     commit to its folder; analysis/release-values.py)
+  #   EXTRA_COMMITS     folders of openwrt/gl-extra-commits ("-": none):
+  #                     GL.iNet patch commits missing from the public patch set
+  #                     (4.5.0+), recreated with the release's patch date
 
 jobs:
   recreate:
@@ -153,7 +156,7 @@ jobs:
           REL="${{ inputs.release }}"
           case "$REL" in ""|false) REL=4.2.0 ;; esac
           awk -F'\t' -v r="$REL" -v q="'" '$1 == r { f = 1
-              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES PRIVATE_NOW LATE_PATCHES PATCHES_REV EXTRA_CONFIG FEED_REVS", k, " ")
+              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES PRIVATE_NOW LATE_PATCHES PATCHES_REV EXTRA_CONFIG FEED_REVS EXTRA_COMMITS", k, " ")
               for (i = 1; i <= n; i++) print k[i] "=" q $i q }
             END { exit !f }' openwrt/gl-releases.tsv > work/release.env \
             || { echo "release $REL not in openwrt/gl-releases.tsv"; exit 1; }
@@ -212,6 +215,7 @@ jobs:
         run: |
           cp -r openwrt/gl-4.2.0-patches work/
           cp .github/scripts/link-order.py work/   # used by the sipcalc recipe
+          cp -r openwrt/gl-extra-commits work/
           cat > work/build.sh << 'EOF'
           #!/usr/bin/env bash
           # Runs inside ubuntu:20.04 (OpenWrt 21.02 predates newer hosts).
@@ -288,6 +292,18 @@ jobs:
               -- "$first^..HEAD"
           fi
           git log --reverse --format='%ct %s' -n 45 | awk 'NR <= 12'   # first patch commits
+          # GL.iNet patch commits missing from the public patch set (see env)
+          for c in ${EXTRA_COMMITS:--}; do
+            [ "$c" = - ] && continue
+            d=/work/gl-extra-commits/$c
+            if [ -d "$d/files" ]; then
+              cp -r "$d/files/." .
+              (cd "$d/files" && find . -type f) | xargs git add
+            fi
+            if [ -f "$d/edit.sh" ]; then sh "$d/edit.sh"; fi
+            GIT_COMMITTER_DATE="$GIT_COMMIT_DATE +0000" GIT_AUTHOR_DATE="$GIT_COMMIT_DATE +0000" \
+              git commit -q -a -m "$(cat "$d/message")"
+          done
           git log --oneline -3
 
           # GL.iNet's build time (see env): get_source_date_epoch.sh reads
