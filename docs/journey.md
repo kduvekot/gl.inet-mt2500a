@@ -1550,7 +1550,10 @@ which musl only got in 1.2.3. GL.iNet's published 4.8.6 tree has musl
 its own flags, is identical to the function in GL.iNet's libc (addresses
 masked; an existing function compiled the same way is identical too).
 Extra commit `musl-pthread-getname-np` (patch `910`), 4.6.2+; in 4.6.x it
-takes the place of another unidentified placeholder (two left).
+takes the place of another unidentified placeholder (two left). (The first version of
+that patch lacked the new file, because `diff` writes nothing for a file
+whose folder is missing on the old side; job 70b built musl without the
+function. The patch now creates it from `/dev/null` and was test-applied.)
 
 **MDIO: the kernel side of the PHY reset.** GL.iNet's `__mdiobus_register`
 waits after releasing the MDIO bus reset: `__udelay()` with a field after
