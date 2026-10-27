@@ -275,6 +275,10 @@ def main():
             if ver:
                 m = re.sub(r"^PKG_VERSION:=.*$", f"PKG_VERSION:={ver}", m, count=1, flags=re.M)
             m = re.sub(r"^PKG_RELEASE:=.*$", f"PKG_RELEASE:={rel}", m, count=1, flags=re.M)
+            # an override without dependencies of its own gets the official
+            # ones (gl-sdk4-adguardhome: zoneinfo-* from 4.6.4 on)
+            m = re.sub(r"^  DEPENDS:=$", "  DEPENDS:=" + " ".join("+" + x for x in deps),
+                       m, count=1, flags=re.M)
             (d / "Makefile").write_text(m)
         print(f"{name:40} -> {d.relative_to(out)}{' (override: built from source)' if ov.exists() else ''}")
 
