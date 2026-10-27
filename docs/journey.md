@@ -1749,7 +1749,10 @@ the image only through the `gl-sdk4-base-files` overlay (it is one of the
 seven overlay files whose modes were found earlier). Repacked the way
 `ipkg-build` packs, our package with upstream's `ppp6-up` comes out at
 GL.iNet's size (136512 plus the repack's 9-byte offset; official 136518 to
-136520 by release), so `ppp-pppoe-retry-delay` now changes only `ppp.sh`.
+136520 by release), so `ppp-pppoe-retry-delay` now changes only `ppp.sh`. (Job 74b still had the old
+commit: the local runner reuses `work/`, and `cp -r` of the extra-commit
+folders kept the removed `ppp6-up`. The workflow now copies them fresh;
+the first full builds with the fix are 78b, 80b and 81b.)
 `gl-sdk4-tethering` (ours 72 bytes smaller in 4.6.x, 18 in 4.7.x) is still
 open: no mode change fits, and of all 234 folders of the image as an empty
 folder only `lib` fits both 4.6.x versions, while for 4.7.x four others fit
@@ -1952,3 +1955,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | Worker fix: a commit with `__pycache__` files had blocked w1's `git pull`, so 73p/74a ran on an old checkout; files removed, and a failed pull now puts the job back instead of building. |
 | 2026-10-27 | 4.9.0 `ubus`: GL.iNet's published auto-subscribe patch gives `libubus`, `ubus` and the Lua module byte-identical; `ubusd` has an unpublished server-side change. |
 | 2026-10-27 | 4.8.2 `dnsmasq` byte-identical with GL.iNet's published 302-305 (extra commit for 305); 4.7.4's had an earlier, unpublished 304. |
+| 2026-10-27 | 4.6.4 with complete MPTCP and the routing mix (job 74b): revision +900, all packages and files, `nf_nat.ko` and `fib_table_lookup` now as GL.iNet's; left: not-public parts, `ethsys_reset`, `ip_valid_fib_dump_req`. |

@@ -235,6 +235,9 @@ jobs:
 
       - name: Write build script
         run: |
+          # fresh copies: a reused work/ (local runs) would keep files that
+          # were removed from the repo (2026-10-27: ppp6-up in job 74b)
+          rm -rf work/gl-4.2.0-patches work/gl-extra-commits
           cp -r openwrt/gl-4.2.0-patches work/
           cp .github/scripts/link-order.py work/   # used by the sipcalc recipe
           cp -r openwrt/gl-extra-commits work/
