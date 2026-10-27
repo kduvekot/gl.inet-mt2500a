@@ -1471,7 +1471,14 @@ is through. The releases already counted as recreated hold up: our 4.5.0 and
 GL.iNet's published `999-5002-export-fib-info-devhash-bucket.patch`: an
 exported function isn't inlined, so five routing functions change code at
 the same size. Extra commit `fib-devhash-export`; in 4.6.2–4.6.8 it takes
-the place of one unidentified placeholder (four left).
+the place of one unidentified placeholder (four left). The two routing functions that differ in size (`fib_create_info`,
+`fib_inetaddr_event`) come from the route-failover/kmwan patch versions:
+our 953/954 reverse cleanly, but GL.iNet's published 922 doesn't apply to
+5.4.211 (one of seven hunks fails; it's written for 5.4.281), so the
+MT2500's 4.6.x version lies between the two and isn't public. Open, like
+iwinfo and usbnet. (A first attempt at this test changed an archived
+tree in place and damaged its kernel source; experiments now run on a
+copy, each step checked.)
 
 ## Next steps
 
