@@ -1695,8 +1695,14 @@ as before. Package changes against 4.8.2: dnsmasq 2.85 to **2.92** and AdGuardHo
 and their patches 300-305 ported), and built on a copy of job 71b's tree it
 gives a `dnsmasq` byte-identical to the MT2500's 4.9.0 one, with every other
 file of the package the same; only the release differs (published 4,
-official 6). Extra commit `dnsmasq-2.92` (folder plus release 6), tested
-the way the recipe applies it. Kernel: wireless as modules (`CFG80211=m` with the
+official 6). And no extra commit is needed: in 4.9.0 dnsmasq comes from
+`gl_feed_common` (`Source: feeds/gl_feed_common/dnsmasq`), whose 4.9.0 pin
+has the same folder with `$(AUTORELEASE)`, so release 6 from the feed's
+history, replacing OpenWrt's like iproute2 from the MPTCP feed in 4.7.0.
+Of 4.9.0's package changes, only two are in the OpenWrt tree itself:
+`base-files` (1447, one commit more) and `ubus` (release 3, one more); the
+rest are new packages (nftables, NFQUEUE, CAKE, `kmod-loop`, ...), which the
+official package list selects, and 159 feed packages, which the pins cover. Kernel: wireless as modules (`CFG80211=m` with the
 signed regulatory database, RSA and asymmetric keys built in), although the
 MT2500 has no Wi-Fi of its own, and `NET_SCH_PRIO` built in; the MPTCP stub
 in `subflow_v4_init_req` is gone (implemented, as in GL.iNet's published
