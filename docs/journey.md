@@ -1278,16 +1278,34 @@ rewrites that file from `$(PKG_BUILD_DIR)/Module.symvers` (empty for a
 prebuilt module). The closed recipe now writes the exports there, with the
 module path in the build directory, and the hook carries them over.
 
-**4.8.2 was built without git.** Its revision is empty everywhere
+**4.8.2 was built with `SDK=1`, not without git** (corrected; first
+taken for a tree without git). Its revision is empty everywhere
 (`DISTRIB_REVISION=''`, `base-files` version `1446-`, the toolchain's
-version string "OpenWrt GCC 8.4.0 " in every binary): OpenWrt's `getver.sh`
-returns nothing outside a git repository, so GL.iNet built 4.8.2 from an
-exported tree, like the offline tree in `gl-image`; its CI build number is
-in the new `/etc/version.build` (845; 4.9.0: 1048). The 222 OpenWrt-tree
-packages share the build second as `SourceDateEpoch`, and missing patch
-commits no longer show in the revision. AdGuardHome is built from source
-from 4.8.2 on (`adguardhome-conntrack` in gl_feed_common). To do for 4.8.2:
-a release value that removes the tree's git metadata before the build.
+version string "OpenWrt GCC 8.4.0 " in every binary), the same in 4.9.0,
+and `/etc/version.build` (845; 4.9.0: 1048) is GL.iNet's CI build number.
+But its packages still carry git dates: of 222 OpenWrt-tree packages 114
+have the build second, 16 are from February 2021, 13 from July 2021 and so
+on, exactly as in 4.7.4, and 12 are one second early, the familiar
+early-patch group (fstools: `fstools`, `block-mount`; iwinfo: `iwinfo`,
+`libiwinfo20210430`, `libiwinfo-lua`, `libiwinfo-data`; uci: `uci`,
+`libuci20130104`, `libuci-lua`; `netifd`; `opkg`;
+`kmod-gpio-button-hotplug`), the same six source packages in 4.7.4 and
+4.9.0. So the tree had git. `getver.sh` (unchanged and executable in
+GL.iNet's published trees, no `version` file) always prints something in
+a git tree; the empty revision comes from `include/toplevel.mk`: with
+`SDK=1` it doesn't run `getver.sh` but includes `include/version.mk`, where
+`REVISION` and the global `SOURCE_DATE_EPOCH` are commented out ("Substituted
+by SDK"). GL.iNet's CI evidently builds with `SDK=1` set from 4.8.2 on.
+In a full tree `SDK=1` also ignores the `linux` package when scanning
+package information, downloads only for `package/`, runs `prereq` and
+`conf --defconfig` before every target and drops `package/compile`'s
+dependency on the host opkg; the first build will show whether any of that
+matters. The release value is now `sdk_mode` (instead of the earlier
+`no_git`, which removed `.git` and would have given the git-dated packages
+the build time): the build exports `SDK=1` and this release's
+`SOURCE_DATE_EPOCH`, which then sets the kernel's build time. AdGuardHome
+is built from source from 4.8.2 on (`adguardhome-conntrack` in
+gl_feed_common).
 
 **4.6.2's kernel commits, and the sibling models.** Compared with 4.5.0
 (both with all kernel modules), 4.6.2's kernel config changes in only ten
@@ -1644,8 +1662,8 @@ private repository, not here.)
 
 **4.8.2 prepared (not built yet: 4.7.4 first).** Its row combines the
 values collected this morning with what the builds since have taught us:
-`no_git` (its revision is empty, so commit counts don't show and the
-placeholders are left out), GL.iNet's Jenkins path, feeds pinned as
+`sdk_mode` (see below: its revision is empty, so commit counts don't
+show and the placeholders are left out), GL.iNet's Jenkins path, feeds pinned as
 collected (including the new OpenVPN feed `gl_feed_ovpn_with_dco` and
 MediaTek's feed at `964926c`), no LuCI English, and 4.7.4's recreated
 commits. Two things change for 4.8.2: AdGuardHome is a package of its own
@@ -1661,8 +1679,7 @@ in; exactly the ones their MT7987 target config sets), and their hardware
 check (`security/gl-hw-check`, source and patch published; the patch
 applies cleanly here). Extra commits `mt7981-arm64-crypto` and
 `gl-hw-check`. Open until the first build: dnsmasq is release 14 (one more
-commit than 4.7.4, probably patch 305), and 12 packages are one second
-early although the tree had no git.
+commit than 4.7.4, probably patch 305).
 
 ## Next steps
 
@@ -1812,6 +1829,7 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | GL.iNet's 4.6.2-4.7.4 route-failover is 922 with 953's `fib_trie.c` and `nf_nat_masquerade.c` parts (validated compiles); extra commit updated. |
 | 2026-10-27 | 4.7.x placeholders as for 4.6.x: iwinfo, usbnet, Airoha link polling, PCIe (4.7.0+), emergency reboot (4.7.4), one unidentified each (to +908 and +912). |
 | 2026-10-27 | 4.8.2 prepared (row, AdGuardHome as its own package, routing variant); built once 4.7.4 is validated. |
+| 2026-10-27 | 4.8.2/4.9.0 were built with `SDK=1` (empty revision via `version.mk`), not without git: packages keep git dates. Release value `no_git` replaced by `sdk_mode`. 4.8.2's 42 kernel options: ARMv8 crypto and GL.iNet's hardware check, both published. |
 | 2026-10-27 | 4.6.2 at GL.iNet's revision (job 68b); musl `pthread_getname_np` backport found (identical code), two unidentified placeholders left. |
 | 2026-10-27 | MDIO `reset-post-delay-us` backported (kernel side of GL.iNet's PHY reset on the MDIO bus); exact sizes, validated. |
 | 2026-10-27 | 4.7.0 at GL.iNet's Jenkins path (job 69b): no build-path differences left, kernel configuration identical; busybox/dnsmasq/odhcpd carry GL.iNet patches (4.8.6 tree has them). |

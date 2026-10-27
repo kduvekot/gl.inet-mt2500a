@@ -125,13 +125,13 @@ env:
   #                     GL.iNet patch commits missing from the public patch set
   #                     (4.5.0+), recreated with the release's patch date;
   #                     name@early: one second earlier (4.6.4's lua5.3 and uci)
-  #   NO_GIT            1: GL.iNet built from a tree without git metadata
-  #                     (4.8.2 on: empty revision everywhere, also in the
-  #                     toolchain's version string); the tree's .git is removed
-  #                     before compiling, and OpenWrt then dates its packages by
-  #                     the mtime of scripts/get_source_date_epoch.sh (try_mtime),
-  #                     set to the build time; getver.sh prints an empty
-  #                     revision (as GL.iNet's). Feeds keep their git.
+  #   SDK_MODE          1: GL.iNet's CI built with SDK=1 set (4.8.2 on):
+  #                     include/toplevel.mk then takes REVISION and the global
+  #                     SOURCE_DATE_EPOCH from include/version.mk, where both
+  #                     are commented out, so the revision is empty everywhere
+  #                     (also in the toolchain's version string), while packages
+  #                     still date themselves from git; the build exports SDK=1
+  #                     and this release's SOURCE_DATE_EPOCH (kernel timestamp)
   #   BUILD_DIR         GL.iNet's builder checkout, as compiled into binaries
   #                     ("-": /home/glinet/work/_github, up to 4.6.8; from 4.7.0
   #                     on GL.iNet built in a Jenkins job:
@@ -174,7 +174,7 @@ jobs:
           REL="${{ inputs.release }}"
           case "$REL" in ""|false) REL=4.2.0 ;; esac
           awk -F'\t' -v r="$REL" -v q="'" '$1 == r { f = 1
-              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES PRIVATE_NOW LATE_PATCHES PATCHES_REV EXTRA_CONFIG FEED_REVS EXTRA_COMMITS NO_GIT BUILD_DIR", k, " ")
+              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES PRIVATE_NOW LATE_PATCHES PATCHES_REV EXTRA_CONFIG FEED_REVS EXTRA_COMMITS SDK_MODE BUILD_DIR", k, " ")
               for (i = 1; i <= n; i++) print k[i] "=" q $i q }
             END { exit !f }' openwrt/gl-releases.tsv > work/release.env \
             || { echo "release $REL not in openwrt/gl-releases.tsv"; exit 1; }
@@ -590,16 +590,12 @@ jobs:
             } > /work/out/failed.txt || true
           }
           trap save_logs EXIT
-          if [ "${NO_GIT:-0}" = 1 ]; then
-            # (see env) after every patch and edit, right before compiling
-            rm -rf .git
-            # git must not find the builder's repository around the tree
-            GIT_CEILING_DIRECTORIES="$(dirname "$PWD")"; export GIT_CEILING_DIRECTORIES
-            touch -d "@$SOURCE_DATE_EPOCH" scripts/get_source_date_epoch.sh
-            # GL.iNet's revision is empty, not getver.sh's "unknown" (as with
-            # SDK=1 or an empty REVISION; our construction, same effect)
-            sed -i 's/REV="unknown"$/REV=""/' scripts/getver.sh
-            echo "tree without git: revision '$(./scripts/getver.sh)'"
+          if [ "${SDK_MODE:-0}" = 1 ]; then
+            # (see env) as GL.iNet's CI from 4.8.2 on: empty revision, packages
+            # dated by git; the global SOURCE_DATE_EPOCH (kernel build time) is
+            # then only what the environment gives
+            export SDK=1 SOURCE_DATE_EPOCH
+            echo "SDK=1 (empty revision), SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH"
           fi
           make download -j8 || make download -j1 V=s
           if [ "$USE_CCACHE" = "true" ]; then
