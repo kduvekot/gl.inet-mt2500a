@@ -249,7 +249,9 @@ for line in open(sys.argv[1]):
   (iproute2 order); `openwrt/gl-4.2.0-closed/`: what the closed part needs
   besides the official image (three source-built recipes, image-file paths)
 - `analysis/`: `collect-baseline.sh`, `summarize-baseline.py`,
-  `source-diff.py`, `firmware-versions.py`
+  `source-diff.py`, `firmware-versions.py`, `release-values.py`,
+  `kernel-functions.py` (two kernels function by function, with
+  vmlinux-to-elf for GL.iNet's)
 - `openwrt/packages.txt`: extra packages for the OpenWrt images
 - `recovery/`: `pi-setup.sh`, `uartboot.sh`, `console.sh`, `web-flash.sh`,
   `get-stock-firmware.sh` (GL.iNet's firmware is fetched from GL.iNet, never
