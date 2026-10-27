@@ -1186,7 +1186,13 @@ on another machine or filesystem. Read from the images (the `*_link_util`
 strings in `ip-full`), 4.4.5, 4.4.6 and 4.5.0 share one order and 4.7.4's
 is sorted; this reproduces 4.2.0's known order except three names the
 linker merged into longer strings (`vlan_link_util` inside
-`macvlan_link_util`, etc.).
+`macvlan_link_util`, etc.). `.github/scripts/link-order.py` now reads the order in
+every run from the official `ip-full` (the code that loads each name's
+address, so merged names are found too; it reproduces the 4.2.0 list of
+chapter 13 exactly), and the iproute2 patch uses it. For `sipcalc` it reads
+the order of `sub-output` and `sub-func` from their strings (swapped in
+4.4.x); `interface.c` has too few strings, so `interface` and `sub` keep the
+4.2.x order until a build confirms it.
 
 **4.5.0 and later: same builder, no longer public.** GL.iNet removed
 `gl-infra-builder` in August 2023 ("For some reasons, we are not
@@ -1328,3 +1334,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-26 | 4.4.5's differing kernel modules traced to three July changes on `main` that the image lacks: GL.iNet built 4.4.x from a release branch with the patch folder of 25 June (`patches_rev`), `early_patches` 10, busybox `usleep` (`extra_config`). 4.4.6 adds the picked wireguard fix. |
 | 2026-10-27 | Job 28: 4.4.5 matches in every kernel module, busybox, kernel config, `SourceDateEpoch` and file count; besides the accepted classes only `ip-full` and `sipcalc` differ: directory-order effects fixed for 4.2.x, but GL.iNet's 4.4.x order is another one (other build machine). |
 | 2026-10-27 | 4.5.0+: the builder went private in August 2023 but stayed the same (r15812, kernel 5.4.211 up to 4.9.0). `release-values.py` reads all releases' values and pins `gl-feeds` by `SourceDateEpoch` (`feed_revs`); 4.5.0 queued. |
+| 2026-10-27 | Build-machine orders read per release from the official binaries (`link-order.py`): iproute2's table order (reproduces 4.2.0's hand-derived list) and part of `sipcalc`'s link order; 4.5.0 settings from job 29: Samba without AD DC/VFSX (no Python), no `kmod-dm`, libcurl without nghttp2. |
