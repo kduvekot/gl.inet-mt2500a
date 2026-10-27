@@ -1920,3 +1920,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.7.0 at GL.iNet's Jenkins path (job 69b): no build-path differences left, kernel configuration identical; busybox/dnsmasq/odhcpd carry GL.iNet patches (4.8.6 tree has them). |
 | 2026-10-27 | 4.6.8 at the official revision (job 72b): all packages and files, kernel configuration identical; 4.9.0's `base-files` change found (`guest_wifi_macaddr_add`, GL.iNet's published file). |
 | 2026-10-27 | 4.7.0 with all fixes (job 77b): all packages and files, kernel configuration identical; `ppp` size solved (upstream `ppp6-up` in the package); `base-files` size in 4.7.x traced to `distfeeds.conf` (GL.iNet's feed list, open). |
+| 2026-10-27 | Worker fix: a commit with `__pycache__` files had blocked w1's `git pull`, so 73p/74a ran on an old checkout; files removed, and a failed pull now puts the job back instead of building. |
