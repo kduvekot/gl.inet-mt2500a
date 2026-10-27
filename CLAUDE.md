@@ -51,7 +51,10 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   finding or milestone goes into docs/journey.md (chapter text plus a
   logbook line) in the same turn, also during hourly check-ins.
 - **Never wait in a foreground command** (`sleep`, polling over SSH):
-  waits run as background tasks; act when notified.
+  waits run as background tasks; act when notified. When a watcher's
+  notification arrives, restart the watcher first, while jobs are still
+  queued or running; otherwise results go unnoticed (2026-10-27: three
+  jobs finished unseen).
 - **Scripts first, few tokens:** bulk work in scripts or workflows that
   write a short summary; raw output stays in files. Cheap subagents for
   searches; verify their claims before relaying them.
