@@ -124,6 +124,13 @@ env:
   #   EXTRA_COMMITS     folders of openwrt/gl-extra-commits ("-": none):
   #                     GL.iNet patch commits missing from the public patch set
   #                     (4.5.0+), recreated with the release's patch date
+  #   NO_GIT            1: GL.iNet built from a tree without git metadata
+  #                     (4.8.2 on: empty revision everywhere, also in the
+  #                     toolchain's version string); the tree's .git is removed
+  #                     before compiling, and OpenWrt then dates its packages by
+  #                     the mtime of scripts/get_source_date_epoch.sh (try_mtime),
+  #                     set to the build time; getver.sh prints an empty
+  #                     revision (as GL.iNet's). Feeds keep their git.
 
 jobs:
   recreate:
@@ -161,7 +168,7 @@ jobs:
           REL="${{ inputs.release }}"
           case "$REL" in ""|false) REL=4.2.0 ;; esac
           awk -F'\t' -v r="$REL" -v q="'" '$1 == r { f = 1
-              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES PRIVATE_NOW LATE_PATCHES PATCHES_REV EXTRA_CONFIG FEED_REVS EXTRA_COMMITS", k, " ")
+              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES PRIVATE_NOW LATE_PATCHES PATCHES_REV EXTRA_CONFIG FEED_REVS EXTRA_COMMITS NO_GIT", k, " ")
               for (i = 1; i <= n; i++) print k[i] "=" q $i q }
             END { exit !f }' openwrt/gl-releases.tsv > work/release.env \
             || { echo "release $REL not in openwrt/gl-releases.tsv"; exit 1; }
@@ -537,7 +544,7 @@ jobs:
             # would otherwise only show at package/install, at the very end.
             n=$(sed -n 's/^not selectable (no such package in the public feeds): //p' /work/out/mirror.txt)
             { echo "preflight: $([ "$n" = 0 ] && echo OK || echo FAILED)"; cat /work/out/mirror.txt
-              echo "revision: r$(git rev-list --count HEAD)"; } | tee /work/out/preflight.txt
+              echo "revision: $(./scripts/getver.sh 2>/dev/null)"; } | tee /work/out/preflight.txt
             [ "$n" = 0 ]; exit
           fi
           # Logs per package (BUILD_LOG) and a summary of failed packages are
@@ -553,6 +560,17 @@ jobs:
             } > /work/out/failed.txt || true
           }
           trap save_logs EXIT
+          if [ "${NO_GIT:-0}" = 1 ]; then
+            # (see env) after every patch and edit, right before compiling
+            rm -rf .git
+            # git must not find the builder's repository around the tree
+            export GIT_CEILING_DIRECTORIES="$(dirname "$PWD")"
+            touch -d "@$SOURCE_DATE_EPOCH" scripts/get_source_date_epoch.sh
+            # GL.iNet's revision is empty, not getver.sh's "unknown" (as with
+            # SDK=1 or an empty REVISION; our construction, same effect)
+            sed -i 's/REV="unknown"$/REV=""/' scripts/getver.sh
+            echo "tree without git: revision '$(./scripts/getver.sh)'"
+          fi
           make download -j8 || make download -j1 V=s
           if [ "$USE_CCACHE" = "true" ]; then
             # ccache in disguise: after building the toolchain, each compiler
