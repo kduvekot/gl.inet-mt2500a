@@ -1654,9 +1654,15 @@ commits. Two things change for 4.8.2: AdGuardHome is a package of its own
 the image (new generator option `--skip-override`, used when `agh_version`
 is `-`); and `nf_nat_masquerade_ipv4` is 344 bytes there, without 953's
 change, while `fib_trie` is still 953's (`route-failover-kmwan-update-4.8`).
-Open until its first build: dnsmasq is release 14 (one more commit than
-4.7.4, probably patch 305), 42 kernel options differ from 4.7.4, and 12
-packages are one second early although the tree had no git.
+The 42 kernel options that differ from 4.7.4 turn out to be two GL.iNet
+changes, both in their published tree: 21 crypto options (AES, SHA and
+GHASH with the ARMv8 crypto extensions, ChaCha20/Poly1305 with NEON, built
+in; exactly the ones their MT7987 target config sets), and their hardware
+check (`security/gl-hw-check`, source and patch published; the patch
+applies cleanly here). Extra commits `mt7981-arm64-crypto` and
+`gl-hw-check`. Open until the first build: dnsmasq is release 14 (one more
+commit than 4.7.4, probably patch 305), and 12 packages are one second
+early although the tree had no git.
 
 ## Next steps
 
