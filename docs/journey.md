@@ -1874,9 +1874,14 @@ to 5.4.211, and those that do change nothing there. The link polling is
 fork) reads the GPY211's status register at MDIO address 5; GL.iNet's 4.6.2+
 version is four times larger, presumably handling the EN8811H too, and
 this polling code appears nowhere in MediaTek's history or gl-image: GL.iNet's
-own code. Not searched yet: third-party copies of the old
-`gl-infra-builder`, and the vendors' own sources (Airoha's EN8811H driver
-releases, Quectel's RM500U patches).
+own code. Third-party copies of GL.iNet's old builder checked too: of the
+seven GitHub forks of `gl-infra-builder` the newest (zongceng, July 2024)
+has the `patches-mt798x-7.6.6.1` set with third-party additions; its iwinfo
+and modem patches differ from GL.iNet's 2023 ones only by refreshing, a
+small Lua change and Quectel's own qmi_wwan code for kernel 5.4.188: no HE
+rate table, no RM500U `usbnet` entry. A web search for `rm500u_5gnet` finds
+nothing: GL.iNet's own name. Not searched yet: Airoha's EN8811H driver
+releases outside MediaTek's feed.
 
 ## Next steps
 
