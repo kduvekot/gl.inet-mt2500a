@@ -313,6 +313,7 @@ jobs:
               (cd "$d/files" && find . -type f) | xargs git add
             fi
             if [ -f "$d/edit.sh" ]; then sh "$d/edit.sh"; fi
+            git add -A -- target package toolchain tools include   # files edit.sh created
             GIT_COMMITTER_DATE="$GIT_COMMIT_DATE +0000" GIT_AUTHOR_DATE="$GIT_COMMIT_DATE +0000" \
               git commit -q -a --allow-empty -m "$(cat "$d/message")"
           done
