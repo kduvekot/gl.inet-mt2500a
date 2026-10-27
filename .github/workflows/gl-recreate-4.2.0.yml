@@ -195,7 +195,11 @@ jobs:
             # GL.iNet's closed packages and image-level files, from the official
             # image (stays inside the run)
             C="$GITHUB_WORKSPACE/openwrt/gl-4.2.0-closed"
-            sudo python3 -I "$GITHUB_WORKSPACE/.github/scripts/gen-closed-feed.py" off_root ../closed "$C" "--private-now=$PRIVATE_NOW" > ../out/closed-feed.txt
+            # AGH_VERSION "-" (4.8.2 on): AdGuardHome is a package of its own
+            # (adguardhome-conntrack, built from gl_feed_common); GL.iNet's
+            # gl-sdk4-adguardhome then comes from the image like the others
+            SKIP=; [ "${AGH_VERSION:--}" = - ] && SKIP=--skip-override=gl-sdk4-adguardhome
+            sudo python3 -I "$GITHUB_WORKSPACE/.github/scripts/gen-closed-feed.py" off_root ../closed "$C" "--private-now=$PRIVATE_NOW" $SKIP > ../out/closed-feed.txt
             sudo python3 -I - off_root ../closed-image "$C/image-files.txt" << 'PY'
           import os, shutil, sys
           root, out, lst = sys.argv[1:4]
@@ -209,7 +213,7 @@ jobs:
           PY
             sudo chown -R "$(id -u):$(id -g)" ../closed ../closed-image
             # This release's AdGuardHome binary
-            sed -i -e "s/@AGH_VERSION@/$AGH_VERSION/g" -e "s/@AGH_SHA256@/$AGH_SHA256/g" \
+            [ -n "$SKIP" ] || sed -i -e "s/@AGH_VERSION@/$AGH_VERSION/g" -e "s/@AGH_SHA256@/$AGH_SHA256/g" \
               ../closed/glinet/gl-sdk4-adguardhome/Makefile
             wc -l ../out/closed-feed.txt
           fi

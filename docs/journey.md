@@ -1642,6 +1642,22 @@ published trees nor MediaTek's history, so not public. (Rebuilding its
 logic from the machine code would be decompilation, which belongs in the
 private repository, not here.)
 
+**4.8.2 prepared (not built yet: 4.7.4 first).** Its row combines the
+values collected this morning with what the builds since have taught us:
+`no_git` (its revision is empty, so commit counts don't show and the
+placeholders are left out), GL.iNet's Jenkins path, feeds pinned as
+collected (including the new OpenVPN feed `gl_feed_ovpn_with_dco` and
+MediaTek's feed at `964926c`), no LuCI English, and 4.7.4's recreated
+commits. Two things change for 4.8.2: AdGuardHome is a package of its own
+(`adguardhome-conntrack` 0.107.56, built from `gl_feed_common`), so
+`gl-sdk4-adguardhome` holds only its configuration and is generated from
+the image (new generator option `--skip-override`, used when `agh_version`
+is `-`); and `nf_nat_masquerade_ipv4` is 344 bytes there, without 953's
+change, while `fib_trie` is still 953's (`route-failover-kmwan-update-4.8`).
+Open until its first build: dnsmasq is release 14 (one more commit than
+4.7.4, probably patch 305), 42 kernel options differ from 4.7.4, and 12
+packages are one second early although the tree had no git.
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -1789,6 +1805,7 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.6.4 at GL.iNet's revision r15812+900 (job 70b); 4.7.4 complete (71b); first verdicts with the kernel comparison. |
 | 2026-10-27 | GL.iNet's 4.6.2-4.7.4 route-failover is 922 with 953's `fib_trie.c` and `nf_nat_masquerade.c` parts (validated compiles); extra commit updated. |
 | 2026-10-27 | 4.7.x placeholders as for 4.6.x: iwinfo, usbnet, Airoha link polling, PCIe (4.7.0+), emergency reboot (4.7.4), one unidentified each (to +908 and +912). |
+| 2026-10-27 | 4.8.2 prepared (row, AdGuardHome as its own package, routing variant); built once 4.7.4 is validated. |
 | 2026-10-27 | 4.6.2 at GL.iNet's revision (job 68b); musl `pthread_getname_np` backport found (identical code), two unidentified placeholders left. |
 | 2026-10-27 | MDIO `reset-post-delay-us` backported (kernel side of GL.iNet's PHY reset on the MDIO bus); exact sizes, validated. |
 | 2026-10-27 | 4.7.0 at GL.iNet's Jenkins path (job 69b): no build-path differences left, kernel configuration identical; busybox/dnsmasq/odhcpd carry GL.iNet patches (4.8.6 tree has them). |

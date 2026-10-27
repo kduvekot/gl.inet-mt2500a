@@ -89,7 +89,11 @@ def mk_escape(s):
 def main():
     root, out, closed = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
     opts = [a for a in sys.argv[4:] if a.startswith("--private-now=")]
-    only = set(a for a in sys.argv[4:] if a not in opts)
+    # --skip-override=<package>: generate it from the image like the others
+    # (gl-sdk4-adguardhome from 4.8.2 on: AdGuardHome is its own package)
+    skip = {a.split("=", 1)[1] for a in sys.argv[4:] if a.startswith("--skip-override=")}
+    opts_all = opts + [a for a in sys.argv[4:] if a.startswith("--skip-override=")]
+    only = set(a for a in sys.argv[4:] if a not in opts_all)
     # packages verified identical from public source: not part of this feed
     pub = closed / "built-from-public.txt"
     public = {l.strip() for l in pub.read_text().splitlines() if l.strip() and not l.startswith("#")} if pub.exists() else set()
@@ -274,6 +278,8 @@ def main():
                       f"$(eval $(call BuildPackage,{name}))"]
         (d / "Makefile").write_text("\n".join(lines) + "\n")
         ov = closed / "overrides" / d.relative_to(out) / "Makefile"
+        if name in skip:
+            ov = closed / "overrides" / "-"     # (none)
         if ov.exists():                  # built from source (files/ from the image)
             m = ov.read_text()           # with this release's version
             if ver:
