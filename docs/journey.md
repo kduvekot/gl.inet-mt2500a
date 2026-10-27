@@ -1379,8 +1379,11 @@ as `=m`, built but not installed, so such packages now go to `=m`; and from
 (OpenWrt 3d62b5d5c6), byte-identical to the file in GL.iNet's published 4.8.6
 tree (extra commit `base-files-tz-revert`). Also new in 4.7.0:
 `libstdc++.so.6.0.25-gdb.py` holds GL.iNet's build path
-(`/work2/jenkins/workspace/router_mt2500/mt7981/...`), and `wireguard.ko`
-differs in code.
+(`/work2/jenkins/workspace/router_mt2500/mt7981/...`). `wireguard.ko` is
+64 bytes larger than 4.6.8's with every function the same size: one more
+entry in the peer netlink policy, exactly what GL.iNet's published
+`hack-5.4/952-wireguard-support-punch.patch` (4.8.6 tree) does by adding
+`WGPEER_A_PUNCH`; extra commit `wireguard-punch-attribute`.
 
 ## Next steps
 
@@ -1513,4 +1516,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.6.2: zstd (`UBIFS_FS_ZSTD`) and device tree recreated; iwinfo and the `usbnet` RM500U entry found but not public; about 6 commits probably only for other boards. |
 | 2026-10-27 | 4.5.0 and 4.5.16 recreated to the level of 4.2.x (jobs 61, 62): only Samba order, `wg` tree hash and vermagic remain. |
 | 2026-10-27 | 4.7.0+: iproute2 6.3.0 from the MPTCP feed replaces OpenWrt's (`OVERRIDE_PKGS`); the static-syms order patch now reaches it (official 4.7.4 order reproduced). 4.6.4 → 4.6.8 leaves kernel code unchanged. |
-| 2026-10-27 | 4.6.2 and 4.7.0 build completely (all packages and files). 4.6.2: placeholders for its 8 missing commits (owner's choice). 4.7.0: ppp/opkg/uci in the later rows, extra packages GL.iNet built as modules stay `=m` (IPsec kernel options), `base-files-tz-revert`. |
+| 2026-10-27 | 4.6.2 and 4.7.0 build completely (all packages and files). 4.6.2: placeholders for its 8 missing commits (owner's choice). 4.7.0: ppp/opkg/uci in the later rows, extra packages GL.iNet built as modules stay `=m` (IPsec kernel options), `base-files-tz-revert`, `wireguard-punch-attribute` (GL.iNet's 952 patch). |
