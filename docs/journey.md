@@ -1486,6 +1486,24 @@ explains `fib_create_info`. Extra commit `route-failover-kmwan-update`; in
 archived tree in place and damaged its kernel source; experiments now run
 on a copy, each step checked.)
 
+**"Not public", checked again.** After the routing patches turned out to
+be public after all, every remaining "not public" claim was searched again
+the same way: all four of GL.iNet's published source trees (gl-image:
+4.8.6 for the BE10000, 4.8.7 and 4.9.0 for the MT3600BE, 4.9.1 for the
+BE14000), including the complete patched kernel sources they carry
+(`offline-sources/linux-5.4.281`), MediaTek's feed history, all gl-feeds
+branches and the fork, with fixed-string searches for the exact strings of
+GL.iNet's binaries. All five still hold, some more precisely now:
+`usbnet`'s `rm500u_5gnet` interface name (GL.iNet's modem patch 960 touches
+`qmi_wwan`, `option`, `qcserial`, `usb_wwan`, not `usbnet`); the 4.6.x USB
+port `power_ctl`; the EN8811H driver changes (in none of the trees' driver
+copies, v1.0.5 to v1.3.3); opkg's size option (GL.iNet's other opkg
+patches, database and conffile output, are already in our build since
+4.4.x); and iwinfo, whose upstream version is the same in every release
+(`2022-04-26-dc6847eb`): GL.iNet extended its MediaTek patch (HE rate
+table, `htmode`, `@wifi-device` lookups); the MT3600BE's published htmode
+patch is a different one, for `nl80211`.
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -1625,3 +1643,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.6.4 and 4.7.4 build completely. 4.6.4+: firewall ubus timeouts (2 → 20 s), AdGuardHome's zoneinfo dependencies, `@early` extra commits. 4.7.4: ChaCha20-Poly1305 package and built-in pstore. |
 | 2026-10-27 | Kernel code compared in every verdict (function by function against GL.iNet's kernel); open groups in 4.6.x/4.7.x: MDIO/PHY, MediaTek Ethernet, MPTCP version, PCIe. |
 | 2026-10-27 | 4.6.2+ routing solved: GL.iNet's published 922/923 (one context line adapted to 5.4.211) plus the devhash export match every routing function; validated single-object compiles with OpenWrt's flags. |
+| 2026-10-27 | All five remaining "not public" claims re-checked against GL.iNet's four published trees (incl. full kernel sources), MediaTek's feed history and gl-feeds: they hold. |
