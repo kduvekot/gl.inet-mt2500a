@@ -17,6 +17,7 @@ with the release's patch date and the subject in `message`.
 | `ppp-pppoe-retry-delay` | GL.iNet's published 4.8.6 tree (gl-inet/gl-image, branch gl-be10000, commit bfe99df8): `ppp.sh` (with ppp 2.4.8's plugin name `rp-pppoe.so`) and `ppp6-up` | 4.6.2: `ppp.sh` with the PPPoE retry delay (FAIL_COUNT) is exactly this; `ppp6-up` identical |
 | `opkg-remove-once` | GL.iNet's published 4.8.6 tree (gl-inet/gl-image, branch gl-be10000, commit bfe99df8): `0001-opkg_remove-avoid-remove-pkg-repeatly...patch` (upstream cherry-pick) | 4.6.2: `opkg` 477 bytes larger than 4.5.x (candidate, to be confirmed) |
 | `uci-lua-iteration` | GL.iNet's published 4.8.6 tree (gl-inet/gl-image, branch gl-be10000, commit bfe99df8): `001-lua-support-for-iteration.patch` | 4.6.2: uci/libuci-lua dated at the patch date, `uci.so` differs (candidate, to be confirmed) |
+| `mptcp-backport` | GL.iNet's MPTCP backport for kernel 5.4 as published in gl-inet/gl-image (gl-be10000, bfe99df8, versions/4.8.6): 25 files under `target/linux/mediatek/files-5.4`, patch `999-9999-2-compat-mptcp-proto.patch`, `kmod-mptcp` definition; fetched and checked at build time (`files.sha256`) | 4.6.2+: `MPTCP=y`, `MPTCP_IPV6=y`; 4.7.0+: package `kmod-mptcp` (4.7.0's preflight). The backport differs slightly between GL.iNet's trees: the MT2500's may be older |
 
 The placeholder stays until there is a good reason to remove it, or until
 the content of GL.iNet's actual commit is found (owner's decision,
