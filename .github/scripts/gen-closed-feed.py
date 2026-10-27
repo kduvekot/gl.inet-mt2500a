@@ -248,10 +248,14 @@ def main():
             sp = info / f"{name}.prerm-pkg"
             if sp.exists():
                 lines += [f"define Package/{name}/prerm", mk_escape(sp.read_text().rstrip("\n")), "endef", ""]
-            if name in MOVED:
-                mv = [f'mv -f "$${{IPKG_INSTROOT}}/{a}" "$${{IPKG_INSTROOT}}/{b}"' for a, b in MOVED[name].items()]
+            # only the moves of files this release's package lists (4.6.2's
+            # gl-sdk4-ddns ships none of them: ddns-scripts is gone)
+            listed = {l.strip().lstrip("/") for l in (info / f"{name}.list").read_text().splitlines()}
+            moves = {a: b for a, b in MOVED.get(name, {}).items() if a in listed}
+            if moves:
+                mv = [f'mv -f "$${{IPKG_INSTROOT}}/{a}" "$${{IPKG_INSTROOT}}/{b}"' for a, b in moves.items()]
                 lines += [f"define Package/{name}/postinst", "#!/bin/sh",
-                          *sorted({f'mkdir -p "$${{IPKG_INSTROOT}}/{b.rsplit("/", 1)[0]}"' for b in MOVED[name].values()}),
+                          *sorted({f'mkdir -p "$${{IPKG_INSTROOT}}/{b.rsplit("/", 1)[0]}"' for b in moves.values()}),
                           *mv, "endef", ""]
             lines += ["# GL.iNet's files are final: don't strip them again", "RSTRIP:=:", "",
                       "define Build/Compile", "endef", "",
