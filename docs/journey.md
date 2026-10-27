@@ -1678,8 +1678,16 @@ GHASH with the ARMv8 crypto extensions, ChaCha20/Poly1305 with NEON, built
 in; exactly the ones their MT7987 target config sets), and their hardware
 check (`security/gl-hw-check`, source and patch published; the patch
 applies cleanly here). Extra commits `mt7981-arm64-crypto` and
-`gl-hw-check`. Open until the first build: dnsmasq is release 14 (one more
-commit than 4.7.4, probably patch 305).
+`gl-hw-check`. dnsmasq is release 14, one commit more than 4.7.4: GL.iNet's
+published patch 305 (31 August 2025, a leak fix for the connection mark).
+With their published 302 to 305, built on a copy of job 71b's tree (the
+as-built rebuild first equal to 71b's), `dnsmasq` is byte-identical to the
+MT2500's 4.8.2 one: extra commit `dnsmasq-ct-mark-leak-fix`. This also
+explains 4.7.4's open dnsmasq layout: the published 304 is GL.iNet's later
+version (every 2.85 folder in gl-image, 4.8.6, 4.8.7 and 4.9.1, has the same
+one), and 4.7.4 was built with an earlier one, which is not public. (The
+same build had already been compared with 4.7.4 at 17:52; it differed from
+4.7.4 in exactly as many bytes as 4.8.2 does, which pointed here.)
 
 **4.9.0 (beta3), values collected for later.** Built 4 July 2026 at
 GL.iNet's Jenkins path with `SDK=1` (empty revision, CI build 1048), patch
@@ -1943,3 +1951,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.7.0 with all fixes (job 77b): all packages and files, kernel configuration identical; `ppp` size solved (upstream `ppp6-up` in the package); `base-files` size in 4.7.x traced to `distfeeds.conf` (GL.iNet's feed list, open). |
 | 2026-10-27 | Worker fix: a commit with `__pycache__` files had blocked w1's `git pull`, so 73p/74a ran on an old checkout; files removed, and a failed pull now puts the job back instead of building. |
 | 2026-10-27 | 4.9.0 `ubus`: GL.iNet's published auto-subscribe patch gives `libubus`, `ubus` and the Lua module byte-identical; `ubusd` has an unpublished server-side change. |
+| 2026-10-27 | 4.8.2 `dnsmasq` byte-identical with GL.iNet's published 302-305 (extra commit for 305); 4.7.4's had an earlier, unpublished 304. |

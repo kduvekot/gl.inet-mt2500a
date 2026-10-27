@@ -1,0 +1,1 @@
+dnsmasq: prevent a leak when getting the ct mark fails (GL.iNet, 4.8.2+)
