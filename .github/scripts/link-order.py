@@ -13,6 +13,10 @@ machine's directory order (journey, chapter 13; the order changed between
     link-order.py objects <binary> <source.c> ...
         the sources in link order: by the position of each source's own
         string literals in the binary (read-only data follows link order)
+    link-order.py marks <binary> <name>=<string> ...
+        the names in link order, by the position of a string known to come
+        from each (needs no sources, so a package recipe can run it when
+        OpenWrt reads the recipe, before the sources are unpacked)
 """
 import re, struct, sys
 
@@ -76,8 +80,18 @@ def objects(path, sources):
     return sorted(sources, key=lambda s: pos[s])
 
 
+def marks(path, pairs):
+    data = open(path, "rb").read()
+    pos = {n: data.find(t.encode()) for n, t in (p.split("=", 1) for p in pairs)}
+    if any(v < 0 for v in pos.values()):
+        sys.exit("marker not found")
+    return sorted(pos, key=pos.get)
+
+
 if __name__ == "__main__":
     if sys.argv[1] == "iproute2":
         print("\n".join(iproute2(sys.argv[2])))
     elif sys.argv[1] == "objects":
         print("\n".join(objects(sys.argv[2], sys.argv[3:])))
+    elif sys.argv[1] == "marks":
+        print(" ".join(marks(sys.argv[2], sys.argv[3:])))
