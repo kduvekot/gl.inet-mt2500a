@@ -2,7 +2,10 @@ From: our backport of upstream 77c3c95637526f1e4330cc9a4b2065f668c2c4fe
 Subject: [PATCH] tcp: factor out __tcp_close() helper
 
 Needed by the MPTCP backport (written for 5.4.281, where 5.4 stable already
-has this split); the split alone, for 5.4.211.
+has this split); the split alone, for 5.4.211. As in GL.iNet's 4.6.x/4.7.x
+kernels, __tcp_close() doesn't set sk->sk_shutdown (upstream's does): their
+machine code has no such store, and only without it the function has
+GL.iNet's size (single-object compile, validated against our vmlinux).
 
 ---
 --- a/include/net/tcp.h
@@ -17,7 +20,7 @@ has this split); the split alone, for 5.4.211.
  __poll_t tcp_poll(struct file *file, struct socket *sock,
 --- a/net/ipv4/tcp.c
 +++ b/net/ipv4/tcp.c
-@@ -2349,13 +2349,12 @@
+@@ -2349,13 +2349,10 @@
  	return too_many_orphans || out_of_socket_memory;
  }
  
@@ -29,10 +32,10 @@ has this split); the split alone, for 5.4.211.
  	int state;
  
 -	lock_sock(sk);
- 	sk->sk_shutdown = SHUTDOWN_MASK;
- 
+-	sk->sk_shutdown = SHUTDOWN_MASK;
+-
  	if (sk->sk_state == TCP_LISTEN) {
-@@ -2519,6 +2518,12 @@
+@@ -2519,6 +2516,12 @@
  out:
  	bh_unlock_sock(sk);
  	local_bh_enable();
