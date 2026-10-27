@@ -1251,6 +1251,41 @@ sources are unpacked. `link-order.py marks` needs no sources: it orders
 the objects by the position of one known string from each in GL.iNet's
 `sipcalc` (4.2.x `sub-output` first, 4.4.5 to 4.7.4 `sub-func` first).
 
+**Feeds fetched by branch, and feeds outside gl-feeds.** Some releases'
+feed packages all carry one commit's time: GL.iNet fetched those feeds by
+branch, which OpenWrt's feeds script clones with depth 1, so `git log` on
+any package folder returns the head (4.6.2's `shortcut-fe` has the time of
+gl_feed_21_02's `02702ea`, a commit that doesn't touch it). Writing the
+pinned head into the feed's `.git/shallow` reproduces that offline (tested:
+1716438772 as in the image, 1691135655 from a full clone); release value
+suffix `~shallow`. `release-values.py` now pins every feed of 4.5.0 to
+4.8.2: gl-feeds (by branch for 4.6.x/4.7.0), `mptcp-feeds` (4.7.0 on),
+4.8.2's OpenVPN feed (`gl-inet/vpn-extra-feeds`) and MediaTek's feed
+(unchanged since 2022 except in 4.7.0: November 2024). `wifidog-ng` is a
+submodule of gl-feeds with its own dates. GL.iNet's private MediaTek feed
+is called `mt798x` from 4.6.2 on, and `ddns-scripts` is gone there (our
+reconstructed `gl-sdk4-ddns` install script now only moves files the
+release's package lists). Only 4.5.16 was built without all kernel modules;
+4.6.2 to 4.7.4 again with them (about 910 options as modules), 4.8.2/4.9.0
+without LuCI English.
+
+**`shortcut-fe` and tertf's exports.** `shortcut-fe` (from 4.5.0) uses
+tertf's exported `term_update`, so GL.iNet's module has
+`depends=gl-sdk4-tertf`; ours takes tertf from the image. Placing a
+`.symvers` in `$(PKG_SYMVERS_DIR)` didn't help: OpenWrt's
+`collect_module_symvers` hook runs after every kernel package's compile and
+rewrites that file from `$(PKG_BUILD_DIR)/Module.symvers` (empty for a
+prebuilt module). The closed recipe now writes the exports there, with the
+module path in the build directory, and the hook carries them over.
+
+**Fewer wasted builds.** Most failed jobs could have been caught early or
+were races. `DRY_RUN=1` (local `dry=true`) stops after the configuration
+(builder, patches, extra commits, feeds, closed feed, defconfig) and fails
+if official packages can't be selected; a package that fails is built once
+more single-threaded before the build gives up; the end of the build log is
+kept with every result. A second job worker uses the M5+'s idle cores, and
+each worker keeps its last tree for single-package rebuilds.
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -1377,3 +1412,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | Revision count compiled into every binary (toolchain version string): labelled placeholder commit for 4.5.x's unidentified 885th commit. 4.5.16: no `ALL_KMODS`, LuCI English again. `sipcalc` order via marker strings (OpenWrt evaluates package recipes before unpacking). |
 | 2026-10-27 | 4.4.5 recreated to the level of 4.2.x (job 40): only the accepted classes remain (`.pyc`, `python3` Depends order, `wg`, vermagic). `sipcalc`: from 4.4.x on GL.iNet's link order is the sorted one (byte-identical by direct compilation). 4.5.0 (job 39): r15812+885 with the placeholder, `sipcalc`, `libelf`, Go programs identical; closed kernel modules now provide their exports (`.symvers`) for `shortcut-fe`. |
 | 2026-10-27 | 4.4.6 recreated to the level of 4.2.x (job 41): only the accepted classes remain. Second job worker on the M5+ (one build leaves ~90 % of the CPU idle); each worker keeps its last tree for single-package rebuilds. `gl-inet/gl-image` holds GL.iNet's complete 4.8.6 GPL tree for the BE10000. |
+| 2026-10-27 | 4.5.16 at 4.5.0's level (r15812+885). All feeds of 4.5.0-4.8.2 pinned, incl. depth-1 feeds (`~shallow`) and those outside gl-feeds; 4.6.2: `mt798x` feed, no `ddns-scripts`. tertf exports via OpenWrt's symvers hook. Preflight (`dry=true`) and a single-package retry. |
