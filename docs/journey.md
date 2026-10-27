@@ -1362,7 +1362,7 @@ function-by-function comparison below shows it isn't one.
 
 **Kernels function by function.** `vmlinux-to-elf` (in its own Python
 environment on the M5+) rebuilds a symbol table from a kernel's built-in
-kallsyms; our `kfuncs.py` (M5+) then compares two kernels per function, by
+kallsyms; `analysis/kernel-functions.py` then compares two kernels per function, by
 size and by machine code with PC-relative address fields masked. 4.6.2,
 4.6.4 and 4.6.8: all 30,806 functions identical; only the data behind two
 section-end markers differs (the embedded initramfs's timestamps and the
@@ -1550,4 +1550,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.6.2 and 4.7.0 build completely (all packages and files). 4.6.2: placeholders for its 8 missing commits (owner's choice). 4.7.0: ppp/opkg/uci in the later rows, extra packages GL.iNet built as modules stay `=m` (IPsec kernel options), `base-files-tz-revert`, `wireguard-punch-attribute` (GL.iNet's 952 patch). |
 | 2026-10-27 | From 4.7.0 on GL.iNet built in a Jenkins job (`/work2/jenkins/workspace/router_mt2500`, up to 4.9.0); release value `build_dir`. |
 | 2026-10-27 | Not public (4.6.2+): GL.iNet's changes to the EN8811H driver v1.2.5 (two messages, one flag) and opkg's package-size option. |
-| 2026-10-27 | Kernels compared function by function (`vmlinux-to-elf` + `kfuncs.py`): 4.6.2, 4.6.4 and 4.6.8 have identical kernel code; 4.7.0 adds USB hub port disabling and changes MPTCP, PCIe and USB power management. |
+| 2026-10-27 | Kernels compared function by function (`vmlinux-to-elf` + `analysis/kernel-functions.py`): 4.6.2, 4.6.4 and 4.6.8 have identical kernel code; 4.7.0 adds USB hub port disabling and changes MPTCP, PCIe and USB power management. |
