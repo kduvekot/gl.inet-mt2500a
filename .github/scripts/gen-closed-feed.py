@@ -189,6 +189,10 @@ def main():
         if kmod:
             lines += ["include $(INCLUDE_DIR)/kernel.mk"]
         lic = [f"PKG_LICENSE:={c['License']}"] if c.get("License") else []
+        # from 4.7.0 on some closed packages also name license files and a
+        # maintainer (gl-sdk4-arp-scan)
+        lic += [f"PKG_LICENSE_FILES:={c['LicenseFiles']}"] if c.get("LicenseFiles") else []
+        lic += [f"PKG_MAINTAINER:={c['Maintainer']}"] if c.get("Maintainer") else []
         lines += [f"PKG_NAME:={c.get('SourceName', name)}", *([f"PKG_VERSION:={ver}"] if ver else []), f"PKG_RELEASE:={rel}", *lic,
                   "", "include $(INCLUDE_DIR)/package.mk", ""]
         dep = " ".join("+" + x for x in deps)

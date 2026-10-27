@@ -1579,7 +1579,9 @@ once. Every historical version of `pcie-mediatek-gen3.c` in MediaTek's
 feed, compiled the validated way, fits GL.iNet's 4.7.0 worse than or as
 badly as ours (the closest still differ in `mtk_pcie_probe` and
 `mtk_msi_bottom_domain_free`; MediaTek's 2024 file in eight functions), so
-it is GL.iNet's own change to the 2022 SDK driver, not public.
+it is GL.iNet's own change to the 2022 SDK driver, not public. And one closed package, `gl-sdk4-arp-scan`, names `LicenseFiles` and a
+`Maintainer` from 4.7.0 on; the closed-feed generator now carries both
+fields over (before, only `License`).
 
 ## Next steps
 
