@@ -1593,8 +1593,16 @@ dated at 4.7.0's patch time), `dnsmasq-full` (2.85-12) and `odhcpd`
 their folders had more commits. GL.iNet's published 4.8.6 tree has extra
 patches for exactly these three (odhcpd 2, dnsmasq 5 plus its init script,
 busybox 2); of them, only dnsmasq's `302-support-log-level-config` leaves
-strings, and those are in 4.7.0 and not in 4.6.8. Which of the others were
-there already is tested by package rebuilds on a copy of 69b's tree. PCIe in 4.7.0:
+strings, and those are in 4.7.0 and not in 4.6.8. Package rebuilds on a copy of
+69b's tree (each package built directly with its own Makefile and
+OpenWrt's `SOURCE_DATE_EPOCH`, first validated to give 69b's own binary)
+settle it: busybox with GL.iNet's 531 (crond log line) and dnsmasq with 302
+and 303 are byte-identical to GL.iNet's 4.7.0 binaries, odhcpd with 01 and
+the `odhcpd.c` half of 02; 4.7.4's odhcpd has the whole 02 (one byte,
+`LOG_ERR` to `LOG_DEBUG`, at the same release number: GL.iNet's builder
+recreates its patch commits, so a patch can change in place). Busybox's 531
+is already in 4.6.8 (release 3). The commits per package now give exactly
+GL.iNet's release numbers (busybox 3, dnsmasq 12/13, odhcpd 6). PCIe in 4.7.0:
 GL.iNet's `mtk_pcie_probe` sleeps twice after enabling the clocks, ours
 once. Every historical version of `pcie-mediatek-gen3.c` in MediaTek's
 feed, compiled the validated way, fits GL.iNet's 4.7.0 worse than or as
@@ -1747,6 +1755,7 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | MPTCP: GL.iNet's `__tcp_close()` split doesn't set `sk_shutdown`, and their `tcp_collapse()` moves the MPTCP skb extension; both now match (validated single-object compiles). |
 | 2026-10-27 | MPTCP: our backport is Linux 5.15's; GL.iNet's 4.6.2-4.8.2 `subflow_v4_init_req` is a "need to implement this function" stub, now reproduced instruction for instruction. |
 | 2026-10-27 | MPTCP complete: 4.6.x's receive path still reported subflow priority events (`mptcp_recvmsg` identical with that call active); `mptcp-backport-4.6x` for the 4.6.x rows. |
+| 2026-10-27 | busybox (531, 4.6.8+), dnsmasq (302, 303) and odhcpd (01, 02) from GL.iNet's published tree, byte-identical to GL.iNet's 4.7.0 binaries; release numbers match. |
 | 2026-10-27 | 4.6.2 at GL.iNet's revision (job 68b); musl `pthread_getname_np` backport found (identical code), two unidentified placeholders left. |
 | 2026-10-27 | MDIO `reset-post-delay-us` backported (kernel side of GL.iNet's PHY reset on the MDIO bus); exact sizes, validated. |
 | 2026-10-27 | 4.7.0 at GL.iNet's Jenkins path (job 69b): no build-path differences left, kernel configuration identical; busybox/dnsmasq/odhcpd carry GL.iNet patches (4.8.6 tree has them). |
