@@ -1463,7 +1463,10 @@ Ethernet (`ethsys_reset`, in 4.7.0 also `mtk_mac_link_up`,
 `subflow_v4_init_req`: GL.iNet's backport in these releases isn't quite the
 4.8.6 one); and `mtk_pcie_probe` in 4.7.0. These go into kernel test builds
 (candidate patch versions, compared function by function) once the queue
-is through.
+is through. The releases already counted as recreated hold up: our 4.5.0 and
+4.5.16 kernels (jobs 61, 62) match GL.iNet's in every shared function
+(30,232 and 28,925), once the mask also covers sign-extending loads
+(`ldrsw`; one global variable's address had looked like a code change).
 
 ## Next steps
 

@@ -69,8 +69,8 @@ def mask(b):
         elif (w & 0x7e000000) == 0x36000000: w &= 0xfff8001f        # tbz/tbnz
         elif (w & 0x3b000000) == 0x18000000: w &= 0xff00001f        # ldr literal
         elif (w & 0xffc00000) == 0x91000000: w &= 0xffc003ff        # add imm (adrp pairs: low12)
-        elif (w & 0x3fc00000) in (0x39400000, 0x39000000) or (w & 0xbfc00000) == 0xb9400000 \
-                or (w & 0xffc00000) == 0xf9400000: w &= 0xffc003ff   # ldr/str uimm (adrp pairs)
+        elif (w & 0x3b000000) == 0x39000000: w &= 0xffc003ff        # any load/store with unsigned
+                                                                    # 12-bit offset (adrp pairs)
         m.append(w)
     return hashlib.sha1(str(m).encode()).hexdigest()[:12]
 
