@@ -76,7 +76,8 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   `grep --line-buffered`, save logs with `if: always()`, keep a time limit.
 - **Order of work:** a release step only after the previous base is
   validated; `docs/releases.md` only once all releases are done (collect
-  data meanwhile).
+  data meanwhile). No GPL source request to GL.iNet until all firmwares
+  are done (owner, 2026-10-27); keep the list of not-public parts current.
 - **Naming:** GitHub workflow runs by their run number (#N); M5+ jobs by
   their queue number.
 - **Decompilation** (private repo): one commit per iteration, never
