@@ -523,9 +523,16 @@ jobs:
           real = set(re.findall(r"^Package: (\S+)$", open("tmp/.packageinfo").read(), re.M))
           extra = sorted((selected - official) & real)
           missing = sorted(p for p in wanted if p not in selected)
+          # GL.iNet's own configuration, as far as it builds packages as
+          # modules (=m: built, not in the image; with ALL_KMODS their kernel
+          # options are =m too): an extra package GL.iNet had as =m goes back
+          # to =m, not off (4.7.0: kmod-ipsec, kmod-crypto-echainiv)
+          offcfg = "/work/cmp/off_root/etc/openwrt.config"
+          offm = set(re.findall(r"^CONFIG_PACKAGE_(\S+)=m$", open(offcfg).read(), re.M)) \
+              if os.path.exists(offcfg) else set()
           with open(".config", "a") as f:
               for p in extra:
-                  f.write(f"# CONFIG_PACKAGE_{p} is not set\n")
+                  f.write(f"CONFIG_PACKAGE_{p}=m\n" if p in offm else f"# CONFIG_PACKAGE_{p} is not set\n")
           subprocess.run(["make", "defconfig"], check=True)
           selected = set(re.findall(r"^CONFIG_PACKAGE_(\S+)=y$", open(".config").read(), re.M))
           open("/work/out/mirror.txt", "w").write(
