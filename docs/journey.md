@@ -1624,3 +1624,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.7.0+: GL.iNet's USB hub port power patch (963, published) as an extra commit; 4.6.x: USB port `power_ctl` not public (labelled placeholder). |
 | 2026-10-27 | 4.6.4 and 4.7.4 build completely. 4.6.4+: firewall ubus timeouts (2 → 20 s), AdGuardHome's zoneinfo dependencies, `@early` extra commits. 4.7.4: ChaCha20-Poly1305 package and built-in pstore. |
 | 2026-10-27 | Kernel code compared in every verdict (function by function against GL.iNet's kernel); open groups in 4.6.x/4.7.x: MDIO/PHY, MediaTek Ethernet, MPTCP version, PCIe. |
+| 2026-10-27 | 4.6.2+ routing solved: GL.iNet's published 922/923 (one context line adapted to 5.4.211) plus the devhash export match every routing function; validated single-object compiles with OpenWrt's flags. |
