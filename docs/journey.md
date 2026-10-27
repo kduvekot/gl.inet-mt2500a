@@ -1635,7 +1635,12 @@ its new file (fixed, see above). 4.7.4 builds completely (458 packages,
 5255 files, kernel configuration identical); new there, only noted so far:
 a group of reboot functions (`psci_sys_reset`, `emergency_restart`, the
 restart handlers), `copy_creds`, `partition_split`, and `libpcre`'s
-Auto-Installed flag.
+Auto-Installed flag. The reboot group is a GL.iNet change in 4.7.4:
+`emergency_restart()` sets a flag and `psci_sys_reset()` asks for it
+through a new `get_reboot_emergency()`; it is in none of GL.iNet's
+published trees nor MediaTek's history, so not public. (Rebuilding its
+logic from the machine code would be decompilation, which belongs in the
+private repository, not here.)
 
 ## Next steps
 
