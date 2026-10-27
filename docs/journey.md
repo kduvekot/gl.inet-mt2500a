@@ -1512,8 +1512,12 @@ start, GL.iNet's has no such store anywhere in the function (nor in
 keeps that line. Without it, the single-object compile (validated against
 our vmlinux) gives exactly GL.iNet's sizes for `__tcp_close` and
 `tcp_close`. Our split patch now leaves the line out, as GL.iNet's does.
-The other MPTCP differences (`tcp_collapse`, `mptcp_recvmsg`,
-`subflow_v4_init_req`) are still open; GL.iNet's 4.8.7 MPTCP files differ
+`tcp_collapse` is 68 bytes larger in GL.iNet's kernel: it moves the
+MPTCP skb extension (`active_extensions`, `extensions`, a WARN), upstream
+MPTCP's `mptcp_skb_ext_move()` call, which GL.iNet's later published compat
+patch no longer has. Adding that one line gives exactly GL.iNet's size,
+with no other function in `tcp_input.o` changing (patch `999-9999-3`). Still
+open: `mptcp_recvmsg`, `subflow_v4_init_req`; GL.iNet's 4.8.7 MPTCP files differ
 from 4.8.6's only in `compat.h`, the `Makefile` and a compat patch that
 also exports `fib_info_devhash_bucket`.
 
@@ -1657,4 +1661,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | Kernel code compared in every verdict (function by function against GL.iNet's kernel); open groups in 4.6.x/4.7.x: MDIO/PHY, MediaTek Ethernet, MPTCP version, PCIe. |
 | 2026-10-27 | 4.6.2+ routing solved: GL.iNet's published 922/923 (one context line adapted to 5.4.211) plus the devhash export match every routing function; validated single-object compiles with OpenWrt's flags. |
 | 2026-10-27 | All five remaining "not public" claims re-checked against GL.iNet's four published trees (incl. full kernel sources), MediaTek's feed history and gl-feeds: they hold. |
-| 2026-10-27 | MPTCP: GL.iNet's `__tcp_close()` split doesn't set `sk_shutdown`; our split now matches (validated single-object compile). |
+| 2026-10-27 | MPTCP: GL.iNet's `__tcp_close()` split doesn't set `sk_shutdown`, and their `tcp_collapse()` moves the MPTCP skb extension; both now match (validated single-object compiles). |
