@@ -1526,8 +1526,17 @@ this function: %s,%s,%d", __FILE__, __func__, __LINE__)` with line 1791,
 nothing else (the message is in every kernel from 4.6.2 to 4.8.2, gone in
 4.9.0). Replacing the function's two calls with that line puts it exactly
 on line 1791 of our file, and the compiled function is GL.iNet's
-instruction for instruction (patch `999-9999-4`). Still open:
-`mptcp_recvmsg` and `mptcp_stream_accept`; GL.iNet's 4.8.7 MPTCP files differ
+instruction for instruction (patch `999-9999-4`). `mptcp_stream_accept`
+differs only in data addresses. `mptcp_recvmsg`: GL.iNet's 4.6.2 version
+is larger, not smaller; it keeps two values on the stack, which a call
+inside the inlined `mptcp_rcv_space_adjust()` loop forces, and our file has
+exactly one call there commented out: `mptcp_event(MPTCP_EVENT_SUB_PRIORITY,
+...)` after GL.iNet's `is_set_backup_for_rx()`. Active, it gives GL.iNet's
+`mptcp_recvmsg` instruction for instruction (578); `mptcp_finish_join` is
+identical too. Only 4.6.2-4.6.8 have it (2312 bytes; 2256 from 4.7.0 on,
+like ours), so the 4.6.x rows use `mptcp-backport-4.6x`, the same commit
+with that patch (`999-9999-5`). With that, every MPTCP difference is
+explained; GL.iNet's 4.8.7 MPTCP files differ
 from 4.8.6's only in `compat.h`, the `Makefile` and a compat patch that
 also exports `fib_info_devhash_bucket`.
 
@@ -1734,6 +1743,7 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | All five remaining "not public" claims re-checked against GL.iNet's four published trees (incl. full kernel sources), MediaTek's feed history and gl-feeds: they hold. |
 | 2026-10-27 | MPTCP: GL.iNet's `__tcp_close()` split doesn't set `sk_shutdown`, and their `tcp_collapse()` moves the MPTCP skb extension; both now match (validated single-object compiles). |
 | 2026-10-27 | MPTCP: our backport is Linux 5.15's; GL.iNet's 4.6.2-4.8.2 `subflow_v4_init_req` is a "need to implement this function" stub, now reproduced instruction for instruction. |
+| 2026-10-27 | MPTCP complete: 4.6.x's receive path still reported subflow priority events (`mptcp_recvmsg` identical with that call active); `mptcp-backport-4.6x` for the 4.6.x rows. |
 | 2026-10-27 | 4.6.2 at GL.iNet's revision (job 68b); musl `pthread_getname_np` backport found (identical code), two unidentified placeholders left. |
 | 2026-10-27 | MDIO `reset-post-delay-us` backported (kernel side of GL.iNet's PHY reset on the MDIO bus); exact sizes, validated. |
 | 2026-10-27 | 4.7.0 at GL.iNet's Jenkins path (job 69b): no build-path differences left, kernel configuration identical; busybox/dnsmasq/odhcpd carry GL.iNet patches (4.8.6 tree has them). |
