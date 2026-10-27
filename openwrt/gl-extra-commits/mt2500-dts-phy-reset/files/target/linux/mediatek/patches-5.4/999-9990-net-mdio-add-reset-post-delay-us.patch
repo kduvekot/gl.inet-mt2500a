@@ -1,0 +1,44 @@
+From: our backport of upstream "net: mdiobus: add reset-post-delay-us handling" (Linux 5.9)
+Subject: [PATCH] net: mdio: add reset-post-delay-us
+
+GL.iNet's 4.6.2+ kernels honour the MDIO bus property reset-post-delay-us
+(their MT2500 device tree sets 100 ms): after the bus reset, __udelay() with
+it if > 0; the field follows reset_delay_us in struct mii_bus. Upstream
+uses fsleep(), which 5.4 doesn't have; GL.iNet's code calls __udelay().
+With this, __mdiobus_register and of_mdiobus_register have GL.iNet's sizes
+(single-object compiles, validated against our vmlinux).
+
+---
+--- a/include/linux/phy.h
++++ b/include/linux/phy.h
+@@ -253,6 +253,8 @@
+ 
+ 	/* GPIO reset pulse width in microseconds */
+ 	int reset_delay_us;
++	/* GPIO reset deassert delay in microseconds */
++	int reset_post_delay_us;
+ 	/* RESET GPIO descriptor pointer */
+ 	struct gpio_desc *reset_gpiod;
+ };
+--- a/drivers/net/phy/mdio_bus.c
++++ b/drivers/net/phy/mdio_bus.c
+@@ -413,6 +413,8 @@
+ 		gpiod_set_value_cansleep(gpiod, 1);
+ 		udelay(bus->reset_delay_us);
+ 		gpiod_set_value_cansleep(gpiod, 0);
++		if (bus->reset_post_delay_us > 0)
++			udelay(bus->reset_post_delay_us);
+ 	}
+ 
+ 	if (bus->reset)
+--- a/drivers/of/of_mdio.c
++++ b/drivers/of/of_mdio.c
+@@ -219,6 +219,8 @@
+ 	/* Get bus level PHY reset GPIO details */
+ 	mdio->reset_delay_us = DEFAULT_GPIO_RESET_DELAY;
+ 	of_property_read_u32(np, "reset-delay-us", &mdio->reset_delay_us);
++	mdio->reset_post_delay_us = 0;
++	of_property_read_u32(np, "reset-post-delay-us", &mdio->reset_post_delay_us);
+ 
+ 	/* Register the MDIO bus */
+ 	rc = mdiobus_register(mdio);

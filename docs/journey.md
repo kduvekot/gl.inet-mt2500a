@@ -1537,6 +1537,22 @@ masked; an existing function compiled the same way is identical too).
 Extra commit `musl-pthread-getname-np` (patch `910`), 4.6.2+; in 4.6.x it
 takes the place of another unidentified placeholder (two left).
 
+**MDIO: the kernel side of the PHY reset.** GL.iNet's `__mdiobus_register`
+waits after releasing the MDIO bus reset: `__udelay()` with a field after
+`reset_delay_us` in `struct mii_bus`, if it is greater than 0, which is the
+`reset-post-delay-us` property their 4.6.2 device tree sets (100 ms). Linux
+got that in 5.9 ("net: mdiobus: add reset-post-delay-us handling"; there
+with `fsleep()`, which 5.4 lacks). Our backport for 5.4 (field, reading the
+property in `of_mdio.c`, the wait) gives exactly GL.iNet's sizes for
+`__mdiobus_register` and `of_mdiobus_register` (single-object compiles of
+`mdio_bus.o`, `of_mdio.o`, `phy_device.o`, `phylink.o`, all 170 functions
+validated against our vmlinux first). It goes with the device tree in
+`mt2500-dts-phy-reset`. Still open there: `get_phy_device` (GL.iNet's does
+one more register read while identifying the PHY) and `phylink_fixed_state`.
+Two MediaTek Ethernet "differences" (`mtk_mac_link_up`,
+`mtk_rx_irq_disable`) were artifacts of compiler-generated names; only
+`ethsys_reset` differs (one load scheduled elsewhere).
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -1679,3 +1695,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | All five remaining "not public" claims re-checked against GL.iNet's four published trees (incl. full kernel sources), MediaTek's feed history and gl-feeds: they hold. |
 | 2026-10-27 | MPTCP: GL.iNet's `__tcp_close()` split doesn't set `sk_shutdown`, and their `tcp_collapse()` moves the MPTCP skb extension; both now match (validated single-object compiles). |
 | 2026-10-27 | 4.6.2 at GL.iNet's revision (job 68b); musl `pthread_getname_np` backport found (identical code), two unidentified placeholders left. |
+| 2026-10-27 | MDIO `reset-post-delay-us` backported (kernel side of GL.iNet's PHY reset on the MDIO bus); exact sizes, validated. |
