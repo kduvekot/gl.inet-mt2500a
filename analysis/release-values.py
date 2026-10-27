@@ -19,6 +19,9 @@ only = sys.argv[6:]
 AGH_SHA = {   # AdGuardHome release tarballs already in the table
     "v0.107.8": "77a678e8beaa7978b950d3d8dff9e54c9bd50ae43495a9ad478f59ef73bced67",
     "v0.107.26": "709eefbefe18ca8d2bd3578eb9923a8ea7382c59920e6565f386898f0c64b91e",
+    # 4.6.2: GL.iNet's binary = this release binary after sstrip -z (checked 2026-10-27)
+    "v0.107.46": "5011096bae383e27db9f0de063caeea9ec4b0e0bcac6728409d223dc51c8c0d0",
+    "v0.107.52": "86ae7a7c2db9c158b9db9f350568485e3ccc43e7039624d1a5bc50bb1dee1048",
 }
 
 

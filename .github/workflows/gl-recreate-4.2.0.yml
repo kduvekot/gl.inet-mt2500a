@@ -164,6 +164,11 @@ jobs:
           echo "${OFFICIAL_SHA256}  official.bin" | sha256sum -c -
           mkdir official && tar -xf official.bin -C official
           sudo unsquashfs -q -d off_root official/*/root > /dev/null
+          # GL.iNet's build-machine order of iproute2's static-syms table, read
+          # from its ip-full (used by openwrt/gl-4.2.0-patches/iproute2)
+          sudo python3 -I "$GITHUB_WORKSPACE/.github/scripts/link-order.py" iproute2 \
+            off_root/usr/libexec/ip-full > ../link-order-ip.txt || : > ../link-order-ip.txt
+          echo "iproute2 table order: $(wc -l < ../link-order-ip.txt) names"
           if [ "$CLOSED" = true ]; then
             # GL.iNet's closed packages and image-level files, from the official
             # image (stays inside the run)
