@@ -581,7 +581,24 @@ jobs:
             # the compiler by content instead, or every run misses the cache.
             export CCACHE_DIR=/work/cache/ccache-glpath CCACHE_MAXSIZE=5G CCACHE_COMPILERCHECK=content
             rm -rf /work/cache/ccache
-            make -j"$(nproc)" BUILD_LOG=1 tools/install toolchain/install
+            # Host tools cache (ccache runs only, so never in validation runs):
+            # the tools don't depend on the release, only on tools/, include/
+            # and rules.mk (hashed into the key, so GL.iNet's patches to tools
+            # give a new key) and the host compiler. OpenWrt's own stamp name
+            # encodes which tools are enabled, so another selection rebuilds.
+            # Restored files get the current time: newer than the fresh tree,
+            # so make sees them as up to date.
+            tkey=$( { find tools include rules.mk -type f -print0 | sort -z | xargs -0 sha1sum; gcc --version; } | sha1sum | cut -c1-16)
+            tcache=/work/cache/hosttools/$tkey.tar
+            if [ -f "$tcache" ]; then
+              tar -xf "$tcache" && find staging_dir/host build_dir/host -exec touch -h {} + && echo "host tools from cache $tkey"
+            fi
+            make -j"$(nproc)" BUILD_LOG=1 tools/install
+            if [ ! -f "$tcache" ]; then
+              mkdir -p /work/cache/hosttools && rm -f /work/cache/hosttools/*.tar
+              tar -cf "$tcache.tmp" staging_dir/host build_dir/host && mv "$tcache.tmp" "$tcache" && echo "host tools cached as $tkey"
+            fi
+            make -j"$(nproc)" BUILD_LOG=1 toolchain/install
             for c in staging_dir/toolchain-*/bin/aarch64-openwrt-linux-musl-{gcc,g++,c++,cpp} \
                      staging_dir/toolchain-*/bin/aarch64-openwrt-linux-{gcc,g++,c++,cpp}; do
               [ -f "$c" ] && [ ! -L "$c" ] && [ ! -e "$(dirname "$c")/.$(basename "$c").real" ] || continue
