@@ -1689,9 +1689,14 @@ gets ABI names in `Depends` again (as in 4.2.1-4.4.6: `rebuilt_packages`).
 483 packages (4.8.2: 461). Feeds: `gl_feed_common` `0bd8fb4` (branch
 `common_v4.9`), `mptcp-feeds` `612196d`, a new `gl_feed_smstools3`
 (`08b281f`), no OpenVPN feed any more; `gl_feed_21_02` and MediaTek's feed
-as before. Package changes against 4.8.2: dnsmasq 2.85 to **2.92** (a new
-upstream version: GL.iNet's dnsmasq patches need checking against it) and
-AdGuardHome 0.107.73. Kernel: wireless as modules (`CFG80211=m` with the
+as before. Package changes against 4.8.2: dnsmasq 2.85 to **2.92** and AdGuardHome
+0.107.73. dnsmasq 2.92 is already settled: GL.iNet's published 4.9.0 tree
+(for the MT3600BE) has its dnsmasq 2.92 package folder (six 2026 CVE fixes
+and their patches 300-305 ported), and built on a copy of job 71b's tree it
+gives a `dnsmasq` byte-identical to the MT2500's 4.9.0 one, with every other
+file of the package the same; only the release differs (published 4,
+official 6). Extra commit `dnsmasq-2.92` (folder plus release 6), tested
+the way the recipe applies it. Kernel: wireless as modules (`CFG80211=m` with the
 signed regulatory database, RSA and asymmetric keys built in), although the
 MT2500 has no Wi-Fi of its own, and `NET_SCH_PRIO` built in; the MPTCP stub
 in `subflow_v4_init_req` is gone (implemented, as in GL.iNet's published
