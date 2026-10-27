@@ -1806,8 +1806,18 @@ packages differ in `Installed-Size` by a few bytes in every 4.7.x job (not
 in 4.6.x), with identical files: the package archives' owner fields. Our
 `luci-mod-status` repacked without owner names gives exactly the size of
 GL.iNet's 2022 copy of it in their package repository (29087), so the
-headers explain sizes to the byte; which owner GL.iNet's Jenkins wrote
-from 4.7.0 on is being searched.
+headers explain sizes to the byte. No owner or group name or id fits
+eight packages at once, nor does another tar version or format. What fits
+is the folder modes: GL.iNet's Jenkins builds with umask 002. The official
+images have 1 group-writable folder up to 4.6.8, 60 in 4.7.0 and 4.7.4, 26
+in 4.8.2 and 23 in 4.9.0. Rebuilt on a copy of 79b's tree, `luci-mod-status`
+goes from 29098 (umask 022) to 29103 (umask 002) and 29110 (umask 002 with
+its source folders 775, as a checkout under umask 002 leaves them; GL.iNet:
+29108), with every non-shared folder's mode as in the image. Which mode the
+shared folders (`usr`, `usr/bin`, ...) had depends on the whole build, so
+the umask is now a release value (`umask`, 002 for 4.7.0 to 4.8.2), set in
+the build script before anything is checked out, and also for the copy of
+the closed feeds; job 82b is the first build with it.
  The 4.8.2 preflight 73p failed
 in the fetch step because it ran on an old checkout: a commit had included
 Python bytecode (`__pycache__`) by accident, and the worker's `git pull`
@@ -1989,3 +1999,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.6.4 with complete MPTCP and the routing mix (job 74b): revision +900, all packages and files, `nf_nat.ko` and `fib_table_lookup` now as GL.iNet's; left: not-public parts, `ethsys_reset`, `ip_valid_fib_dump_req`. |
 | 2026-10-27 | `ip_valid_fib_dump_req` explained: GL.iNet's `fib_frontend.c` part is 953's (two blank lines fewer than 922's, so `ASSERT_RTNL()`'s line number is 928, not 930); our 922 now has it, test-applied. |
 | 2026-10-27 | 4.7.4 with all fixes (job 79b): r15812+912 as GL.iNet's, all packages and files; `libpcre` traced to a feed pin one commit too late (fixed, and `release-values.py` now avoids such pins). |
+| 2026-10-27 | GL.iNet's Jenkins builds (4.7.0+) use umask 002 (group-writable folders in the images, ~100 `Installed-Size` values); new release value `umask`. |

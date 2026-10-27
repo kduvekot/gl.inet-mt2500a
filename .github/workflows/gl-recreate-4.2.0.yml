@@ -137,6 +137,11 @@ env:
   #                     on GL.iNet built in a Jenkins job:
   #                     /work2/jenkins/workspace/router_mt2500); OpenWrt's tree
   #                     is its mt7981 folder
+  #   UMASK             the builder's umask ("-": 022). From 4.7.0 on GL.iNet's
+  #                     Jenkins builds with 002: folders made without an
+  #                     explicit mode are group-writable (60 in the 4.7.x
+  #                     images, 1 up to 4.6.8), which shows in about 100
+  #                     packages' Installed-Size (the archive's folder modes)
 
 jobs:
   recreate:
@@ -174,7 +179,7 @@ jobs:
           REL="${{ inputs.release }}"
           case "$REL" in ""|false) REL=4.2.0 ;; esac
           awk -F'\t' -v r="$REL" -v q="'" '$1 == r { f = 1
-              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES PRIVATE_NOW LATE_PATCHES PATCHES_REV EXTRA_CONFIG FEED_REVS EXTRA_COMMITS SDK_MODE BUILD_DIR", k, " ")
+              n = split("RELEASE FORK_TAG OFFICIAL_URL OFFICIAL_SHA256 SOURCE_DATE_EPOCH GIT_COMMIT_DATE VERSION_DATE GL_TYPE AGH_VERSION AGH_SHA256 EARLY_PATCHES REBUILT_PACKAGES PRIVATE_NOW LATE_PATCHES PATCHES_REV EXTRA_CONFIG FEED_REVS EXTRA_COMMITS SDK_MODE BUILD_DIR UMASK", k, " ")
               for (i = 1; i <= n; i++) print k[i] "=" q $i q }
             END { exit !f }' openwrt/gl-releases.tsv > work/release.env \
             || { echo "release $REL not in openwrt/gl-releases.tsv"; exit 1; }
@@ -245,6 +250,11 @@ jobs:
           #!/usr/bin/env bash
           # Runs inside ubuntu:20.04 (OpenWrt 21.02 predates newer hosts).
           set -euxo pipefail
+          # GL.iNet's builder umask (release value UMASK), before anything is
+          # checked out or built
+          U=$(sed -n "s/^UMASK='\(.*\)'$/\1/p" /work/release.env)
+          case "$U" in ""|-) U=022 ;; esac
+          umask "$U"
           # GL.iNet's build path (release value BUILD_DIR)
           GL_DIR=$(sed -n "s/^BUILD_DIR='\(.*\)'$/\1/p" /work/release.env)
           case "$GL_DIR" in ""|-) GL_DIR=/home/glinet/work/_github ;; esac
@@ -440,14 +450,15 @@ jobs:
           done
           if [ "${CLOSED:-}" = true ]; then
             # GL.iNet's closed packages (generated in the run), copied into the
-            # tree (src-cpy) so their Source: reads feeds/...; umask 022 as in
-            # a normal build environment (folder modes end up in the packages)
+            # tree (src-cpy) so their Source: reads feeds/...; with the
+            # builder's umask (release value UMASK; folder modes end up in the
+            # packages)
             # One feed per folder the generator wrote (named after the official
             # Source: glinet, and mt7981 up to 4.5.16, mt798x from 4.6.2 on)
             F=feeds.conf; [ -f "$F" ] || F=feeds.conf.default
             closed_feeds=$(cd /work/closed && ls -d */ | tr -d /)
             for f in $closed_feeds; do printf 'src-cpy %s /work/closed/%s\n' "$f" "$f" >> "$F"; done
-            ( umask 022; ./scripts/feeds update $closed_feeds > /dev/null )
+            ( umask "$U"; ./scripts/feeds update $closed_feeds > /dev/null )
             # OpenWrt names a source package after its folder: GL.iNet's
             # gl-ui4.0/module/adguardhome (gl-sdk4-ui-adguardhome) clashes with
             # the packages feed's adguardhome (not in the official image), and
