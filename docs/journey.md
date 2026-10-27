@@ -1426,6 +1426,25 @@ package and its dependencies need (`opkg_recurse_okgs_size`,
 4.8.6 opkg patches don't have it. Our `opkg` is exactly 4.5.16's size, so
 the remove-once candidate leaves the binary unchanged and stays unconfirmed.
 
+**4.6.4 and 4.7.4 complete builds (jobs 66b, 67b).** 4.6.4: all 436
+packages and 4905 files, kernel configuration identical. New: GL.iNet's
+`firewall` is release 1.2 from 4.6.4 on, and `fw3` differs from 4.6.2's in
+exactly two instructions, the timeouts of its two `ubus_invoke` calls (2000
+→ 20000 ms), in no public source (our construction `firewall-ubus-timeout`);
+GL.iNet's `gl-sdk4-adguardhome` depends on `zoneinfo-*` from 4.6.4 on, which
+our source-built override lacked (it now takes the official dependencies,
+which also fixes Auto-Installed and the `status` order); and the lua5.3 and
+uci commits are among the one-second-early ones in 4.6.4 (new suffix
+`@early` for extra commits). 4.7.4: all 458 packages and 5255 files; its
+kernel configuration adds ChaCha20-Poly1305 (`kmod-crypto-chacha20poly1305`,
+GL.iNet's package definition from the published 4.8.6 tree) and built-in
+pstore (`PSTORE_RAM`, `_CONSOLE`, `_PMSG`). `kmod-ramoops` stays `=m` there,
+yet `PSTORE_RAM=y`: OpenWrt merges the module packages' options with
+`kconfig.pl 'm+'`, which never turns a target config's `y` into `m`, so
+three lines in the MT7981 target config give exactly GL.iNet's result. The
+4.6.4–4.6.8 rows now carry 4.6.2's eight placeholders, plus the firewall
+commit (r15812+900 expected for 4.6.4).
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -1562,3 +1581,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | Not public (4.6.2+): GL.iNet's changes to the EN8811H driver v1.2.5 (two messages, one flag) and opkg's package-size option. |
 | 2026-10-27 | Kernels compared function by function (`vmlinux-to-elf` + `analysis/kernel-functions.py`): 4.6.2, 4.6.4 and 4.6.8 have identical kernel code; 4.7.0 adds USB hub port disabling and changes MPTCP, PCIe and USB power management. |
 | 2026-10-27 | 4.7.0+: GL.iNet's USB hub port power patch (963, published) as an extra commit; 4.6.x: USB port `power_ctl` not public (labelled placeholder). |
+| 2026-10-27 | 4.6.4 and 4.7.4 build completely. 4.6.4+: firewall ubus timeouts (2 → 20 s), AdGuardHome's zoneinfo dependencies, `@early` extra commits. 4.7.4: ChaCha20-Poly1305 package and built-in pstore. |
