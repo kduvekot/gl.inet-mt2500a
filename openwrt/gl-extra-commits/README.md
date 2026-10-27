@@ -20,7 +20,14 @@ with the release's patch date and the subject in `message`.
 | `mptcp-backport` | GL.iNet's MPTCP backport for kernel 5.4 as published in gl-inet/gl-image (gl-be10000, bfe99df8, versions/4.8.6): 25 files under `target/linux/mediatek/files-5.4`, patch `999-9999-2-compat-mptcp-proto.patch`, `kmod-mptcp` definition; fetched and checked at build time (`files.sha256`) | 4.6.2+: `MPTCP=y`, `MPTCP_IPV6=y`; 4.7.0+: package `kmod-mptcp` (4.7.0's preflight). The backport differs slightly between GL.iNet's trees: the MT2500's may be older. Plus our backport of upstream's `__tcp_close()` split for 5.4.211 (`files/`, patch 999-9999-1b): GL.iNet's MPTCP calls it, and 5.4 stable only got it after 5.4.211 (job 59b: link error without it) |
 | `mt7981-ubifs-zstd` | our construction: `CONFIG_UBIFS_FS_ZSTD=y` in the MT7981 target config | 4.6.2+: the only zstd option that changes on its own (4.5.0: not set); it selects `CRYPTO_ZSTD`, `ZSTD_COMPRESS`/`DECOMPRESS` and `XXHASH`, built in from 4.6.2 on; zstd built in only on MT7981 models |
 | `mt2500-dts-phy-reset` | our construction: the MT2500 device tree as GL.iNet's 4.6.2 (decompiled, source order) | 4.6.2+: one device tree for both WAN PHYs: reset on the MDIO bus (GPIO 14, 100 ms/100 ms), PHY node `ethernet-phy-ieee802.3-c45` (see docs/driver-analysis.md) |
+| `iwinfo-mediatek-not-public` | our construction: an empty, labelled commit | 4.6.2+: GL.iNet's `iwinfo` has newer MediaTek support (HE rate table, HT mode, country) found in no public source (gl-feeds, the fork, gl-image, MediaTek's feed). Reproduces only the revision count; `iwinfo` itself will differ |
+| `usbnet-rm500u-not-public` | our construction: an empty, labelled commit | 4.6.2+: `usbnet.ko` has an RM500U 5G modem entry (`rm500u_5gnet`) found in no public source. Reproduces only the revision count; `usbnet.ko` will differ |
 
-The placeholder stays until there is a good reason to remove it, or until
-the content of GL.iNet's actual commit is found (owner's decision,
+In 4.6.2 `unidentified-commit` is used six times: GL.iNet's 4.6.2 is
+r15812+899, the public set plus the folders above give 893, and the rest
+most likely only touches other boards built from the same tree (MT3000,
+X3000, MT6000).
+
+The placeholders stay until there is a good reason to remove them, or until
+the content of GL.iNet's actual commits is found (owner's decision,
 2026-10-27).
