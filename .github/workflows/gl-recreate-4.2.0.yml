@@ -123,7 +123,8 @@ env:
   #                     gl_feed_21_02, 4.7.0's gl_feed_common)
   #   EXTRA_COMMITS     folders of openwrt/gl-extra-commits ("-": none):
   #                     GL.iNet patch commits missing from the public patch set
-  #                     (4.5.0+), recreated with the release's patch date
+  #                     (4.5.0+), recreated with the release's patch date;
+  #                     name@early: one second earlier (4.6.4's lua5.3 and uci)
   #   NO_GIT            1: GL.iNet built from a tree without git metadata
   #                     (4.8.2 on: empty revision everywhere, also in the
   #                     toolchain's version string); the tree's .git is removed
@@ -316,6 +317,9 @@ jobs:
           # GL.iNet patch commits missing from the public patch set (see env)
           for c in ${EXTRA_COMMITS:--}; do
             [ "$c" = - ] && continue
+            # name@early: dated one second earlier, like the early patches
+            cdate=$GIT_COMMIT_DATE
+            case "$c" in *@early) c=${c%@early}; cdate=$((GIT_COMMIT_DATE - 1)) ;; esac
             d=/work/gl-extra-commits/$c
             if [ -d "$d/files" ]; then
               cp -r "$d/files/." .
@@ -323,7 +327,7 @@ jobs:
             fi
             if [ -f "$d/edit.sh" ]; then sh "$d/edit.sh"; fi
             git add -A -- target package toolchain tools include   # files edit.sh created
-            GIT_COMMITTER_DATE="$GIT_COMMIT_DATE +0000" GIT_AUTHOR_DATE="$GIT_COMMIT_DATE +0000" \
+            GIT_COMMITTER_DATE="$cdate +0000" GIT_AUTHOR_DATE="$cdate +0000" \
               git commit -q -a --allow-empty -m "$(cat "$d/message")"
           done
           git log --oneline -3
