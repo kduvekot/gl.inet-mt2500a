@@ -1525,6 +1525,18 @@ which needs matching against upstream kernel versions (research item); GL.iNet's
 from 4.8.6's only in `compat.h`, the `Makefile` and a compat patch that
 also exports `fib_info_devhash_bucket`.
 
+**4.6.2 at r15812+899 (job 68b), and musl's `pthread_getname_np`.** With
+the placeholders, 4.6.2's revision is GL.iNet's, and what still differs is
+almost only the not-public set (`iwinfo`, `usbnet`, `air_en8811h`, opkg's
+size option), plus `libc.so`: GL.iNet's exports `pthread_getname_np`,
+which musl only got in 1.2.3. GL.iNet's published 4.8.6 tree has musl
+1.2.3's tarball in its downloads (checked against their `dl.sha256`); its
+`pthread_getname_np.c`, compiled in a copy of our musl 1.1.24 build with
+its own flags, is identical to the function in GL.iNet's libc (addresses
+masked; an existing function compiled the same way is identical too).
+Extra commit `musl-pthread-getname-np` (patch `910`), 4.6.2+; in 4.6.x it
+takes the place of another unidentified placeholder (two left).
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -1666,3 +1678,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.6.2+ routing solved: GL.iNet's published 922/923 (one context line adapted to 5.4.211) plus the devhash export match every routing function; validated single-object compiles with OpenWrt's flags. |
 | 2026-10-27 | All five remaining "not public" claims re-checked against GL.iNet's four published trees (incl. full kernel sources), MediaTek's feed history and gl-feeds: they hold. |
 | 2026-10-27 | MPTCP: GL.iNet's `__tcp_close()` split doesn't set `sk_shutdown`, and their `tcp_collapse()` moves the MPTCP skb extension; both now match (validated single-object compiles). |
+| 2026-10-27 | 4.6.2 at GL.iNet's revision (job 68b); musl `pthread_getname_np` backport found (identical code), two unidentified placeholders left. |

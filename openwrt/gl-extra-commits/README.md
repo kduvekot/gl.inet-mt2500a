@@ -29,11 +29,12 @@ with the release's patch date and the subject in `message`.
 | `mt7981-pstore-builtin` | our construction: `CONFIG_PSTORE_CONSOLE=y`, `CONFIG_PSTORE_PMSG=y`, `CONFIG_PSTORE_RAM=y` in the MT7981 target config (GL.iNet's published MT7987/MT7988 configs have the same three lines) | 4.7.4+: these options and `REED_SOLOMON` built in, while `kmod-ramoops` stays `=m` in the official config: the target config's `y` wins (`kconfig.pl 'm+'`), which only a target-config change gives |
 | `fib-devhash-export` | GL.iNet's `999-5002-export-fib-info-devhash-bucket.patch` (published 4.8.6 tree, gl-inet/gl-image branch gl-be10000, commit bfe99df8), its one line with context from our 5.4.211 (theirs needs fuzz there) | 4.6.2+: GL.iNet's kernels have `fib_info_devhash_bucket` as a real function (exported, so not inlined), 4.5.16's doesn't; without it five routing functions (`fib_sync_down_dev`, `fib_sync_up`, `fib_sync_mtu`, `free_fib_info`, `ip_fib_check_default`) differ in code at the same size |
 | `route-failover-kmwan-update` | GL.iNet's published 4.8.6 tree (gl-inet/gl-image, branch gl-be10000, commit bfe99df8): `hack-5.4/922-support-route-failover.patch` (one context line adapted to 5.4.211: `RT_SCOPE_HOST`, where 5.4.281 has `RT_SCOPE_LINK`) and `923-support-gl-kmwan.patch`, replacing the fork's `953`/`954` (`edit.sh`) | 4.6.2+: compiled with OpenWrt's flags (validated: the unchanged source reproduces our vmlinux), 922/923 plus `fib-devhash-export` match every routing function of GL.iNet's kernel, 953/954 don't (`fib_sync_down_dev`) |
+| `musl-pthread-getname-np` | upstream musl 1.2.3's `src/thread/pthread_getname_np.c` (tarball from GL.iNet's published 4.8.6 `offline-inputs/dl`, checked against their `dl.sha256`) plus its declaration in `pthread.h`, as patch `910` for our musl 1.1.24 | 4.6.2+: GL.iNet's `libc.so` exports `pthread_getname_np` (4.5.16's doesn't); compiled with our musl build's flags the function is identical to theirs (addresses masked) |
 | `iwinfo-mediatek-not-public` | our construction: an empty, labelled commit | 4.6.2+: GL.iNet's `iwinfo` has newer MediaTek support (HE rate table, HT mode, country) found in no public source (gl-feeds, the fork, gl-image, MediaTek's feed). Reproduces only the revision count; `iwinfo` itself will differ |
 | `usbnet-rm500u-not-public` | our construction: an empty, labelled commit | 4.6.2+: `usbnet.ko` has an RM500U 5G modem entry (`rm500u_5gnet`) found in no public source. Reproduces only the revision count; `usbnet.ko` will differ |
 
-In 4.6.2 `unidentified-commit` is used three times: GL.iNet's 4.6.2 is
-r15812+899, the public set plus the folders above give 896, and the rest
+In 4.6.2 `unidentified-commit` is used twice: GL.iNet's 4.6.2 is
+r15812+899, the public set plus the folders above give 897, and the rest
 most likely only touches other boards built from the same tree (MT3000,
 X3000, MT6000).
 

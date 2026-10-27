@@ -1,0 +1,19 @@
+220:int pthread_setname_np(pthread_t, const char *);
+From: backport of upstream musl 1.2.3 (as GL.iNet's 4.6.2+ libc)
+Subject: [PATCH] add pthread_getname_np function
+
+src/thread/pthread_getname_np.c is musl 1.2.3's file (tarball checked against
+GL.iNet's dl.sha256); compiled with our musl 1.1.24 flags it is identical
+to the function in GL.iNet's 4.6.2 libc.so (addresses masked).
+
+---
+--- a/include/pthread.h
++++ b/include/pthread.h
+@@ -218,6 +218,7 @@
+ int pthread_setaffinity_np(pthread_t, size_t, const struct cpu_set_t *);
+ int pthread_getattr_np(pthread_t, pthread_attr_t *);
+ int pthread_setname_np(pthread_t, const char *);
++int pthread_getname_np(pthread_t, char *, size_t);
+ int pthread_getattr_default_np(pthread_attr_t *);
+ int pthread_setattr_default_np(const pthread_attr_t *);
+ int pthread_tryjoin_np(pthread_t, void **);
