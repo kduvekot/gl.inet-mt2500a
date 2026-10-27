@@ -1787,6 +1787,27 @@ package's own version shows only in its size. GL.iNet's grew 73 bytes from
 only 5 to 18 bytes, so GL.iNet's 4.7.0 tree had several more feeds, or
 other feed URLs, without any of their packages in the image. Sizes alone
 can't tell which; open.
+
+Job 79b (4.7.4 with every fix up to the routing mix) comes out at
+r15812+912, GL.iNet's revision, with 458 packages and 5255 files as
+official and an identical kernel configuration; busybox, odhcpd, libc and
+the revision-carrying packages now match. Left besides the known parts:
+`libpcre`, which GL.iNet's 4.7.4 has from OpenWrt's `package/libs/pcre`
+and ours from `gl_feed_common` (hence also its Auto-Installed flag). Our
+pin was `16b1e75`, the commit that adds `pcre` to that feed (12 March
+2025, "due to nginx"); the newest package the official image has from the
+feed is nginx at `e422ba9` (17 February), the commit before. A feed
+package overrides OpenWrt's own of the same name, so GL.iNet's 4.7.4 tree
+can't have had `16b1e75`: 4.7.4 is now pinned to `e422ba9`.
+`release-values.py` had picked the latest of the equally fitting commits;
+it now drops commits that add a package the image takes from `package/`
+(rerun for 4.6.8 to 4.8.2: only 4.7.4's pin changes). And about 100
+packages differ in `Installed-Size` by a few bytes in every 4.7.x job (not
+in 4.6.x), with identical files: the package archives' owner fields. Our
+`luci-mod-status` repacked without owner names gives exactly the size of
+GL.iNet's 2022 copy of it in their package repository (29087), so the
+headers explain sizes to the byte; which owner GL.iNet's Jenkins wrote
+from 4.7.0 on is being searched.
  The 4.8.2 preflight 73p failed
 in the fetch step because it ran on an old checkout: a commit had included
 Python bytecode (`__pycache__`) by accident, and the worker's `git pull`
@@ -1967,3 +1988,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.8.2 `dnsmasq` byte-identical with GL.iNet's published 302-305 (extra commit for 305); 4.7.4's had an earlier, unpublished 304. |
 | 2026-10-27 | 4.6.4 with complete MPTCP and the routing mix (job 74b): revision +900, all packages and files, `nf_nat.ko` and `fib_table_lookup` now as GL.iNet's; left: not-public parts, `ethsys_reset`, `ip_valid_fib_dump_req`. |
 | 2026-10-27 | `ip_valid_fib_dump_req` explained: GL.iNet's `fib_frontend.c` part is 953's (two blank lines fewer than 922's, so `ASSERT_RTNL()`'s line number is 928, not 930); our 922 now has it, test-applied. |
+| 2026-10-27 | 4.7.4 with all fixes (job 79b): r15812+912 as GL.iNet's, all packages and files; `libpcre` traced to a feed pin one commit too late (fixed, and `release-values.py` now avoids such pins). |

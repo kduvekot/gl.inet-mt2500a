@@ -137,6 +137,17 @@ def feed_pins(ctl, built):
         if rows:
             best = max(r[0] for r in rows)
             top = sorted((r for r in rows if r[0] == best), key=lambda r: r[1])
+            # a feed package overrides OpenWrt's own of the same name (feeds
+            # install -f): a commit that adds one the image takes from
+            # package/ is too late (4.7.4: pcre, added to gl_feed_common
+            # after the newest package GL.iNet's image has from it)
+            core = {c["Source"].rstrip("/").split("/")[-1] for c in ctl.values()
+                    if c.get("Source", "").startswith("package/")}
+            def overrides(h):
+                return sum(1 for n in git("ls-tree", "-r", "--name-only", h).splitlines()
+                           if n.endswith("/Makefile") and n.count("/") == 1 and n.split("/")[0] in core)
+            least = min(overrides(r[2]) for r in top)
+            top = [r for r in top if overrides(r[2]) == least]
             res[feed] = (len(pk), best, [(h[:10], time.strftime("%Y-%m-%d", time.gmtime(ct)),
                                           git("branch", "-r", "--contains", h).split()[:3]) for _, ct, h, _ in top],
                          top[0][3], top[-1][2])
