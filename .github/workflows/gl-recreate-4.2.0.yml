@@ -320,6 +320,17 @@ jobs:
 
           # MediaTek's feed moved behind a login; same commit from GL.iNet's mirror.
           sed -i "s#${MTK_FEED_OLD}#${MTK_FEED_MIRROR}#" feeds.conf.default
+          # FEED_REVS entries for feeds of feeds.conf.default (MediaTek's: 4.7.0
+          # was built with its November 2024 state) are set there; the rest
+          # go to the profiles below
+          rest=""
+          for x in ${FEED_REVS:--}; do
+            n=${x%%=*}; v=${x#*=}
+            if grep -q "^src-git[a-z-]* $n " feeds.conf.default; then
+              sed -i -E "s#^(src-git[a-z-]* $n ).*#\1${v%%~*}#" feeds.conf.default
+            else rest="$rest $x"; fi
+          done
+          export FEED_REVS="${rest# }"
           cat feeds.conf.default
 
           # Public copies of GL.iNet's two MT2500 profiles: drop private feeds
