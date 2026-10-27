@@ -1278,6 +1278,17 @@ rewrites that file from `$(PKG_BUILD_DIR)/Module.symvers` (empty for a
 prebuilt module). The closed recipe now writes the exports there, with the
 module path in the build directory, and the hook carries them over.
 
+**4.8.2 was built without git.** Its revision is empty everywhere
+(`DISTRIB_REVISION=''`, `base-files` version `1446-`, the toolchain's
+version string "OpenWrt GCC 8.4.0 " in every binary): OpenWrt's `getver.sh`
+returns nothing outside a git repository, so GL.iNet built 4.8.2 from an
+exported tree, like the offline tree in `gl-image`; its CI build number is
+in the new `/etc/version.build` (845; 4.9.0: 1048). The 222 OpenWrt-tree
+packages share the build second as `SourceDateEpoch`, and missing patch
+commits no longer show in the revision. AdGuardHome is built from source
+from 4.8.2 on (`adguardhome-conntrack` in gl_feed_common). To do for 4.8.2:
+a release value that removes the tree's git metadata before the build.
+
 **Fewer wasted builds.** Most failed jobs could have been caught early or
 were races. `DRY_RUN=1` (local `dry=true`) stops after the configuration
 (builder, patches, extra commits, feeds, closed feed, defconfig) and fails
