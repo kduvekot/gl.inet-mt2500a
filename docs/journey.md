@@ -1231,8 +1231,25 @@ of chapter 12, recreated on MediaTek's public source. New release value
 commit (no trace in the image), `shortcut-fe.ko`'s module info
 (`depends=gl-sdk4-tertf`: GL.iNet built it with the tertf module present),
 `sipcalc` (order fix queued), and build IDs/data sections of `libelf` and
-the Go programs (the ccache class of chapter 14, to be confirmed without
-ccache).
+the Go programs.
+
+**The revision count reaches the binaries.** Without ccache (job 36) `libelf`'s
+build ID and the Go programs still differed, so not the ccache class of
+chapter 14: OpenWrt's toolchain carries the revision in its version string
+("OpenWrt GCC 8.4.0 r15812+885-46b6ee7ffc"), which every binary's
+`.comment` holds and build IDs cover. GL.iNet's one unidentified patch
+commit therefore matters; an empty, labelled placeholder commit
+(`openwrt/gl-extra-commits/unidentified-commit`, our construction)
+reproduces the count, not GL.iNet's change. **4.5.16** turned off
+`ALL_KMODS` (923 kernel options GL.iNet no longer builds) and has LuCI's
+English translations again.
+
+**`sipcalc`'s order, a make pitfall.** Reading the order inside the
+package recipe failed twice: OpenWrt expands package targets with
+`$(eval)` when it reads the recipe, so a `$(shell)` there runs before the
+sources are unpacked. `link-order.py marks` needs no sources: it orders
+the objects by the position of one known string from each in GL.iNet's
+`sipcalc` (4.2.x `sub-output` first, 4.4.5 to 4.7.4 `sub-func` first).
 
 ## Next steps
 
@@ -1357,3 +1374,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.5.0+: the builder went private in August 2023 but stayed the same (r15812, kernel 5.4.211 up to 4.9.0). `release-values.py` reads all releases' values and pins `gl-feeds` by `SourceDateEpoch` (`feed_revs`); 4.5.0 queued. |
 | 2026-10-27 | Build-machine orders read per release from the official binaries (`link-order.py`): iproute2's table order (reproduces 4.2.0's hand-derived list) and part of `sipcalc`'s link order; 4.5.0 settings from job 29: Samba without AD DC/VFSX (no Python), no `kmod-dm`, libcurl without nghttp2. |
 | 2026-10-27 | 4.5.0 job 33: kernel config, `opkg`, `liblua5.3`, `mtkhnat`, `ext4` identical, counts and `status` as official, r15812+884; GL.iNet's opkg/lua5.3 patches found in `gl-inet/gl-image`, release value `extra_commits`. 4.4.5 `ip-full` identical with the per-release order. |
+| 2026-10-27 | Revision count compiled into every binary (toolchain version string): labelled placeholder commit for 4.5.x's unidentified 885th commit. 4.5.16: no `ALL_KMODS`, LuCI English again. `sipcalc` order via marker strings (OpenWrt evaluates package recipes before unpacking). |
