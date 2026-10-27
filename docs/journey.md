@@ -1573,7 +1573,13 @@ their folders had more commits. GL.iNet's published 4.8.6 tree has extra
 patches for exactly these three (odhcpd 2, dnsmasq 5 plus its init script,
 busybox 2); of them, only dnsmasq's `302-support-log-level-config` leaves
 strings, and those are in 4.7.0 and not in 4.6.8. Which of the others were
-there already is tested by package rebuilds on a copy of 69b's tree.
+there already is tested by package rebuilds on a copy of 69b's tree. PCIe in 4.7.0:
+GL.iNet's `mtk_pcie_probe` sleeps twice after enabling the clocks, ours
+once. Every historical version of `pcie-mediatek-gen3.c` in MediaTek's
+feed, compiled the validated way, fits GL.iNet's 4.7.0 worse than or as
+badly as ours (the closest still differ in `mtk_pcie_probe` and
+`mtk_msi_bottom_domain_free`; MediaTek's 2024 file in eight functions), so
+it is GL.iNet's own change to the 2022 SDK driver, not public.
 
 ## Next steps
 
