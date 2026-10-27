@@ -1749,7 +1749,17 @@ the image only through the `gl-sdk4-base-files` overlay (it is one of the
 seven overlay files whose modes were found earlier). Repacked the way
 `ipkg-build` packs, our package with upstream's `ppp6-up` comes out at
 GL.iNet's size (136512 plus the repack's 9-byte offset; official 136518 to
-136520 by release), so `ppp-pppoe-retry-delay` now changes only `ppp.sh`. (Job 74b still had the old
+136520 by release), so `ppp-pppoe-retry-delay` now changes only `ppp.sh`. Job 74b (4.6.4) then confirms the routing mix in a full
+build (`fib_table_lookup` and `nf_nat.ko` as GL.iNet's) except for
+`ip_valid_fib_dump_req`, whose only difference is a constant: the line
+number of the `ASSERT_RTNL()` warning, 928 in GL.iNet's kernel, 930 in
+ours. GL.iNet's 922 and 953 have the same `fib_frontend.c` change, but 922
+adds two blank lines in `__fib_validate_source`; GL.iNet's kernels have
+953's version without them (as job 66b did). Our 922 now takes 953's
+`fib_frontend.c` section (both routing variants); test-applied on copies of
+74b's patched files with 5002 and 923 undone and redone: it applies
+without offset there, and the result differs from 74b's source in exactly
+those two lines, which puts `ASSERT_RTNL()` on line 928. (Job 74b also still had the old
 commit: the local runner reuses `work/`, and `cp -r` of the extra-commit
 folders kept the removed `ppp6-up`. The workflow now copies them fresh;
 the first full builds with the fix are 78b, 80b and 81b.)
@@ -1956,3 +1966,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.9.0 `ubus`: GL.iNet's published auto-subscribe patch gives `libubus`, `ubus` and the Lua module byte-identical; `ubusd` has an unpublished server-side change. |
 | 2026-10-27 | 4.8.2 `dnsmasq` byte-identical with GL.iNet's published 302-305 (extra commit for 305); 4.7.4's had an earlier, unpublished 304. |
 | 2026-10-27 | 4.6.4 with complete MPTCP and the routing mix (job 74b): revision +900, all packages and files, `nf_nat.ko` and `fib_table_lookup` now as GL.iNet's; left: not-public parts, `ethsys_reset`, `ip_valid_fib_dump_req`. |
+| 2026-10-27 | `ip_valid_fib_dump_req` explained: GL.iNet's `fib_frontend.c` part is 953's (two blank lines fewer than 922's, so `ASSERT_RTNL()`'s line number is 928, not 930); our 922 now has it, test-applied. |

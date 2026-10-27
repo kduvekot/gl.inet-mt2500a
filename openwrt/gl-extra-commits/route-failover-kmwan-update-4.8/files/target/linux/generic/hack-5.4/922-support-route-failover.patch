@@ -145,7 +145,7 @@ it, see route-failover-kmwan-update).
  
  	no_addr = idev->ifa_list == NULL;
  
-@@ -404,15 +412,25 @@ static int __fib_validate_source(struct
+@@ -404,15 +412,23 @@ static int __fib_validate_source(struct
  	}
  	if (no_addr)
  		goto last_resort;
@@ -154,7 +154,6 @@ it, see route-failover-kmwan-update).
 +	table = FIB_RES_TABLE(&res);
 +	prefixlen = res.prefixlen;
 +	scope = res.scope;
-+
  	fl4.flowi4_oif = dev->ifindex;
  
  	ret = 0;
@@ -164,7 +163,6 @@ it, see route-failover-kmwan-update).
 +		    ((table == FIB_RES_TABLE(&res) &&
 +		      res.prefixlen >= prefixlen && res.scope >= scope) ||
 +		     !rpf)) {
-+
  			ret = FIB_RES_NHC(res)->nhc_scope >= RT_SCOPE_HOST;
 +			return ret;
 +		}
@@ -174,7 +172,7 @@ it, see route-failover-kmwan-update).
  	return ret;
  
  last_resort:
-@@ -1439,9 +1457,7 @@ static int fib_inetaddr_event(struct not
+@@ -1433,9 +1449,7 @@ static int fib_inetaddr_event(struct not
  	switch (event) {
  	case NETDEV_UP:
  		fib_add_ifaddr(ifa);
@@ -184,7 +182,7 @@ it, see route-failover-kmwan-update).
  		atomic_inc(&net->ipv4.dev_addr_genid);
  		rt_cache_flush(dev_net(dev));
  		break;
-@@ -1486,9 +1502,7 @@ static int fib_netdev_event(struct notif
+@@ -1480,9 +1494,7 @@ static int fib_netdev_event(struct notif
  		in_dev_for_each_ifa_rtnl(ifa, in_dev) {
  			fib_add_ifaddr(ifa);
  		}
