@@ -37,8 +37,9 @@ endef
 # the official sipcalc (link-order.py: their string literals); interface.c
 # has too few strings to place, so interface and sub keep the 4.2.x order.
 # (make's $(shell) in a recursive variable: runs when the compile step
-# expands it, after the sources are unpacked)
-GL_SIPCALC_FIRST = $(or $(shell python3 -I /work/link-order.py objects /work/cmp/off_root/usr/bin/sipcalc \
+# expands it, after the sources are unpacked; the system Python: OpenWrt
+# puts its own host Python first in PATH)
+GL_SIPCALC_FIRST = $(or $(shell /usr/bin/python3 -I /work/link-order.py objects /work/cmp/off_root/usr/bin/sipcalc \
 	$(PKG_BUILD_DIR)/src/sub-output.c $(PKG_BUILD_DIR)/src/sub-func.c 2>/dev/null \
 	| sed "s|.*/||; s|\.c$$|.o|"),sub-output.o sub-func.o)
 
