@@ -1562,6 +1562,19 @@ Two MediaTek Ethernet "differences" (`mtk_mac_link_up`,
 `mtk_rx_irq_disable`) were artifacts of compiler-generated names; only
 `ethsys_reset` differs (one load scheduled elsewhere).
 
+**4.7.0 at GL.iNet's Jenkins path (job 69b).** The first build at
+`/work2/jenkins/workspace/router_mt2500` leaves no build-path differences
+at all (417 differing files, 430 in 65b, nearly all from the revision
+string), and the kernel configuration is now identical (extra packages
+GL.iNet built as modules stay `=m`). New: GL.iNet's `busybox` (1.33.2-3,
+dated at 4.7.0's patch time), `dnsmasq-full` (2.85-12) and `odhcpd`
+(bc9d317f-6) have higher `AUTORELEASE` numbers than ours (-2, -10, -4):
+their folders had more commits. GL.iNet's published 4.8.6 tree has extra
+patches for exactly these three (odhcpd 2, dnsmasq 5 plus its init script,
+busybox 2); of them, only dnsmasq's `302-support-log-level-config` leaves
+strings, and those are in 4.7.0 and not in 4.6.8. Which of the others were
+there already is tested by package rebuilds on a copy of 69b's tree.
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -1705,3 +1718,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | MPTCP: GL.iNet's `__tcp_close()` split doesn't set `sk_shutdown`, and their `tcp_collapse()` moves the MPTCP skb extension; both now match (validated single-object compiles). |
 | 2026-10-27 | 4.6.2 at GL.iNet's revision (job 68b); musl `pthread_getname_np` backport found (identical code), two unidentified placeholders left. |
 | 2026-10-27 | MDIO `reset-post-delay-us` backported (kernel side of GL.iNet's PHY reset on the MDIO bus); exact sizes, validated. |
+| 2026-10-27 | 4.7.0 at GL.iNet's Jenkins path (job 69b): no build-path differences left, kernel configuration identical; busybox/dnsmasq/odhcpd carry GL.iNet patches (4.8.6 tree has them). |
