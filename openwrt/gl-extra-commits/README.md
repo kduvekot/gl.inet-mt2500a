@@ -27,11 +27,12 @@ with the release's patch date and the subject in `message`.
 | `kmod-crypto-chacha20poly1305` | GL.iNet's published 4.8.6 tree (gl-inet/gl-image, branch gl-be10000, commit bfe99df8): the package definition in `package/kernel/linux/modules/crypto.mk`, inserted at the same place (before `crypto-cmac`; `block.mk` + `edit.sh`) | 4.7.4+: `CONFIG_PACKAGE_kmod-crypto-chacha20poly1305=m` and `CRYPTO_CHACHA20POLY1305`, `CHACHA20`, `POLY1305`, `LIB_POLY1305_GENERIC` as `=m` in the official configuration; our tree had no such package |
 | `firewall-ubus-timeout` | our construction: firewall3's two ubus timeouts 2000 → 20000 ms (`ubus.c`, patch `100-ubus-timeout.patch`) and `PKG_RELEASE` 1.1 → 1.2 (`edit.sh`) | 4.6.4+: `firewall` is release 1.2 dated at the patch time, and `fw3` differs from 4.6.2's in exactly two instructions (`mov w6, #2000` → `#20000`, the timeout arguments of the two `ubus_invoke` calls); in no public source (GL.iNet's 4.8.6 tree for the BE10000 still has 1.1) |
 | `mt7981-pstore-builtin` | our construction: `CONFIG_PSTORE_CONSOLE=y`, `CONFIG_PSTORE_PMSG=y`, `CONFIG_PSTORE_RAM=y` in the MT7981 target config (GL.iNet's published MT7987/MT7988 configs have the same three lines) | 4.7.4+: these options and `REED_SOLOMON` built in, while `kmod-ramoops` stays `=m` in the official config: the target config's `y` wins (`kconfig.pl 'm+'`), which only a target-config change gives |
+| `fib-devhash-export` | GL.iNet's `999-5002-export-fib-info-devhash-bucket.patch` (published 4.8.6 tree, gl-inet/gl-image branch gl-be10000, commit bfe99df8), its one line with context from our 5.4.211 (theirs needs fuzz there) | 4.6.2+: GL.iNet's kernels have `fib_info_devhash_bucket` as a real function (exported, so not inlined), 4.5.16's doesn't; without it five routing functions (`fib_sync_down_dev`, `fib_sync_up`, `fib_sync_mtu`, `free_fib_info`, `ip_fib_check_default`) differ in code at the same size |
 | `iwinfo-mediatek-not-public` | our construction: an empty, labelled commit | 4.6.2+: GL.iNet's `iwinfo` has newer MediaTek support (HE rate table, HT mode, country) found in no public source (gl-feeds, the fork, gl-image, MediaTek's feed). Reproduces only the revision count; `iwinfo` itself will differ |
 | `usbnet-rm500u-not-public` | our construction: an empty, labelled commit | 4.6.2+: `usbnet.ko` has an RM500U 5G modem entry (`rm500u_5gnet`) found in no public source. Reproduces only the revision count; `usbnet.ko` will differ |
 
-In 4.6.2 `unidentified-commit` is used five times: GL.iNet's 4.6.2 is
-r15812+899, the public set plus the folders above give 894, and the rest
+In 4.6.2 `unidentified-commit` is used four times: GL.iNet's 4.6.2 is
+r15812+899, the public set plus the folders above give 895, and the rest
 most likely only touches other boards built from the same tree (MT3000,
 X3000, MT6000).
 

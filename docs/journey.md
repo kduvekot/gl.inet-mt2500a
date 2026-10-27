@@ -1466,7 +1466,12 @@ Ethernet (`ethsys_reset`, in 4.7.0 also `mtk_mac_link_up`,
 is through. The releases already counted as recreated hold up: our 4.5.0 and
 4.5.16 kernels (jobs 61, 62) match GL.iNet's in every shared function
 (30,232 and 28,925), once the mask also covers sign-extending loads
-(`ldrsw`; one global variable's address had looked like a code change).
+(`ldrsw`; one global variable's address had looked like a code change). First result of the kernel groups: from 4.6.2 on GL.iNet's kernels have
+`fib_info_devhash_bucket` as a real function (4.5.16's don't), which is
+GL.iNet's published `999-5002-export-fib-info-devhash-bucket.patch`: an
+exported function isn't inlined, so five routing functions change code at
+the same size. Extra commit `fib-devhash-export`; in 4.6.2–4.6.8 it takes
+the place of one unidentified placeholder (four left).
 
 ## Next steps
 
