@@ -115,7 +115,9 @@ env:
   #                     ("-": the profiles' own). From 4.5.0 on the builder
   #                     isn't public; the gl-feeds revisions follow from the
   #                     image (each package's SourceDateEpoch is the last
-  #                     commit to its folder; analysis/release-values.py)
+  #                     commit to its folder; analysis/release-values.py);
+  #                     name=url^commit adds a feed the profiles don't have
+  #                     (mptcp_feeds from 4.7.0 on)
   #   EXTRA_COMMITS     folders of openwrt/gl-extra-commits ("-": none):
   #                     GL.iNet patch commits missing from the public patch set
   #                     (4.5.0+), recreated with the release's patch date
@@ -341,6 +343,12 @@ jobs:
                       f.pop("branch", None)
                       f["revision"] = revs.pop(f["name"])
                       print(f"feed {f['name']} at {f['revision']}")
+              if src.startswith("target_"):
+                  # feeds GL.iNet added after the public builder (name=url^commit)
+                  for name in [n for n, v in revs.items() if "^" in v]:
+                      uri, rev = revs.pop(name).rsplit("^", 1)
+                      d["feeds"].append({"name": name, "uri": uri, "revision": rev})
+                      print(f"feed {name} added: {uri} at {rev}")
               keep = [p for p in d.get("packages", []) if not private(p)]
               removed += [f"{src}: {p}" for p in d.get("packages", []) if private(p)]
               d["packages"] = keep
