@@ -625,7 +625,7 @@ jobs:
             if [ ! -f "$ccache_tc" ]; then
               # keep the 4 most recent toolchains of this worker
               mkdir -p /work/cache/toolchain
-              ls -t /work/cache/toolchain/*.tar 2>/dev/null | tail -n +4 | xargs -r rm -f
+              { ls -t /work/cache/toolchain/*.tar 2>/dev/null || true; } | tail -n +4 | xargs -r rm -f
               tar -cf "$ccache_tc.tmp" staging_dir/toolchain-* build_dir/toolchain-* \
                 && mv "$ccache_tc.tmp" "$ccache_tc" && echo "toolchain cached as $ckey"
             fi
