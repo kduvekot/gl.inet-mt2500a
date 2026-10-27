@@ -1,3 +1,13 @@
+From: GL.iNet's route-failover as in their 4.6.x kernels (our construction)
+Subject: [PATCH] support route failover (4.6.x)
+
+GL.iNet's published 922 (4.8.6 tree; one context line adapted to 5.4.211),
+with the fib_trie.c part and the nf_nat_masquerade.c part of the fork's
+older 953: in GL.iNet's 4.6.x kernels fib_semantics.c matches 922, but
+fib_table_lookup and nf_nat.ko's nf_nat_masquerade_ipv4 match 953
+(single-object compiles, validated).
+
+---
 --- a/include/net/flow.h
 +++ b/include/net/flow.h
 @@ -93,6 +93,7 @@ struct flowi4 {
@@ -864,16 +874,58 @@
  	int ret, i;
 --- a/net/ipv4/fib_trie.c
 +++ b/net/ipv4/fib_trie.c
-@@ -1485,6 +1485,12 @@ out_reject:
+@@ -1483,6 +1483,11 @@ out_reject:
+ 				if (flp->flowi4_oif &&
+ 				    flp->flowi4_oif != nhc->nhc_oif)
  					continue;
- 			}
- 
-+			if (flp->fl4_gw &&
++				if (flp->fl4_gw &&
 +				    flp->fl4_gw != nhc->nhc_gw.ipv4 &&
 +				    nhc->nhc_gw.ipv4 &&
 +				    nhc->nhc_scope == RT_SCOPE_LINK)
 +					continue;
-+
- 			if (!(fib_flags & FIB_LOOKUP_NOREF))
- 				refcount_inc(&fi->fib_clntref);
+ 			}
  
+ 			if (!(fib_flags & FIB_LOOKUP_NOREF))
+--- a/net/netfilter/nf_nat_masquerade.c
++++ b/net/netfilter/nf_nat_masquerade.c
+@@ -32,8 +32,8 @@ nf_nat_masquerade_ipv4(struct sk_buff *s
+ 	struct nf_conn_nat *nat;
+ 	enum ip_conntrack_info ctinfo;
+ 	struct nf_nat_range2 newrange;
+-	const struct rtable *rt;
+-	__be32 newsrc, nh;
++	struct rtable *rt;
++	__be32 newsrc;
+ 
+ 	WARN_ON(hooknum != NF_INET_POST_ROUTING);
+ 
+@@ -48,12 +48,23 @@ nf_nat_masquerade_ipv4(struct sk_buff *s
+ 	if (ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple.src.u3.ip == 0)
+ 		return NF_ACCEPT;
+ 
+-	rt = skb_rtable(skb);
+-	nh = rt_nexthop(rt, ip_hdr(skb)->daddr);
+-	newsrc = inet_select_addr(out, nh, RT_SCOPE_UNIVERSE);
+-	if (!newsrc) {
+-		pr_info("%s ate my IP address\n", out->name);
+-		return NF_DROP;
++	{
++		struct flowi4 fl4 = { .flowi4_tos = RT_TOS(ip_hdr(skb)->tos),
++				      .flowi4_mark = skb->mark,
++				      .flowi4_oif = out->ifindex,
++				      .daddr = ip_hdr(skb)->daddr,
++				      .fl4_gw = skb_rtable(skb)->rt_gw4 };
++		rt = ip_route_output_key(dev_net(out), &fl4);
++		if (IS_ERR(rt)) {
++			/* Funky routing can do this. */
++			if (net_ratelimit())
++				pr_info("%s:"
++				       " No route: Rusty's brain broke!\n",
++				       out->name);
++			return NF_DROP;
++		}
++		newsrc = fl4.saddr;
++		ip_rt_put(rt);
+ 	}
+ 
+ 	nat = nf_ct_nat_ext_add(ct);

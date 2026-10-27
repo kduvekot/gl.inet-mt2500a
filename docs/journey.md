@@ -1482,7 +1482,17 @@ plus `fib-devhash-export` match every routing function of GL.iNet's 4.6.2
 kernel, our 953/954 don't (`fib_sync_down_dev`). The devhash export alone
 explains `fib_create_info`. Extra commit `route-failover-kmwan-update`; in
 4.6.2–4.6.8 it takes another unidentified placeholder's place (three left).
-924 (IPv6) isn't in 4.6.x. (A first attempt at this test changed an
+924 (IPv6) isn't in 4.6.x. Job 70b (4.6.4) then showed that GL.iNet's
+version is a mix: `fib_table_lookup` and `nf_nat.ko` differed with 922.
+Compiling each file where 922 and 953 differ, in both versions: GL.iNet's
+4.6.2-4.7.4 kernels have 953's `fib_trie.c` part (`fib_table_lookup` 976
+bytes) and 953's `nf_nat_masquerade.c` part (`nf_nat_masquerade_ipv4` 420
+bytes; 922 doesn't touch that file), with 922's `fib_semantics.c`;
+`fib_frontend.c` and `route.c` compile the same either way (their remaining
+differences, `ip_valid_fib_dump_req` and a few in `route.c`, have another
+cause, still open). The extra commit now carries that combination, applied
+cleanly in the right order on a copy of the kernel source. 4.8.2 has 922's
+`nf_nat_masquerade` (344 bytes) but still 953's `fib_trie`. (A first attempt at this test changed an
 archived tree in place and damaged its kernel source; experiments now run
 on a copy, each step checked.)
 
@@ -1772,6 +1782,7 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | MPTCP complete: 4.6.x's receive path still reported subflow priority events (`mptcp_recvmsg` identical with that call active); `mptcp-backport-4.6x` for the 4.6.x rows. |
 | 2026-10-27 | busybox (531, 4.6.8+), dnsmasq (302, 303) and odhcpd (01, 02) from GL.iNet's published tree, byte-identical to GL.iNet's 4.7.0 binaries; release numbers match. |
 | 2026-10-27 | 4.6.4 at GL.iNet's revision r15812+900 (job 70b); 4.7.4 complete (71b); first verdicts with the kernel comparison. |
+| 2026-10-27 | GL.iNet's 4.6.2-4.7.4 route-failover is 922 with 953's `fib_trie.c` and `nf_nat_masquerade.c` parts (validated compiles); extra commit updated. |
 | 2026-10-27 | 4.6.2 at GL.iNet's revision (job 68b); musl `pthread_getname_np` backport found (identical code), two unidentified placeholders left. |
 | 2026-10-27 | MDIO `reset-post-delay-us` backported (kernel side of GL.iNet's PHY reset on the MDIO bus); exact sizes, validated. |
 | 2026-10-27 | 4.7.0 at GL.iNet's Jenkins path (job 69b): no build-path differences left, kernel configuration identical; busybox/dnsmasq/odhcpd carry GL.iNet patches (4.8.6 tree has them). |
