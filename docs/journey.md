@@ -1338,6 +1338,14 @@ more single-threaded before the build gives up; the end of the build log is
 kept with every result. A second job worker uses the M5+'s idle cores, and
 each worker keeps its last tree for single-package rebuilds.
 
+**4.5.0 and 4.5.16 recreated.** The final jobs (61, 62; with the
+placeholder commit, `sipcalc` order, tertf exports and host Python first)
+leave only the accepted classes: Samba (library order, so also the
+`Installed-Size` of its three packages), `wg`/`wireguard-tools` (tree hash),
+and the vermagic hash in the kernel and kmod entries. Packages (419 and 423),
+files (4321 and 4353), `Auto-Installed` and the `status` order are as
+official, kernel config identical, revision r15812+885 in both.
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -1467,3 +1475,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | 4.5.16 at 4.5.0's level (r15812+885). All feeds of 4.5.0-4.8.2 pinned, incl. depth-1 feeds (`~shallow`) and those outside gl-feeds; 4.6.2: `mt798x` feed, no `ddns-scripts`. tertf exports via OpenWrt's symvers hook. Preflight (`dry=true`) and a single-package retry. |
 | 2026-10-27 | `shortcut-fe` matches (tertf exports via OpenWrt's symvers hook). 4.6.2 kernel: Airoha EN8811H from MediaTek's feed, MPTCP from GL.iNet's published 5.4 backport (both as extra commits). Sibling firmware: MT3000 is the MT2500's twin, X3000/XE3000 on the 4.4 branch until late 2024. Host Python built first (bpftools race). |
 | 2026-10-27 | 4.6.2: zstd (`UBIFS_FS_ZSTD`) and device tree recreated; iwinfo and the `usbnet` RM500U entry found but not public; about 6 commits probably only for other boards. |
+| 2026-10-27 | 4.5.0 and 4.5.16 recreated to the level of 4.2.x (jobs 61, 62): only Samba order, `wg` tree hash and vermagic remain. |
