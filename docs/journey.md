@@ -1733,7 +1733,30 @@ seven overlay files whose modes were found earlier). Repacked the way
 GL.iNet's size (136512 plus the repack's 9-byte offset; official 136518 to
 136520 by release), so `ppp-pppoe-retry-delay` now changes only `ppp.sh`.
 `gl-sdk4-tethering` (ours 72 bytes smaller in 4.6.x, 18 in 4.7.x) is still
-open: no empty folder or mode change among the usual candidates fits. The 4.8.2 preflight 73p failed
+open: no mode change fits, and of all 234 folders of the image as an empty
+folder only `lib` fits both 4.6.x versions, while for 4.7.x four others fit
+but not `lib` (nor `lib` plus any other): no rule across releases, and
+single-folder fits are weak evidence, since a few bytes of gzip noise
+decide them.
+
+Job 77b (4.7.0 with every fix before the routing mix and the placeholders)
+has 463 packages and 5302 files as official, an identical kernel
+configuration and the same Auto-Installed flags; its revision is +903, so
+the five placeholders of the current row should give +908 (job 80b). Its
+kernel list holds only known items: the pre-mix routing functions,
+`mtk_pcie_probe` (not public), the Airoha link polling, `get_phy_device`,
+`ethsys_reset`. New to look at: `base-files`' `Installed-Size` is 50 to 63
+bytes smaller than GL.iNet's in every 4.7.x job, while 4.6.x matches. The
+files in the image are identical (or are GL.iNet's overlay copies), and
+the TZ revert accounts for only 4 bytes. The likely place is
+`etc/opkg/distfeeds.conf`: `base-files` writes one line per feed of the
+build tree, and the image shows GL.iNet's overlay copy instead, so the
+package's own version shows only in its size. GL.iNet's grew 73 bytes from
+4.6.8 to 4.7.0, ours 11 (the `mptcp_feeds` line). One more feed line adds
+only 5 to 18 bytes, so GL.iNet's 4.7.0 tree had several more feeds, or
+other feed URLs, without any of their packages in the image. Sizes alone
+can't tell which; open.
+ The 4.8.2 preflight 73p failed
 in the fetch step; a fetch-only rerun passed (461 official packages, 112
 closed packages, AdGuardHome skipped), so it is queued again (73q), and the
 local runner now keeps a failed step's log with the results.
@@ -1892,3 +1915,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | MDIO `reset-post-delay-us` backported (kernel side of GL.iNet's PHY reset on the MDIO bus); exact sizes, validated. |
 | 2026-10-27 | 4.7.0 at GL.iNet's Jenkins path (job 69b): no build-path differences left, kernel configuration identical; busybox/dnsmasq/odhcpd carry GL.iNet patches (4.8.6 tree has them). |
 | 2026-10-27 | 4.6.8 at the official revision (job 72b): all packages and files, kernel configuration identical; 4.9.0's `base-files` change found (`guest_wifi_macaddr_add`, GL.iNet's published file). |
+| 2026-10-27 | 4.7.0 with all fixes (job 77b): all packages and files, kernel configuration identical; `ppp` size solved (upstream `ppp6-up` in the package); `base-files` size in 4.7.x traced to `distfeeds.conf` (GL.iNet's feed list, open). |
