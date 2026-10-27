@@ -321,7 +321,7 @@ jobs:
           # and the packages that only exist there.
           python3 - << 'PY'
           import os, yaml
-          private_feeds = {"glinet", "mt7981"}
+          private_feeds = {"glinet", "mt7981", "mt798x"}
           # this release's feed revisions (see env)
           revs = dict(x.split("=", 1) for x in os.environ.get("FEED_REVS", "-").split() if "=" in x)
           # kmod-gl-sdk4-tertf and -hw-info are public (gl_feed_common at the
@@ -377,16 +377,18 @@ jobs:
             # GL.iNet's closed packages (generated in the run), copied into the
             # tree (src-cpy) so their Source: reads feeds/...; umask 022 as in
             # a normal build environment (folder modes end up in the packages)
+            # One feed per folder the generator wrote (named after the official
+            # Source: glinet, and mt7981 up to 4.5.16, mt798x from 4.6.2 on)
             F=feeds.conf; [ -f "$F" ] || F=feeds.conf.default
-            printf 'src-cpy glinet /work/closed/glinet\nsrc-cpy mt7981 /work/closed/mt7981\n' >> "$F"
-            ( umask 022; ./scripts/feeds update glinet mt7981 > /dev/null )
+            closed_feeds=$(cd /work/closed && ls -d */ | tr -d /)
+            for f in $closed_feeds; do printf 'src-cpy %s /work/closed/%s\n' "$f" "$f" >> "$F"; done
+            ( umask 022; ./scripts/feeds update $closed_feeds > /dev/null )
             # OpenWrt names a source package after its folder: GL.iNet's
             # gl-ui4.0/module/adguardhome (gl-sdk4-ui-adguardhome) clashes with
             # the packages feed's adguardhome (not in the official image), and
             # only the first one gets installed
             ./scripts/feeds uninstall adguardhome > /dev/null
-            ./scripts/feeds install -a -p glinet > /dev/null
-            ./scripts/feeds install -a -p mt7981 > /dev/null
+            for f in $closed_feeds; do ./scripts/feeds install -a -p "$f" > /dev/null; done
             ./scripts/feeds install -a > /dev/null
           fi
           python3 - << 'PY'

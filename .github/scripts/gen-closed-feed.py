@@ -12,7 +12,7 @@ built programs are installed over it). Run inside the workflow only: the
 output contains GL.iNet's files and is never stored or published.
 
 For every closed package (default: all whose control file names a source in
-feeds/glinet, feeds/mt7981, or a gl-/oui-/libgl prefix) it writes
+feeds/glinet, feeds/mt7981 or mt798x, or a gl-/oui-/libgl prefix) it writes
 <out_dir>/<feed>/<path>/ with
   Makefile      PKG_NAME/VERSION/RELEASE, DEPENDS, SECTION, TITLE and
                 description from the official control file; installs files/
