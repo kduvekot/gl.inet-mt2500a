@@ -39,6 +39,8 @@ with the release's patch date and the subject in `message`.
 | `odhcpd-ping-fault` | GL.iNet's published 4.8.6 tree (gl-inet/gl-image, branch gl-be10000, commit bfe99df8): `01-ipv6-ping-fault-rectified.patch` | 4.7.0+: `odhcpd` release 6 (two commits more); with 01 and 02 byte-identical to GL.iNet's (4.7.0: 02's first half only) |
 | `odhcpd-reduce-logs` | GL.iNet's published 4.8.6 tree (gl-inet/gl-image, branch gl-be10000, commit bfe99df8): `02-reduce-logs-of-the-odhcpd-service.patch` | 4.7.4+: both of its log-level changes (`odhcpd.c`, `ndp.c`); 4.7.4's odhcpd differs from 4.7.0's in exactly the second one, at the same release number (GL.iNet's builder recreates its patch commits each build, so a patch can change in place) |
 | `odhcpd-reduce-logs-4.7.0` | our construction: GL.iNet's patch 02 with only its `odhcpd.c` hunk | 4.7.0: with 01 and this, our odhcpd is byte-identical to GL.iNet's 4.7.0 one; with the full 02 one byte differs (`LOG_ERR` vs `LOG_DEBUG` in `ndp.c`) |
+| `pcie-not-public` | our construction: an empty, labelled commit | 4.7.0+: GL.iNet's `mtk_pcie_probe` sleeps once more after enabling the clocks than ours; no historical version of MediaTek's driver fits (all compiled the validated way), so it is GL.iNet's own change to the 2022 SDK driver. Reproduces only the revision count |
+| `reboot-emergency-not-public` | our construction: an empty, labelled commit | 4.7.4+: `emergency_restart()` sets a flag that `psci_sys_reset()` reads through a new `get_reboot_emergency()`; in no public source. Reproduces only the revision count |
 | `iwinfo-mediatek-not-public` | our construction: an empty, labelled commit | 4.6.2+: GL.iNet's `iwinfo` has newer MediaTek support (HE rate table, HT mode, country) found in no public source (gl-feeds, the fork, gl-image, MediaTek's feed). Reproduces only the revision count; `iwinfo` itself will differ |
 | `usbnet-rm500u-not-public` | our construction: an empty, labelled commit | 4.6.2+: `usbnet.ko` has an RM500U 5G modem entry (`rm500u_5gnet`) found in no public source. Reproduces only the revision count; `usbnet.ko` will differ |
 
@@ -46,6 +48,10 @@ In 4.6.2 `unidentified-commit` is used once: GL.iNet's 4.6.2 is
 r15812+899, the public set plus the folders above give 898, and the rest
 most likely only touches other boards built from the same tree (MT3000,
 X3000, MT6000).
+
+4.7.0 and 4.7.4 use the same approach: the labelled placeholders that
+still apply (iwinfo, usbnet, the Airoha link polling), the new ones above,
+and one unidentified commit each, to GL.iNet's r15812+908 and +912.
 
 The placeholders stay until there is a good reason to remove them, or until
 the content of GL.iNet's actual commits is found (owner's decision,

@@ -1788,6 +1788,7 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-27 | busybox (531, 4.6.8+), dnsmasq (302, 303) and odhcpd (01, 02) from GL.iNet's published tree, byte-identical to GL.iNet's 4.7.0 binaries; release numbers match. |
 | 2026-10-27 | 4.6.4 at GL.iNet's revision r15812+900 (job 70b); 4.7.4 complete (71b); first verdicts with the kernel comparison. |
 | 2026-10-27 | GL.iNet's 4.6.2-4.7.4 route-failover is 922 with 953's `fib_trie.c` and `nf_nat_masquerade.c` parts (validated compiles); extra commit updated. |
+| 2026-10-27 | 4.7.x placeholders as for 4.6.x: iwinfo, usbnet, Airoha link polling, PCIe (4.7.0+), emergency reboot (4.7.4), one unidentified each (to +908 and +912). |
 | 2026-10-27 | 4.6.2 at GL.iNet's revision (job 68b); musl `pthread_getname_np` backport found (identical code), two unidentified placeholders left. |
 | 2026-10-27 | MDIO `reset-post-delay-us` backported (kernel side of GL.iNet's PHY reset on the MDIO bus); exact sizes, validated. |
 | 2026-10-27 | 4.7.0 at GL.iNet's Jenkins path (job 69b): no build-path differences left, kernel configuration identical; busybox/dnsmasq/odhcpd carry GL.iNet patches (4.8.6 tree has them). |
