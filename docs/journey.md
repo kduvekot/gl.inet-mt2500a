@@ -1852,7 +1852,7 @@ different.
 | EN8811H (Airoha) PHY driver changes | 4.6.2+ | `air_en8811h.ko` |
 | Airoha link-state polling | 4.6.2+ | `phylink_fixed_state`, `mtk_mac_link_up`, `mtk_rx_irq_disable` |
 | C45 read in `get_phy_device` | 4.6.2+ | `get_phy_device` |
-| opkg size option | 4.5.0+ | `opkg` (about 480 bytes) |
+| opkg size option | 4.6.2+ | `opkg` (about 480 bytes) |
 | PCIe probe (one more sleep) | 4.7.0+ | `mtk_pcie_probe` |
 | Emergency-reboot flag | 4.7.4 | `psci_sys_reset`, `emergency_restart`, restart handlers |
 | Earlier version of dnsmasq patch 304 | 4.7.4 | `dnsmasq` layout (size and strings equal) |
