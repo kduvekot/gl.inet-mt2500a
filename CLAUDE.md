@@ -211,6 +211,10 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   (unluac 2025, owner-approved, plus `tools/lnum2std.py`, `lua5xstd.py`,
   `relayout.py`), data-only Lua, `oopslog` 4.1.1-4.7.0. C decompilation
   stops on the safety classifier (2026-10-28 again): don't retry it.
+  Bridging a close public version function by function (disassembly
+  compared with our build, source edited, one commit per step) is
+  owner-approved (2026-10-28): private `tools/kbridge.sh` for kernel
+  modules; 4.9.0 `mtk_warp.ko` done that way.
 - **Next:** phase C (upstream
   OpenWrt on the old unit, iperf with the GMKtec). Ask the owner before any
   write to a router.
