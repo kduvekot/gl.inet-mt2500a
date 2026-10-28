@@ -204,7 +204,7 @@ jobs:
             # (adguardhome-conntrack, built from gl_feed_common); GL.iNet's
             # gl-sdk4-adguardhome then comes from the image like the others
             SKIP=; [ "${AGH_VERSION:--}" = - ] && SKIP=--skip-override=gl-sdk4-adguardhome
-            sudo python3 -I "$GITHUB_WORKSPACE/.github/scripts/gen-closed-feed.py" off_root ../closed "$C" "--private-now=$PRIVATE_NOW" $SKIP > ../out/closed-feed.txt
+            sudo python3 -I "$GITHUB_WORKSPACE/.github/scripts/gen-closed-feed.py" off_root ../closed "$C" "--private-now=$PRIVATE_NOW" "--release=$RELEASE" $SKIP > ../out/closed-feed.txt
             sudo python3 -I - off_root ../closed-image "$C/image-files.txt" << 'PY'
           import os, shutil, sys
           root, out, lst = sys.argv[1:4]

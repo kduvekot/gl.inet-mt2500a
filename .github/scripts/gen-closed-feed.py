@@ -8,7 +8,10 @@ unpacked official image, so a full build can reproduce them.
 taken from the image: built-from-public.txt (packages built from public
 source instead) and overrides/<feed>/<path>/Makefile (recipes that build
 their programs from source; files/ still comes from the image and the
-built programs are installed over it). Run inside the workflow only: the
+built programs are installed over it). overrides@<release>/ holds recipes
+for that release and later (--release=<this release>; the newest one at or
+below it wins, other files in the recipe folder, e.g. src/, are copied
+along). Run inside the workflow only: the
 output contains GL.iNet's files and is never stored or published.
 
 For every closed package (default: all whose control file names a source in
@@ -92,7 +95,14 @@ def main():
     # --skip-override=<package>: generate it from the image like the others
     # (gl-sdk4-adguardhome from 4.8.2 on: AdGuardHome is its own package)
     skip = {a.split("=", 1)[1] for a in sys.argv[4:] if a.startswith("--skip-override=")}
-    opts_all = opts + [a for a in sys.argv[4:] if a.startswith("--skip-override=")]
+    # --release=<release>: picks overrides@<release>/ recipes (see above)
+    relarg = [a.split("=", 1)[1] for a in sys.argv[4:] if a.startswith("--release=")]
+    vkey = lambda v: tuple(int(x) for x in re.findall(r"\d+", v))
+    ovdirs = [closed / "overrides"]
+    if relarg:
+        ovdirs += [d for d in sorted(closed.glob("overrides@*"), key=lambda d: vkey(d.name.split("@", 1)[1]))
+                   if vkey(d.name.split("@", 1)[1]) <= vkey(relarg[0])]
+    opts_all = opts + [a for a in sys.argv[4:] if a.startswith("--skip-override=") or a.startswith("--release=")]
     only = set(a for a in sys.argv[4:] if a not in opts_all)
     # packages verified identical from public source: not part of this feed
     pub = closed / "built-from-public.txt"
@@ -277,7 +287,10 @@ def main():
                       "endef", "",
                       f"$(eval $(call BuildPackage,{name}))"]
         (d / "Makefile").write_text("\n".join(lines) + "\n")
-        ov = closed / "overrides" / d.relative_to(out) / "Makefile"
+        ov = closed / "overrides" / "-"
+        for od in ovdirs:                # the newest applicable recipe
+            if (od / d.relative_to(out) / "Makefile").exists():
+                ov = od / d.relative_to(out) / "Makefile"
         if name in skip:
             ov = closed / "overrides" / "-"     # (none)
         if ov.exists():                  # built from source (files/ from the image)
@@ -290,7 +303,10 @@ def main():
             m = re.sub(r"^  DEPENDS:=$", "  DEPENDS:=" + " ".join("+" + x for x in deps),
                        m, count=1, flags=re.M)
             (d / "Makefile").write_text(m)
-        print(f"{name:40} -> {d.relative_to(out)}{' (override: built from source)' if ov.exists() else ''}")
+            for x in ov.parent.iterdir():  # the recipe's own sources (src/)
+                if x.name != "Makefile":
+                    (shutil.copytree if x.is_dir() else shutil.copy2)(x, d / x.name)
+        print(f"{name:40} -> {d.relative_to(out)}{' (override: built from source, ' + ov.parent.relative_to(closed).parts[0] + ')' if ov.exists() else ''}")
 
 
 if __name__ == "__main__":
