@@ -58,6 +58,14 @@ define Build/Prepare
 	$(CP) $(DL_DIR)/gl-sdk4-uci-7e5f319-guci.h $(PKG_BUILD_DIR)/guci.h
 endef
 
+# libguci.so and guci.h for packages that link against it (oopslog, from
+# 4.7.4 on built from GL.iNet's source too)
+define Build/InstallDev
+	$(INSTALL_DIR) $(1)/usr/lib $(1)/usr/include
+	$(CP) $(PKG_BUILD_DIR)/libguci.so $(1)/usr/lib/
+	$(CP) $(PKG_BUILD_DIR)/guci.h $(1)/usr/include/
+endef
+
 define Package/gl-sdk4-uci/install
 	$(CP) ./files/* $(1)/
 	$(INSTALL_DIR) $(1)/usr/lib
