@@ -362,7 +362,7 @@ def public_i18n(out, table):
     """Replace the image's translation files with the same files downloaded
     from gl-inet/router-sdk-languages at the commit the table names, each
     checked against its SHA256 (a failed download or check stops the run)."""
-    import hashlib, urllib.request
+    import hashlib, time, urllib.request
     n = 0
     for l in open(table):
         m = re.match(r"^\| `(/[^`]+)` \| `([0-9a-f]{40})` \| `([^`]+)` \| `([0-9a-f]{64})` \|$", l.strip())
@@ -373,13 +373,14 @@ def public_i18n(out, table):
         if not targets:
             continue                    # not part of a package taken from the image
         url = f"https://raw.githubusercontent.com/gl-inet/router-sdk-languages/{commit}/{urllib.request.quote(rpath)}"
-        for attempt in range(4):
+        for attempt in range(5):              # waits 2, 4, 8, 16 s (DNS hiccups)
             try:
                 data = urllib.request.urlopen(url, timeout=60).read()
                 break
             except OSError:
-                if attempt == 3:
+                if attempt == 4:
                     raise
+                time.sleep(2 ** (attempt + 1))
         if hashlib.sha256(data).hexdigest() != sha:
             sys.exit(f"i18n: {url} doesn't match {sha}")
         for t in targets:
