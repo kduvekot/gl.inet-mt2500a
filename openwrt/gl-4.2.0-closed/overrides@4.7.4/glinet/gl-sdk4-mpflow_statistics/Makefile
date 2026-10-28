@@ -31,4 +31,13 @@ define Build/Compile
 		modules
 endef
 
+# (our addition) GL.iNet's MT2500 package also carries three scripts
+# (/etc/init.d/mpflow, /etc/hotplug.d/iface/99-mpflow, /usr/bin/get_mpflow.sh,
+# 4.7.4 to 4.9.0) that this published recipe doesn't install; they come from
+# the image (files/, as for every closed package), the module from source
+define KernelPackage/$(PKG_NAME)/install
+	[ ! -d ./files/etc ] || $(CP) ./files/etc $(1)/
+	[ ! -d ./files/usr ] || $(CP) ./files/usr $(1)/
+endef
+
 $(eval $(call KernelPackage,$(PKG_NAME)))

@@ -115,6 +115,7 @@ def main():
     for o in opts:
         public -= set(o.split("=", 1)[1].split()) - {"-"}
     info = root / "usr/lib/opkg/info"
+    generated, shared, versions = {}, [], {}   # folder -> first package; shared folders
     # ABI-versioned names (jansson4) -> the name DEPENDS uses (jansson)
     abi = {}
     for f in info.glob("*.control"):
@@ -138,6 +139,12 @@ def main():
         src = c["Source"]                       # feeds/<feed>/<path>
         parts = src.split("/")
         d = out / parts[1] / "/".join(parts[2:]) if parts[0] == "feeds" else out / "misc" / name
+        versions[name] = c["Version"]
+        if d in generated:                     # a second package from the same folder:
+            shared.append((d, name))           # generated on its own, merged below
+            d = out / ".shared" / name
+        else:
+            generated[d] = name
         if d.exists():
             shutil.rmtree(d)
         (d / "files").mkdir(parents=True)
@@ -323,6 +330,34 @@ def main():
                 if x.name != "Makefile":
                     (shutil.copytree if x.is_dir() else shutil.copy2)(x, d / x.name)
         print(f"{name:40} -> {d.relative_to(out)}{' (override: built from source, ' + ov.parent.relative_to(closed).parts[0] + ')' if ov.exists() else ''}")
+    merge_shared(out, generated, shared, versions)
+
+
+def merge_shared(out, generated, shared, versions):
+    """GL.iNet builds some packages from one folder (4.9.0: gl-sdk4-dpi and
+    kmod-dpi in glinet/gl-sdk4-dpi, Source: the same for both). OpenWrt reads
+    one Makefile per folder, so the packages are merged into one: each keeps
+    its own files (files-<package>) and gets its exact official version
+    (VERSION:= in its definition; their PKG_VERSION/PKG_RELEASE split differs)."""
+    def pin(text, name):
+        head = f"define Package/{name}\n" if not name.startswith("kmod-") else f"define KernelPackage/{name[5:]}\n"
+        assert text.count(head) == 1, (name, head)
+        return text.replace(head, head + f"  VERSION:={versions[name]}\n")
+    for d, name2 in shared:
+        name1 = generated[d]
+        mk = (d / "Makefile").read_text()
+        if (d / "files").exists():
+            (d / "files").rename(d / f"files-{name1}")
+            mk = pin(mk.replace("./files/", f"./files-{name1}/"), name1)
+        t = out / ".shared" / name2
+        m2 = (t / "Makefile").read_text()
+        body = m2[m2.index("\ndefine ") + 1:].replace("./files/", f"./files-{name2}/")
+        (t / "files").rename(d / f"files-{name2}")
+        if (t / "Module.symvers").exists() and not (d / "Module.symvers").exists():
+            (t / "Module.symvers").rename(d / "Module.symvers")
+        (d / "Makefile").write_text(mk.rstrip("\n") + "\n\n" + pin(body, name2))
+        print(f"{name2:40} -> merged into {d.relative_to(out)} (folder shared with {name1})")
+    shutil.rmtree(out / ".shared", ignore_errors=True)
 
 
 if __name__ == "__main__":
