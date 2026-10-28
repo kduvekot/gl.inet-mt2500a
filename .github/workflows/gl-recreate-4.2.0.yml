@@ -325,7 +325,7 @@ jobs:
           python3 setup.py -c configs/config-mt798x-7.6.6.1.yml
           unset GIT_COMMITTER_DATE
           cd mt7981
-          if [ "${EARLY_PATCHES:-0}" -gt 0 ] || [ "${LATE_PATCHES:-0}" -gt 0 ]; then
+          if [ "${EARLY_PATCHES:-0}" != 0 ] || [ "${LATE_PATCHES:-0}" != 0 ]; then   # (also a-b ranges)
             # the first EARLY_PATCHES patch commits one second earlier, the last
             # LATE_PATCHES one second later (see env)
             all=$(git log --reverse --format='%H %ct' | awk -v d="$GIT_COMMIT_DATE" '$2 == d { printf "%s ", $1 }')
