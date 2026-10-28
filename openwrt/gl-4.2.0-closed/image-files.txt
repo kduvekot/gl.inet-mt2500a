@@ -23,6 +23,7 @@ etc/uci-defaults/15_fix_glconfig_track_ip
 etc/uci-defaults/dhcp_server
 etc/uci-defaults/network_gl
 etc/uci-defaults/zzzz_gl_init_done
+etc/version.build
 lib/functions/gl_util.sh
 lib/netifd/proto/callip.sh
 lib/netifd/proto/directip.sh
