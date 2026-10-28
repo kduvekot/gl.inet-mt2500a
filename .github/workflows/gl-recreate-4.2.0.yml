@@ -173,7 +173,10 @@ jobs:
         env:
           CLOSED: ${{ inputs.closed }}
         run: |
-          sudo apt-get install -y -q squashfs-tools > /dev/null
+          # (local runs: two workers can start at once; wait for dpkg's lock,
+          # job 95a failed on it)
+          command -v unsquashfs > /dev/null || \
+            sudo apt-get -o DPkg::Lock::Timeout=600 install -y -q squashfs-tools > /dev/null
           mkdir -p work/out work/cache/dl work/cache/ccache work/cmp
           # This release's values (see env), for this and all later steps
           REL="${{ inputs.release }}"
