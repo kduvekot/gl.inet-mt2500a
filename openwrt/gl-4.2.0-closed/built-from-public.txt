@@ -2,3 +2,7 @@
 # (verified identical with the official image); gen-closed-feed.py skips them.
 kmod-gl-sdk4-tertf
 kmod-gl-sdk4-hw-info
+# 4.1.1 only: gl_feed_common's gl-sdk4-edgerouter-status at the profile's pin
+# (directory last changed at the package's SourceDateEpoch); identity with
+# the official image still to be confirmed by 4.1.1's first build
+kmod-gl-sdk4-edgerouter-status
