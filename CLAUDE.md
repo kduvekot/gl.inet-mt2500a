@@ -175,12 +175,11 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   reason to remove it or its real content is found). Build-machine orders
   are read from the official binaries (`.github/scripts/link-order.py`).
   **Proved** (validated without ccache, only the accepted classes left):
-  4.2.0, 4.2.1, 4.2.3, 4.4.5, 4.4.6, 4.5.0, 4.5.16 (2026-10-28).
+  4.1.1, 4.2.0, 4.2.1, 4.2.3, 4.4.5, 4.4.6, 4.5.0, 4.5.16 (2026-10-28).
   4.6.2, 4.6.4, 4.6.8: reproducible without ccache; left only the
   not-public parts (journey ch. 15 keeps the list, 13 items) and
   `ethsys_reset`. 4.7.0, 4.7.4: GL.iNet's revisions, all packages and
-  files; left also a few closed-package folder modes. 4.1.1 (GitHub
-  Actions runner path), 4.8.2 (dropbear without autoreconf) and 4.9.0:
+  files; left also a few closed-package folder modes. 4.8.2 (dropbear without autoreconf) and 4.9.0:
   first full builds 2026-10-28. Release values beyond the first ones:
   `sdk_mode` (4.8.2+ built with SDK=1, empty revision), `build_dir`
   (4.1.1 Actions runner, Jenkins path from 4.7.0), `umask` (002 from
