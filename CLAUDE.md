@@ -78,6 +78,11 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   Generated recipes too: before queueing a release, `~/recipecheck.sh
   <release> [private_now]` on the M5+ (OpenWrt parses every closed recipe,
   ~1 min) (2026-10-28: 4.9.0's preflight 99p lost to a missing `kernel.mk`).
+- **M5+ workers:** address tmux sessions exactly (`tmux kill-session -t
+  =queue`; a plain `-t queue` also matches `queue2`: 2026-10-28 it killed
+  w2's job mid-build and w2 sat idle for 80 minutes). After touching a
+  worker, check `tmux ls` shows both `queue` and `queue2`; every check-in
+  confirms both workers are alive, not only that the log moved.
 - **Watching runs:** by run id with the token; never `pkill -f` or
   `pgrep -f` a pattern that occurs in your own command line (wait on a
   file or the queue log instead); long builds print progress with
