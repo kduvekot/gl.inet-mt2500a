@@ -680,7 +680,11 @@ jobs:
           # 25 and 57): build host Python first. (Host-only; target package
           # metadata is unaffected, unlike a retry, whose second make reads the
           # recipes with more packages built: ABI names in Depends, job 57.)
+          # The host tools first: without ccache nothing has built them yet,
+          # and host Python's dependencies need them (expat: "cmake: command
+          # not found", validation jobs 86, 87, 89). A no-op when built.
           if [ -d package/feeds/packages/python3 ]; then
+            make -j"$(nproc)" BUILD_LOG=1 tools/install
             make -j"$(nproc)" BUILD_LOG=1 package/feeds/packages/python3/host/compile
           fi
           build_retry() {
