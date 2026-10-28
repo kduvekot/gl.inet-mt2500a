@@ -84,7 +84,9 @@ env:
   #   AGH_VERSION, AGH_SHA256  AdGuard's release binary in gl-sdk4-adguardhome
   #   EARLY_PATCHES     number of leading patches committed one second
   #                     earlier (GL.iNet's git am crossed a second boundary;
-  #                     visible in SourceDateEpoch, e.g. uboot-envtools in 4.2.1)
+  #                     visible in SourceDateEpoch, e.g. uboot-envtools in 4.2.1);
+  #                     a-b: patches a to b (4.8.2+: GL.iNet's private builder
+  #                     dated a middle group early; extra commits use @early)
   #   LATE_PATCHES      number of trailing patches committed one second later
   #                     (dnsmasq and odhcpd in 4.2.3)
   #   REBUILT_PACKAGES  packages GL.iNet's tree had built before ("-": none).
@@ -327,7 +329,11 @@ jobs:
             # LATE_PATCHES one second later (see env)
             all=$(git log --reverse --format='%H %ct' | awk -v d="$GIT_COMMIT_DATE" '$2 == d { printf "%s ", $1 }')
             n=$(echo $all | wc -w)
-            early=$(echo $all | tr ' ' '\n' | awk -v e="${EARLY_PATCHES:-0}" 'NR <= e' | tr '\n' ' ')
+            # EARLY_PATCHES N: the first N patch commits; a-b: commits a to b
+            # (4.8.2: GL.iNet's private builder dated a middle group early)
+            early=$(echo $all | tr ' ' '\n' | awk -v e="${EARLY_PATCHES:-0}" '
+              BEGIN { if (split(e, r, "-") == 2) { a = r[1]; b = r[2] } else { a = 1; b = e } }
+              NR >= a && NR <= b' | tr '\n' ' ')
             late=$(echo $all | tr ' ' '\n' | awk -v n="$n" -v l="${LATE_PATCHES:-0}" 'NR > n - l' | tr '\n' ' ')
             first=$(echo $early $late | awk '{ print $1 }')
             FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --env-filter \
