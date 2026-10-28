@@ -109,7 +109,10 @@ def main():
                    if vkey(rng(d)[0]) <= vkey(relarg[0]) and (rng(d)[1] is None or vkey(relarg[0]) <= vkey(rng(d)[1]))]
     # --umask=<umask>: GL.iNet's builder umask for this release (002 from 4.7.0)
     umask = ([a.split("=", 1)[1] for a in sys.argv[4:] if a.startswith("--umask=")] or ["-"])[0]
-    opts_all = opts + [a for a in sys.argv[4:] if a.startswith(("--skip-override=", "--release=", "--umask="))]
+    # --i18n=<table>: translations to take from GL.iNet's public language
+    # repository instead of the image (openwrt/gl-4.2.0-closed/i18n/<release>.md)
+    i18n = ([a.split("=", 1)[1] for a in sys.argv[4:] if a.startswith("--i18n=")] or [None])[0]
+    opts_all = opts + [a for a in sys.argv[4:] if a.startswith(("--skip-override=", "--release=", "--umask=", "--i18n="))]
     only = set(a for a in sys.argv[4:] if a not in opts_all)
     # packages verified identical from public source: not part of this feed
     pub = closed / "built-from-public.txt"
@@ -347,7 +350,39 @@ def main():
                 if x.name != "Makefile":
                     (shutil.copytree if x.is_dir() else shutil.copy2)(x, d / x.name)
         print(f"{name:40} -> {d.relative_to(out)}{' (override: built from source, ' + ov.parent.relative_to(closed).parts[0] + ')' if ov.exists() else ''}")
+    if i18n:
+        public_i18n(out, i18n)
     merge_shared(out, generated, shared, versions)
+
+
+def public_i18n(out, table):
+    """Replace the image's translation files with the same files downloaded
+    from gl-inet/router-sdk-languages at the commit the table names, each
+    checked against its SHA256 (a failed download or check stops the run)."""
+    import hashlib, urllib.request
+    n = 0
+    for l in open(table):
+        m = re.match(r"^\| `(/[^`]+)` \| `([0-9a-f]{40})` \| `([^`]+)` \| `([0-9a-f]{64})` \|$", l.strip())
+        if not m:
+            continue
+        path, commit, rpath, sha = m.groups()
+        targets = [t for t in out.glob("**/files" + path)] + [t for t in out.glob("**/files-*" + path)]
+        if not targets:
+            continue                    # not part of a package taken from the image
+        url = f"https://raw.githubusercontent.com/gl-inet/router-sdk-languages/{commit}/{urllib.request.quote(rpath)}"
+        for attempt in range(4):
+            try:
+                data = urllib.request.urlopen(url, timeout=60).read()
+                break
+            except OSError:
+                if attempt == 3:
+                    raise
+        if hashlib.sha256(data).hexdigest() != sha:
+            sys.exit(f"i18n: {url} doesn't match {sha}")
+        for t in targets:
+            t.write_bytes(data)         # keeps the file's mode
+        n += 1
+    print(f"i18n: {n} translation files from gl-inet/router-sdk-languages ({table})")
 
 
 def merge_shared(out, generated, shared, versions):
