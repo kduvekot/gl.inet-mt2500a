@@ -329,8 +329,11 @@ def main():
             ov = closed / "overrides" / "-"     # (none)
         if ov.name == "build.mk":        # build steps only: the generated recipe
             mk = (d / "Makefile").read_text()  # keeps its metadata (conffiles, ...);
-            assert "define Build/Compile\nendef\n" in mk and "\t$(CP) ./files/* $(1)/\n" in mk, name
-            mk = mk.replace("define Build/Compile\nendef\n", ov.read_text(), 1)   # its programs
+            # (a kmod recipe's Build/Compile may write Module.symvers: the
+            # real build makes its own)
+            compile_ = re.search(r"^define Build/Compile\n(?:.*\n)*?endef\n", mk, re.M)
+            assert compile_ and "\t$(CP) ./files/* $(1)/\n" in mk, name
+            mk = mk.replace(compile_[0], ov.read_text(), 1)                        # its programs
             mk = mk.replace("\t$(CP) ./files/* $(1)/\n",                         # go over files/
                             f"\t$(CP) ./files/* $(1)/\n\t$(call Package/{name}/install-built,$(1))\n", 1)
             (d / "Makefile").write_text(mk)
