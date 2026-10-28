@@ -1857,6 +1857,7 @@ different.
 | Emergency-reboot flag | 4.7.4 | `psci_sys_reset`, `emergency_restart`, restart handlers |
 | Earlier version of dnsmasq patch 304 | 4.7.4 | `dnsmasq` layout (size and strings equal) |
 | Server side of ubus auto-subscribe | 4.9.0 | `ubusd` (48 bytes) |
+| sipcalc output with spaces instead of tabs (33 strings) | 4.7.4+ | `sipcalc` in `gl-sdk4-ipv6` |
 | Unidentified commits (count only) | 4.5.x: 1, 4.6.x: 2, 4.7.x: 1 | the revision number |
 
 Re-checked on 2026-10-27 with a wider net: key strings of every item
@@ -2057,3 +2058,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-28 | 4.1.1's first build (91b): `kmod-dm` can't be packaged (device mapper built in, no `dm-mod.ko`); GL.iNet's 4.1.1 has neither `kmod-dm` nor `kmod-dax`: `extra_config` as for 4.5.0. 4.8.2's first build (90b): GL.iNet's `dropbear` 2024.86 (`gl_feed_common`, `PKG_FIXUP:=autoreconf`) fails in configure: with 21.02's autoconf 2.69 its late `AC_CONFIG_AUX_DIR([src])` isn't honoured; GL.iNet's build must have used another autoconf (open). New in 4.7.x with umask: `netifd`'s `udhcpc` script (4.7.4) and `tc-tiny` differ (open). |
 | 2026-10-28 | 4.7.4's `netifd` `udhcpc` script: GL.iNet's has a cable-passthrough block (masquerade address, proxy ARP), new in 4.7.4 like the dnsmasq one; now part of the passthrough commit, taken from the official image. Repacked, `netifd` gets GL.iNet's exact `Installed-Size` (101228). |
 | 2026-10-28 | 4.7.x `tc-tiny`: GL.iNet's action/qdisc/filter table is in sorted file order (their Jenkins runs GNU make 4.3+, which sorts `$(wildcard)`; 4.6.x's builder didn't). Patch `iproute2@mptcp_feeds/991` sorts tc's static-syms for the MPTCP feed's iproute2 only: direct build byte-identical to GL.iNet's 4.7.4 `tc-tiny`. |
+| 2026-10-28 | 4.7.4's `sipcalc` (`gl-sdk4-ipv6`, package of March 2025): GL.iNet replaced tabs with four spaces in 33 of its 56 tabbed output strings (200 bytes more code); not in upstream (Debian 1.1.6 or git) nor any published tree: not public. 4.7.4's exfat (`gl-sdk4-nas-exfat`) uses `strncpy` where 4.7.0 used `strcpy`: GL.iNet's full recipe and source are published in gl-image (4.8.6), being tested. |
