@@ -8,7 +8,9 @@ unpacked official image, so a full build can reproduce them.
 taken from the image: built-from-public.txt (packages built from public
 source instead) and overrides/<feed>/<path>/Makefile (recipes that build
 their programs from source; files/ still comes from the image and the
-built programs are installed over it). overrides@<release>/ holds recipes
+built programs are installed over it; overrides/<feed>/<path>/build.mk
+instead only adds build steps and Package/<name>/install-built to the
+generated recipe, which keeps its metadata). overrides@<release>/ holds recipes
 for that release and later (overrides@<from>..<to>/: for that range only;
 --release=<this release>; the newest one at or below it wins, other files
 in the recipe folder, e.g. src/, are copied along). Run inside the workflow only: the
@@ -314,10 +316,23 @@ def main():
         (d / "Makefile").write_text("\n".join(lines) + "\n")
         ov = closed / "overrides" / "-"
         for od in ovdirs:                # the newest applicable recipe
-            if (od / d.relative_to(out) / "Makefile").exists():
-                ov = od / d.relative_to(out) / "Makefile"
+            for f in ("Makefile", "build.mk"):
+                if (od / d.relative_to(out) / f).exists():
+                    ov = od / d.relative_to(out) / f
         if name in skip:
             ov = closed / "overrides" / "-"     # (none)
+        if ov.name == "build.mk":        # build steps only: the generated recipe
+            mk = (d / "Makefile").read_text()  # keeps its metadata (conffiles, ...);
+            assert "define Build/Compile\nendef\n" in mk and "\t$(CP) ./files/* $(1)/\n" in mk, name
+            mk = mk.replace("define Build/Compile\nendef\n", ov.read_text(), 1)   # its programs
+            mk = mk.replace("\t$(CP) ./files/* $(1)/\n",                         # go over files/
+                            f"\t$(CP) ./files/* $(1)/\n\t$(call Package/{name}/install-built,$(1))\n", 1)
+            (d / "Makefile").write_text(mk)
+            for x in ov.parent.iterdir():
+                if x.name != "build.mk":
+                    (shutil.copytree if x.is_dir() else shutil.copy2)(x, d / x.name)
+            print(f"{name:40} -> {d.relative_to(out)} (build steps: {ov.parent.relative_to(closed).parts[0]})")
+            continue
         if ov.exists():                  # built from source (files/ from the image)
             m = ov.read_text()           # with this release's version
             if ver:
