@@ -87,6 +87,11 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   `pgrep -f` a pattern that occurs in your own command line (wait on a
   file or the queue log instead); long builds print progress with
   `grep --line-buffered`, save logs with `if: always()`, keep a time limit.
+- **Full runs are for batches (owner, 2026-10-28):** a byte-identical
+  replacement for one closed binary is proven with a targeted compile
+  (the binary alone, against that release's tree or SDK); full runs only
+  after the whole set of binaries has been gone through and several
+  fixes are in, never for one binary on an already proven release.
 - **Order of work:** a release step only after the previous base is
   validated; `docs/releases.md` only once all releases are done (collect
   data meanwhile). No GPL source request to GL.iNet until all firmwares
