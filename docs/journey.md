@@ -1917,6 +1917,17 @@ binary still copied from the official images:
   - the WO is a build of 2023-06-28.
   The recipe still copies the EEPROM from the image: taking it from
   linux-firmware would add a download for one file.
+- **`conninfra.ko` (4.9.0) is public:** MediaTek's conninfra driver
+  `bbf588`, as padavanonly's `immortalwrt-mt798x` (21.02 tree, commit
+  015af9e3) publishes it, built unmodified against our kernel. The options:
+  APSOC MT7981, EMI support, auto-up and EEPROM name `e2p`. The result is
+  byte-identical (targeted compile). The function sizes told the versions
+  apart: hanwckf's later `f2fa25` adds four register writes and a chip
+  revision check (152 bytes). The recipe downloads the 47 files by commit
+  with hashes (`overrides@4.9.0..4.9.0/mt798x/drivers/connectivity/conninfra/build.mk`).
+- Not public: `mt_wifi.ko` and `mtk_warp_proxy.ko` are SDK 7.6.7.1. The
+  public sources are 7.6.6.1, 7.6.7.2 and 7.6.7.3. `mtfwd`, `mtqos` and
+  `fwdd` are in none of the community trees.
 
 ## Next steps
 
@@ -2148,3 +2159,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-28 | **4.8.2 at the not-public-only level (99y):** 461/461 packages, 5189/5189 files, kernel configuration identical; `sysupgrade.conf` and the `1-` versions now as GL.iNet's; left only `sipcalc`, iwinfo, Airoha PHY, `usbnet`, `opkg` and the known kernel functions. Validation without ccache queued (99zb). C decompilation of the closed binaries (started at the owner's request with `glc`) stopped again by the safety classifier, as in the earlier attempt; nothing was produced or committed. |
 | 2026-10-28 | The 176 remaining compiled Lua 5.1 files named `./files/...` (218 release entries, 4.1.1–4.9.0) recompile byte for byte after unluac and re-layout. Private repository: 644 reconstructed files (280a81b), so now really all of GL.iNet's compiled Lua (the 426 of the line above didn't include these). |
 | 2026-10-28 | Second public-source search (chapter 15): 95 gl-inet/zhaojh329 repositories and a web search on 79 binary fingerprints: no new unmodified sources. iwinfo's HE table is MediaTek SDK code (hanwckf, same 192 values), but GL.iNet's library is still its own merge of it. Of the 4.9.0 MT7981 firmware only `MT7981_ePAeLNA_EEPROM.bin` is public (linux-firmware); the 2024-09-24 WM/WA/patch builds and the 2023-06-28 WO build are not. |
+| 2026-10-28 | 4.9.0 `conninfra.ko` built unmodified from MediaTek's public conninfra (padavanonly 21.02 tree), byte-identical in a targeted compile. Recipe `build.mk` with 47 hashed downloads (all verified); `gen-closed-feed.py` now merges `build.mk` into kmod-only recipes too. It joins the next 4.9.0 batch. |
