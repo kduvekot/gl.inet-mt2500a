@@ -1885,6 +1885,39 @@ rate table, no RM500U `usbnet` entry. A web search for `rm500u_5gnet` finds
 nothing: GL.iNet's own name. Not searched yet: Airoha's EN8811H driver
 releases outside MediaTek's feed.
 
+Second search for public sources (2026-10-28 evening), for every closed
+binary still copied from the official images:
+- **String provenance against 95 more repositories:** all public
+  repositories of `gl-inet` and of oui's author (zhaojh329). The closed
+  binaries' strings were scored against them as well as the earlier
+  source pool. No new origins: the matches are libraries embedded in the
+  binaries (Mongoose in `gl_nas_sys`/`webdav_ser`, the already known `qcm`
+  sources, MediaTek's MT7615 SoftAP 5.0.4.0 driver for `mt_wifi.ko`, an
+  older generation than the MT7981's driver).
+- **Web search on fingerprints:** a fingerprint per binary (exported
+  functions, libraries, distinctive strings; symbol tables and strings
+  only). Nothing found for any of the 79 binaries.
+  - `gl-inet/glinet4.x` has GL.iNet's own prebuilt `gl-sdk4-*` ipks
+    (binaries only).
+  - `gl-inet/gl-modem-at` is an older, smaller relative of `gl_modem`, not
+    its source.
+- **iwinfo's HE rate table:** GL.iNet's `he_mcs_phyrate_mapping_table`
+  (4.6.2+) is MediaTek SDK code. hanwckf's `immortalwrt-mt798x`
+  (`iwinfo_mtk_rate.c`) has the same 192 values. GL.iNet's library is
+  still the 2023 `iwinfo_mtk.c` lineage with this table added (hanwckf's
+  `l1util`/country code is not in it), so there is still no unmodified
+  public build.
+- **MT7981 Wi-Fi firmware (4.9.0 `kmod-mt_wifi`/`kmod-warp`):** only
+  `MT7981_ePAeLNA_EEPROM.bin` is public. It is linux-firmware's and
+  MediaTek's `mt7981_eeprom_mt7976_dbdc.bin`, byte for byte. The other
+  firmware files are not in linux-firmware, MediaTek's feed history or the
+  MT798x community trees (hanwckf, padavanonly, lgs2007m's list, which
+  goes up to 2024-08-23):
+  - the WM, WA and ROM patch are MediaTek builds of 2024-09-24;
+  - the WO is a build of 2023-06-28.
+  The recipe still copies the EEPROM from the image: taking it from
+  linux-firmware would add a download for one file.
+
 ## Next steps
 
 - [x] Run the **Build OpenWrt** workflow on GitHub and check the artifacts.
@@ -2113,3 +2146,5 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-28 | 99x (4.9.0 batch) stopped in the kernel: with the cfg80211 config the kernel builds its host tool `extract-cert` against OpenWrt's static host libcrypto (LibreSSL), which needs `pthread_once`; GL.iNet's build machine has glibc 2.34+ (pthread in libc), our Ubuntu 20.04 container glibc 2.31. Build-machine patch `openwrt/gl-4.2.0-patches/linux-kernel/999-extract-cert-link-pthread.patch` (`-lpthread`), applied only when the target config has `CONFIG_CFG80211=m`; the tool embeds nothing, so the kernel is unchanged. 4.9.0 batch requeued (99z). |
 | 2026-10-28 | 99z (4.9.0) stopped after 2 minutes: a short DNS outage on the M5+ during the translation downloads (the failed `git pull` at 18:21 was probably the same). The downloads now retry with waits of 2–16 s; requeued as 99za. |
 | 2026-10-28 | **4.8.2 at the not-public-only level (99y):** 461/461 packages, 5189/5189 files, kernel configuration identical; `sysupgrade.conf` and the `1-` versions now as GL.iNet's; left only `sipcalc`, iwinfo, Airoha PHY, `usbnet`, `opkg` and the known kernel functions. Validation without ccache queued (99zb). C decompilation of the closed binaries (started at the owner's request with `glc`) stopped again by the safety classifier, as in the earlier attempt; nothing was produced or committed. |
+| 2026-10-28 | The 176 remaining compiled Lua 5.1 files named `./files/...` (218 release entries, 4.1.1–4.9.0) recompile byte for byte after unluac and re-layout. Private repository: 644 reconstructed files (280a81b), so now really all of GL.iNet's compiled Lua (the 426 of the line above didn't include these). |
+| 2026-10-28 | Second public-source search (chapter 15): 95 gl-inet/zhaojh329 repositories and a web search on 79 binary fingerprints: no new unmodified sources. iwinfo's HE table is MediaTek SDK code (hanwckf, same 192 values), but GL.iNet's library is still its own merge of it. Of the 4.9.0 MT7981 firmware only `MT7981_ePAeLNA_EEPROM.bin` is public (linux-firmware); the 2024-09-24 WM/WA/patch builds and the 2023-06-28 WO build are not. |
