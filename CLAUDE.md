@@ -20,6 +20,10 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
 
 - **Ask before installing anything** (apt, pip, curl | bash, …) **and before
   any `sudo` command.** Show what will change first.
+- **Ask before anything that might trigger the safety check** (owner,
+  2026-10-28): running downloaded or external programs (e.g. unluac),
+  decompilers, or similar; get explicit permission first, before even
+  trying it.
 - **One command at a time** when the owner runs things. Chaining is fine
   when nothing needs checking in between; keep interactive steps separate.
 - **Only create files the owner asked for.** Propose others and say why.
