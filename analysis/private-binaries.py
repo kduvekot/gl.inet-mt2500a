@@ -29,7 +29,7 @@ high-entropy strings). The public report only flags the kind and count; the
 matches themselves go to <private dir>/<release>.md when given (meant for
 the private decompilation repository, never for this one).
 """
-import collections, gzip, hashlib, os, re, subprocess, sys, tempfile
+import collections, fnmatch, gzip, hashlib, os, re, subprocess, sys, tempfile
 
 repo, roots, kernels, fwdir, results, qlog, out = sys.argv[1:8]
 private = sys.argv[8] if len(sys.argv) > 8 else None
@@ -115,7 +115,16 @@ def closed_from_image(r):
         m = re.match(r"^(\S+)\s+-> (\S+)(.*)$", l)
         if m and l.split("->", 1)[1].strip().startswith("built from public source"):
             continue                    # built from the public feed, not taken from the image
-        if m:
+        if m and "(build steps: " in m.group(3):
+            # only the files the build steps replace are built; the rest
+            # still comes from the image
+            ov = re.search(r"\(build steps: (\S+)\)", m.group(3)).group(1)
+            bm = open(f"{repo}/openwrt/gl-4.2.0-closed/{ov}/{m.group(2)}/build.mk").read()
+            built = set(re.findall(r"> \$\(1\)/(\S+)", bm))
+            if "bundle-luci.sh" in bm:
+                built.add("etc/luci_ipks/*.ipk")
+            pk[m.group(1)] = ("from the image", built)
+        elif m:
             pk[m.group(1)] = "built from source" if "override" in m.group(3) else "from the image"
     return pk
 
@@ -199,12 +208,15 @@ def main():
         pk = closed_from_image(r)
         files = {}                                   # path -> (package, origin)
         for name, how in pk.items():
+            how, built = how if isinstance(how, tuple) else (how, set())
             if how != "from the image" or not os.path.exists(f"{info}/{name}.list"):
                 continue
             for l in open(f"{info}/{name}.list"):
                 p = l.strip().lstrip("/")
                 if p.startswith("rootfs-overlay/"):
                     p = p[len("rootfs-overlay/"):]
+                if any(fnmatch.fnmatch(p, b) for b in built):
+                    continue                     # replaced by a build step
                 files[p] = (name, "closed package (from the image)")
         job = best_job(rel)
         kernel_diff = ""
