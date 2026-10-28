@@ -470,6 +470,19 @@ jobs:
               mkdir -p "$t" && cp "$d"*.patch "$t/" && echo "patches for $n -> $t"
             done
           done
+          # AdGuardHome's recipe downloads its web frontend under an
+          # unversioned name and copies it to the versioned one only if that
+          # is missing: GL.iNet's download cache still held 4.8.2's 0.107.56
+          # frontend, which 4.9.0's AdGuardHome 0.107.73 embeds (99v identical,
+          # 99za with the right frontend not). The same file, from the release.
+          m=$(find feeds -path "*/adguardhome-conntrack/Makefile" | head -1)
+          if [ -n "$m" ] && grep -q '^PKG_VERSION:=0\.107\.73$' "$m"; then
+            curl -fsSL --retry 5 -o /tmp/agh-frontend.tgz \
+              https://github.com/AdguardTeam/AdGuardHome/releases/download/v0.107.56/AdGuardHome_frontend.tar.gz
+            echo "f7d6308d17ed7ac97b62e4cb5bec79a647695ade94b91a8803a6dc0fdbac407f  /tmp/agh-frontend.tgz" | sha256sum -c -
+            cp /tmp/agh-frontend.tgz dl/AdGuardHome_frontend-0.107.73.tar.gz
+            echo "AdGuardHome 0.107.73 with 0.107.56's frontend (GL.iNet's cache)"
+          fi
           # Kernel build-machine patches (linux-kernel/): only where the kernel
           # builds the affected host tool (extract-cert with 4.9.0's cfg80211)
           if grep -q '^CONFIG_CFG80211=m$' target/linux/mediatek/mt7981/config-5.4; then
