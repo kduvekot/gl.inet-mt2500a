@@ -2,7 +2,7 @@
 """Report the binaries of GL.iNet's MT2500 releases that we can't build
 byte-identical from public source (docs/closed-binaries/).
 
-    sudo private-binaries.py <repo> <roots dir> <kernels dir> <fw dir> <results dir> <queue.log> <out dir>
+    sudo private-binaries.py <repo> <roots dir> <kernels dir> <fw dir> <results dir> <queue.log> <out dir> [<private dir>]
 
 <repo>: this repository (openwrt/gl-releases.tsv, openwrt/gl-4.2.0-closed,
 .github/scripts/gen-closed-feed.py); <roots dir>/<release>/: the unpacked root
@@ -22,15 +22,53 @@ A binary is "private" when it is
   - the kernel image, when its code differs function by function.
 Text files are left out (scripts, configuration, Lua source, web files, also
 when gzip-compressed); everything else is listed with its type.
+
+Each binary's strings are also scanned for sensitive-looking data (PEM keys
+and certificates, credential-like assignments, URLs with a password, long
+high-entropy strings). The public report only flags the kind and count; the
+matches themselves go to <private dir>/<release>.md when given (meant for
+the private decompilation repository, never for this one).
 """
 import collections, gzip, hashlib, os, re, subprocess, sys, tempfile
 
 repo, roots, kernels, fwdir, results, qlog, out = sys.argv[1:8]
+private = sys.argv[8] if len(sys.argv) > 8 else None
 BUNDLE = "sysupgrade-glinet_gl-mt2500"
 ACCEPTED = re.compile(r"samba|\.pyc|libndr|libdcerpc|libsmb|libsamba|libnetapi|libsamdb|/smb|nmblookup|ntlm_auth"
                       r"|pdbedit|sharesec|testparm|mvxattr|oLschema|^usr/bin/wg$|^usr/lib/opkg/")
 INTERESTING = re.compile(r"(?i)(version[ :=]|\bv\d+\.\d+|copyright|\(c\) |licen[sc]e|gl\.inet|glinet|"
                          r"mediatek|airoha|quectel|build|compiled)")
+
+
+SENSITIVE = [
+    ("PEM private key", re.compile(rb"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
+    ("PEM certificate", re.compile(rb"-----BEGIN CERTIFICATE-----")),
+    ("PEM public key", re.compile(rb"-----BEGIN [A-Z ]*PUBLIC KEY-----")),
+    ("URL with credentials", re.compile(rb"[a-z][a-z0-9+.-]*://[^/\s:@\x00]+:[^/\s@\x00]+@[^\s\x00]+")),
+    ("credential assignment", re.compile(rb"(?i)\b(passw(or)?d|passwd|secret|api[_-]?key|access[_-]?key|token|auth[_-]?key)"
+                                          rb"\s*[=:]\s*['\"]?[A-Za-z0-9+/=_\-!@#$%^&*.]{6,}")),
+]
+B64ISH = re.compile(rb"[A-Za-z0-9+/_\-]{32,}={0,2}")
+
+
+def entropy(b):
+    import math
+    c = collections.Counter(b)
+    return -sum(n / len(b) * math.log2(n / len(b)) for n in c.values())
+
+
+def scan_sensitive(data):
+    """[(kind, offset, match)] for sensitive-looking data in a binary"""
+    hits = []
+    for kind, rx in SENSITIVE:
+        for m in rx.finditer(data):
+            hits.append((kind, m.start(), m.group(0)[:200]))
+    for m in B64ISH.finditer(data):
+        t = m.group(0)
+        if len(t) >= 40 and entropy(t) > 4.8 and not re.fullmatch(rb"[A-Za-z_]+", t) \
+                and not any(o <= m.start() < o + len(x) for _, o, x in hits):
+            hits.append(("high-entropy string", m.start(), t[:200]))
+    return hits
 
 
 def run(*a, **k):
@@ -130,6 +168,11 @@ def elf_meta(p):
 def file_meta(path, data):
     m = {"size": str(len(data)), "md5": hashlib.md5(data).hexdigest(), "sha256": hashlib.sha256(data).hexdigest(),
          "mode": oct(os.stat(path).st_mode & 0o7777)[2:], "type": run("file", "-b", path).strip()[:120]}
+    hits = scan_sensitive(data)
+    if hits:
+        kinds = collections.Counter(k for k, _, _ in hits)
+        m["sensitive"] = ", ".join(f"{k} ({n})" for k, n in sorted(kinds.items()))
+        m["_hits"] = hits
     if data[:4] == b"\x7fELF":
         m.update(elf_meta(path))
     elif data[:4] == b"\x1bLua":
@@ -209,7 +252,7 @@ def main():
 FIELDS = ["release", "path", "package", "package_version", "origin", "bundle_path", "type", "size", "mode", "md5", "sha256",
           "elf_type", "machine", "interp", "soname", "needed", "build_id", "exported_symbols", "symtab", "comment",
           "modinfo_name", "modinfo_license", "modinfo_author", "modinfo_description", "modinfo_version", "modinfo_srcversion",
-          "modinfo_depends", "modinfo_vermagic", "lua_bytecode", "kernel_functions", "strings"]
+          "modinfo_depends", "modinfo_vermagic", "lua_bytecode", "kernel_functions", "sensitive", "strings"]
 
 
 def md(s):
@@ -229,9 +272,23 @@ def write(per_rel, rows):
              f"{sum(r['origin'].startswith('kernel') for r in d['recs'])} kernel)", ""]
         if d["job"] == "none yet":
             L += ["No complete comparison yet: public packages with unpublished changes aren't listed for this release.", ""]
-        L += ["| Path | Package | Origin | Type | Size | MD5 |", "|---|---|---|---|---|---|"]
+        nsens = sum(1 for r in d["recs"] if r.get("sensitive"))
+        L += [f"- Binaries with sensitive-looking data (kind and count only; details in the private repository): **{nsens}**", ""]
+        L += ["| Path | Package | Origin | Type | Size | MD5 | Sensitive |", "|---|---|---|---|---|---|---|"]
         for r in d["recs"]:
-            L.append(f"| `{md(r['path'])}` | {md(r['package'])} | {md(r['origin'])} | {md(r['type'][:60])} | {r['size']} | `{r['md5']}` |")
+            L.append(f"| `{md(r['path'])}` | {md(r['package'])} | {md(r['origin'])} | {md(r['type'][:60])} | {r['size']} | `{r['md5']}` | {md(r.get('sensitive', ''))} |")
+        if private:
+            P = [f"# Sensitive-looking data in GL.iNet {rel} (PRIVATE: never in the public repository)", "",
+                 f"Image `{d['fw']}`; generated by the public repo's `analysis/private-binaries.py`.", ""]
+            for r in d["recs"]:
+                if r.get("_hits"):
+                    P += [f"## `{r['path']}` ({r['package']}, md5 `{r['md5']}`)", ""]
+                    P += [f"- {k} at 0x{o:x}: `{x.decode('latin1').replace('`', chr(39))}`" for k, o, x in r["_hits"][:40]]
+                    if len(r["_hits"]) > 40:
+                        P.append(f"- … {len(r['_hits']) - 40} more")
+                    P.append("")
+            os.makedirs(private, exist_ok=True)
+            open(f"{private}/{rel}.md", "w").write("\n".join(P) + "\n")
         L += ["", "## Details", ""]
         for r in d["recs"]:
             L += [f"### `{md(r['path'])}`", ""]
@@ -241,7 +298,7 @@ def write(per_rel, rows):
     # overview: one row per binary path, one column per release (short MD5)
     by_path = collections.OrderedDict()
     for r in sorted(rows, key=lambda r: (r["path"] != "(kernel)", r["package"], r["path"])):
-        by_path.setdefault((r["path"], r["package"]), {})[r["release"]] = r["md5"][:8]
+        by_path.setdefault((r["path"], r["package"]), {})[r["release"]] = r["md5"][:8] + (" ⚠" if r.get("sensitive") else "")
     L = ["# Private binaries: what we can't build from source", "",
          "Generated by `analysis/private-binaries.py` from GL.iNet's official MT2500 images and our latest complete "
          "comparison per release. Metadata only: no file from GL.iNet's images is stored here.", "",
@@ -251,7 +308,7 @@ def write(per_rel, rows):
          "bytecode, `wg`, kernel version fields), or, for the kernel, when its code differs function by function. "
          "Text files (scripts, configuration, Lua source, web files, also gzip-compressed) are left out.", "",
          "Each cell holds the first 8 hex digits of the file's MD5 in that release (`·`: not in that release or "
-         "not private there); a value repeated along a row means the binary didn't change. Full hashes, paths in "
+         "not private there); a value repeated along a row means the binary didn't change; ⚠ marks a binary with sensitive-looking data (keys, certificates, credentials, high-entropy strings), detailed only in the private repository. Full hashes, paths in "
          "the firmware bundle and all other metadata are in the per-release files.", "",
          "| Release | Image | Comparison | Private binaries |", "|---|---|---|---|"]
     for rel, d in per_rel.items():
