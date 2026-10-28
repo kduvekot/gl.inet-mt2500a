@@ -113,6 +113,8 @@ def closed_from_image(r):
     pk = {}
     for l in txt.splitlines():
         m = re.match(r"^(\S+)\s+-> (\S+)(.*)$", l)
+        if m and l.split("->", 1)[1].strip().startswith("built from public source"):
+            continue                    # built from the public feed, not taken from the image
         if m:
             pk[m.group(1)] = "built from source" if "override" in m.group(3) else "from the image"
     return pk
