@@ -35,3 +35,4 @@ usr/bin/get_unique_password.lua
 usr/bin/modem_signal_led
 usr/bin/remove_portal_firewall
 usr/bin/set_init_portal
+usr/lib/lua/zoneinfo.lua

@@ -488,6 +488,22 @@ jobs:
             for f in $closed_feeds; do ./scripts/feeds install -a -p "$f" > /dev/null; done
             ./scripts/feeds install -a > /dev/null
           fi
+          # A package that several feeds have is installed from the first one
+          # listed; take it from the feed GL.iNet's control file names (4.9.0:
+          # smstools3 from gl_feed_smstools3, which gl_feed_common also has)
+          if [ -d /work/cmp/off_root/usr/lib/opkg/info ]; then
+            for c in /work/cmp/off_root/usr/lib/opkg/info/*.control; do
+              src=$(sed -n 's#^Source: feeds/##p' "$c"); [ -n "$src" ] || continue
+              feed=${src%%/*}; dir=${src##*/}
+              [ -d "feeds/$feed" ] && [ -f "feeds/$feed/${src#*/}/Makefile" ] || continue
+              [ -e "package/feeds/$feed/$dir" ] && continue
+              pkg=$(sed -n 's/^SourceName: //p' "$c")
+              echo "feed of $pkg: $feed (as GL.iNet's)"
+              ./scripts/feeds uninstall "$pkg" > /dev/null
+              ./scripts/feeds install -p "$feed" "$pkg" > /dev/null
+              [ -e "package/feeds/$feed/$dir" ]
+            done
+          fi
           # GL.iNet's dropbear 2024.86 (gl_feed_common, 4.8.2+) is built with the
           # tarball's own configure (autoconf 2.71): its recipe's autoreconf
           # (OpenWrt 21.02's 2.69) leaves a configure that can't find

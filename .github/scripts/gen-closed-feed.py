@@ -283,6 +283,9 @@ def main():
                       f"$(eval $(call KernelPackage,{pkg}))"]
         else:
             lines += [f"define Package/{name}",
+                      # an empty release ("1-", 4.9.0's mtk-base-files and
+                      # wifi-profile) would otherwise become plain "1"
+                      *([f"  VERSION:={c['Version']}"] if c["Version"].endswith("-") else []),
                       f"  SECTION:={c.get('Section', 'base')}",
                       "  CATEGORY:=GL.iNet (closed, from the official image)",
                       f"  TITLE:={mk_escape(title)}",
