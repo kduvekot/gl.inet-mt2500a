@@ -33,6 +33,7 @@ from pathlib import Path
 
 CLOSED_PREFIX = ("gl-sdk4", "gl-", "oui-", "kmod-gl-sdk4", "libgl")
 CLOSED_EXTRA = {"fwdd", "kmod-mtfwd", "kmod-mtqos", "mtk-base-files"}
+CLOSED_FEEDS = {"glinet", "mt7981", "mt798x"}   # GL.iNet's private feeds
 # Files a package's postinst moved at image build (OpenWrt's rootfs.mk runs
 # and then deletes every postinst, so the script itself isn't in the image):
 # package -> {listed path: final path}. Our reconstruction of the effect.
@@ -124,7 +125,11 @@ def main():
         name = cf.stem
         if only and name not in only:
             continue
-        if not only and not (name.startswith(CLOSED_PREFIX) or name in CLOSED_EXTRA):
+        # closed: by name, or built from one of GL.iNet's private feeds (4.9.0's
+        # kmod-dpi, kmod-mt_wifi, ... don't follow the naming)
+        src_feed = (control(cf).get("Source", "").split("/") + ["", ""])[1]
+        if not only and not (name.startswith(CLOSED_PREFIX) or name in CLOSED_EXTRA
+                             or src_feed in CLOSED_FEEDS):
             continue
         if name in public:
             print(f"{name:40} -> built from public source, skipped")
