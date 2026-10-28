@@ -126,7 +126,8 @@ env:
   #   EXTRA_COMMITS     folders of openwrt/gl-extra-commits ("-": none):
   #                     GL.iNet patch commits missing from the public patch set
   #                     (4.5.0+), recreated with the release's patch date;
-  #                     name@early: one second earlier (4.6.4's lua5.3 and uci)
+  #                     name@early: one second earlier (4.6.4's lua5.3 and uci),
+  #                     name@late: one second later (4.9.0's uboot-envtools)
   #   SDK_MODE          1: GL.iNet's CI built with SDK=1 set (4.8.2 on):
   #                     include/toplevel.mk then takes REVISION and the global
   #                     SOURCE_DATE_EPOCH from include/version.mk, where both
@@ -345,9 +346,11 @@ jobs:
           # GL.iNet patch commits missing from the public patch set (see env)
           for c in ${EXTRA_COMMITS:--}; do
             [ "$c" = - ] && continue
-            # name@early: dated one second earlier, like the early patches
+            # name@early / name@late: dated one second earlier / later, like
+            # the early and late patches (4.9.0's uboot-envtools commit is late)
             cdate=$GIT_COMMIT_DATE
-            case "$c" in *@early) c=${c%@early}; cdate=$((GIT_COMMIT_DATE - 1)) ;; esac
+            case "$c" in *@early) c=${c%@early}; cdate=$((GIT_COMMIT_DATE - 1)) ;;
+                         *@late) c=${c%@late}; cdate=$((GIT_COMMIT_DATE + 1)) ;; esac
             d=/work/gl-extra-commits/$c
             if [ -d "$d/files" ]; then
               cp -r "$d/files/." .
