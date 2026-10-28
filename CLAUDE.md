@@ -88,7 +88,7 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
 - **Decompilation** (private repo): one commit per iteration, never
   squashed.
 
-## Where things stand (2026-10-27)
+## Where things stand (2026-10-28)
 
 - Workflows on `main`: **Build OpenWrt**, **Recovery kit**, **Raspberry Pi
   OS image** (all Node 24 actions). The `recovery-kit` release is
@@ -157,20 +157,24 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   labelled placeholder for 4.5.x's unidentified 885th commit, kept until a
   reason to remove it or its real content is found). Build-machine orders
   are read from the official binaries (`.github/scripts/link-order.py`).
-  4.2.0, 4.2.1, 4.2.3 validated; 4.4.5 at the same level (only accepted
-  classes left); 4.4.6, 4.5.0 and 4.5.16 too (jobs 41, 61, 62).
-  4.6.2–4.7.4 (2026-10-27): every release builds completely at GL.iNet's
-  revision with all packages and files (jobs 72b, 74b, 78/80 pending, 79b);
-  left: the not-public parts (journey ch. 15 keeps the list: iwinfo,
-  usbnet, Airoha PHY, PCIe probe, emergency reboot, 4.7.4's dnsmasq 304,
-  4.9.0's ubusd), a few `Installed-Size` values and `ethsys_reset`. More
-  release values: `sdk_mode` (4.8.2+ built with SDK=1, empty revision),
-  `build_dir` (Jenkins path from 4.7.0), `umask` (002 from 4.7.0).
+  **Proved** (validated without ccache, only the accepted classes left):
+  4.2.0, 4.2.1, 4.2.3, 4.4.5, 4.4.6, 4.5.0, 4.5.16 (2026-10-28).
+  4.6.2, 4.6.4, 4.6.8: reproducible without ccache; left only the
+  not-public parts (journey ch. 15 keeps the list, 13 items) and
+  `ethsys_reset`. 4.7.0, 4.7.4: GL.iNet's revisions, all packages and
+  files; left also a few closed-package folder modes. 4.1.1 (GitHub
+  Actions runner path), 4.8.2 (dropbear without autoreconf) and 4.9.0:
+  first full builds 2026-10-28. Release values beyond the first ones:
+  `sdk_mode` (4.8.2+ built with SDK=1, empty revision), `build_dir`
+  (4.1.1 Actions runner, Jenkins path from 4.7.0), `umask` (002 from
+  4.7.0), `early_patches` also as a range (4.8.2+). Release-specific
+  closed-package recipes: `openwrt/gl-4.2.0-closed/overrides@<release>/`;
+  feed-specific source patches: `openwrt/gl-4.2.0-patches/<pkg>@<feed>/`.
   GL.iNet's private MediaTek feed is called `mt798x` from 4.6.2 on.
-  4.8.2 (preflight passes) and 4.9.0 are prepared: built once 4.7.4 is
-  validated. `gl-inet/gl-image` holds complete GPL trees of later GL.iNet
-  releases for other models (gl-be10000 `versions/4.8.6`, gl-mt3600be
-  `versions/4.9.0`): source for GL.iNet's generic package patches.
+  `gl-inet/gl-image` holds complete GPL trees of later GL.iNet releases
+  for other models (gl-be10000 `versions/4.8.6`, gl-be14000 `4.9.1`,
+  gl-mt3600be `4.8.7`/`4.9.0`): source for GL.iNet's package patches and
+  some of their own packages (e.g. `gl-sdk4-nas-exfat`).
 - **M5+ workflow:** two job workers (`~/queue/`, `~/queue2/`, verdict
   `~/brief.sh NN`), each keeps its last OpenWrt tree (`~/trees/w1|w2`) for
   `~/rebuild.sh <w> <package>` (minutes instead of a ~31-minute full run).
