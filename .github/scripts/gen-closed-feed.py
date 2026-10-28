@@ -102,7 +102,9 @@ def main():
     if relarg:
         ovdirs += [d for d in sorted(closed.glob("overrides@*"), key=lambda d: vkey(d.name.split("@", 1)[1]))
                    if vkey(d.name.split("@", 1)[1]) <= vkey(relarg[0])]
-    opts_all = opts + [a for a in sys.argv[4:] if a.startswith("--skip-override=") or a.startswith("--release=")]
+    # --umask=<umask>: GL.iNet's builder umask for this release (002 from 4.7.0)
+    umask = ([a.split("=", 1)[1] for a in sys.argv[4:] if a.startswith("--umask=")] or ["-"])[0]
+    opts_all = opts + [a for a in sys.argv[4:] if a.startswith(("--skip-override=", "--release=", "--umask="))]
     only = set(a for a in sys.argv[4:] if a not in opts_all)
     # packages verified identical from public source: not part of this feed
     pub = closed / "built-from-public.txt"
@@ -197,6 +199,15 @@ def main():
             t = d / "files/rootfs-overlay" / f
             if t.is_file():
                 t.chmod(m)
+        # With umask 002 (GL.iNet's Jenkins, 4.7.0 on) the package holds its
+        # executable overlay files group-writable (775), while the image shows
+        # the mode of the file they replace: gl-sdk4-modem and gl-line-graph
+        # get GL.iNet's exact 4.7.4 Installed-Size with it (gl-sdk4-base-files
+        # keeps MODES).
+        if umask == "002" and name not in MODES:
+            for t in (d / "files/rootfs-overlay").rglob("*"):
+                if t.is_file() and not t.is_symlink() and t.stat().st_mode & 0o100:
+                    t.chmod(0o775)
         (d / "version.date").write_text(c.get("SourceDateEpoch", "") + "\n")
         pkg = name[5:] if kmod else name
         lines = ["include $(TOPDIR)/rules.mk", ""]
