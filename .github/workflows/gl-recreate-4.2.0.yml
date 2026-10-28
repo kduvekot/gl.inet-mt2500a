@@ -135,7 +135,9 @@ env:
   #   BUILD_DIR         GL.iNet's builder checkout, as compiled into binaries
   #                     ("-": /home/glinet/work/_github, up to 4.6.8; from 4.7.0
   #                     on GL.iNet built in a Jenkins job:
-  #                     /work2/jenkins/workspace/router_mt2500); OpenWrt's tree
+  #                     /work2/jenkins/workspace/router_mt2500; 4.1.1 was built
+  #                     on a GitHub Actions runner: .../actions-runner/_work/
+  #                     gl-infra-builder/gl-infra-builder); OpenWrt's tree
   #                     is its mt7981 folder
   #   UMASK             the builder's umask ("-": 022). From 4.7.0 on GL.iNet's
   #                     Jenkins builds with 002: folders made without an
