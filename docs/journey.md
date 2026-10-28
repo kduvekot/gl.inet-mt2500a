@@ -1954,7 +1954,7 @@ binary still copied from the official images:
 - [x] Phase D, triage: what each closed module does (Chapter 12).
 - [x] Phase D: `mtkhnat` 4.7.4 rebuilt byte-identical from public source (one warning removed).
 - [x] Kernel image compared (run #8): identical apart from the GNU build IDs; no extra GL.iNet kernel patches.
-- [ ] Find out why about 300 libraries and programs still differ in the recreation (Samba, Python, busybox and others).
+- [x] Find out why about 300 libraries and programs still differ in the recreation (Samba, Python, busybox and others). Done (chapters 13 and 15): the public part is identical for every release apart from the accepted classes; what remains is the not-public list (chapter 15) and the closed packages (`docs/closed-binaries/`).
 - [ ] Later optimization: Python bytecode (find GL.iNet's `PYTHONHASHSEED` with OpenWrt's own host Python inside the build).
 - [ ] After the release-by-release comparison (4.2.0 → 4.9): why GL.iNet stayed on Linux 5.4 / OpenWrt 21.02 (MediaTek SDK, shared firmware base, op24 builds).
 - [x] Find the WAN PHY variant of **each** unit separately: the two units
