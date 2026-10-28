@@ -179,8 +179,7 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   4.6.2, 4.6.4, 4.6.8: reproducible without ccache; left only the
   not-public parts (journey ch. 15 keeps the list, 13 items) and
   `ethsys_reset`. 4.7.0, 4.7.4 (99k): reproducible without ccache, left
-  only the not-public parts. 4.8.2 (99y): at that level too, validation
-  without ccache running (99zb). 4.9.0: batch run with the cfg80211
+  only the not-public parts. 4.8.2 (99y, 99zb without ccache): at that level too. 4.9.0: batch run with the cfg80211
   kernel config, WireGuard 954 and the rest (99za). Release values beyond the first ones:
   `sdk_mode` (4.8.2+ built with SDK=1, empty revision), `build_dir`
   (4.1.1 Actions runner, Jenkins path from 4.7.0), `umask` (002 from
