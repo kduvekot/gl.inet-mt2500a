@@ -1,0 +1,14 @@
+From GL.iNet's published 4.8.6 tree (gl-inet/gl-image, branch gl-be10000):
+999-5001-fix-fib_info_devhash_bucket-redefine, for 5.4.211.
+
+--- a/net/ipv4/fib_semantics.c
++++ b/net/ipv4/fib_semantics.c
+@@ -327,7 +327,7 @@
+ 	return hash_32(val, DEVINDEX_HASHBITS);
+ }
+ 
+-static struct hlist_head *
++struct hlist_head *
+ fib_info_devhash_bucket(const struct net_device *dev)
+ {
+ 	u32 val = net_hash_mix(dev_net(dev)) ^ dev->ifindex;
