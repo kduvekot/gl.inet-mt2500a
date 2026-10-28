@@ -713,6 +713,12 @@ jobs:
             make -j"$(nproc)" BUILD_LOG=1 tools/install
             make -j"$(nproc)" BUILD_LOG=1 package/feeds/packages/python3/host/compile
           fi
+          # With SDK=1 package/compile no longer depends on the host opkg
+          # (package/Makefile: ifndef SDK), so package/install found no opkg
+          # (job 99b, Error 127); build it first, as a full build does.
+          if [ "${SDK_MODE:-0}" = 1 ]; then
+            make -j"$(nproc)" BUILD_LOG=1 package/system/opkg/host/compile
+          fi
           build_retry() {
             # a package that failed (e.g. a parallel-build race, job 25's
             # bpftools) is built once more single-threaded before giving up
