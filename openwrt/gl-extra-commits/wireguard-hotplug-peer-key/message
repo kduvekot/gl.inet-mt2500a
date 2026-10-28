@@ -1,0 +1,1 @@
+wireguard: hotplug events carry the peer's public key (GL.iNet, 4.9.0)
