@@ -1,0 +1,19 @@
+Build-machine effect, not a GL.iNet change: the kernel's host tool
+extract-cert (built when CONFIG_SYSTEM_TRUSTED_KEYRING is set, 4.9.0's
+signed regulatory database) links OpenWrt's static host libcrypto
+(LibreSSL), which needs pthread_once. GL.iNet's build machine has glibc
+2.34+, where that is in libc itself; our Ubuntu 20.04 container (glibc 2.31)
+needs -lpthread. The tool only runs at build time and, with no trusted
+keys configured, embeds nothing: the kernel is the same.
+
+--- a/scripts/Makefile
++++ b/scripts/Makefile
+@@ -29,7 +29,7 @@
+ HOSTCFLAGS_sign-file.o = $(CRYPTO_CFLAGS)
+ HOSTLDLIBS_sign-file = $(CRYPTO_LIBS)
+ HOSTCFLAGS_extract-cert.o = $(CRYPTO_CFLAGS)
+-HOSTLDLIBS_extract-cert = $(CRYPTO_LIBS)
++HOSTLDLIBS_extract-cert = $(CRYPTO_LIBS) -lpthread
+ 
+ always		:= $(hostprogs-y) $(hostprogs-m)
+ 

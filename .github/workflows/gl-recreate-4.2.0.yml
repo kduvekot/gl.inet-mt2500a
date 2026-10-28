@@ -461,7 +461,8 @@ jobs:
           # A folder named <package>@<feed> goes only into that feed's copy
           # (iproute2@mptcp_feeds: tc's sorted order, 4.7.0+)
           for d in /work/gl-4.2.0-patches/*/; do
-            n=$(basename "$d"); p=${n%@*}; f=
+            n=$(basename "$d"); [ "$n" = linux-kernel ] && continue
+            p=${n%@*}; f=
             [ "$n" = "$p" ] || f=${n#*@}
             find package feeds -path "*/$p/Makefile" | while read -r m; do
               if [ -n "$f" ]; then case "$m" in feeds/"$f"/*) ;; *) continue ;; esac; fi
@@ -469,6 +470,12 @@ jobs:
               mkdir -p "$t" && cp "$d"*.patch "$t/" && echo "patches for $n -> $t"
             done
           done
+          # Kernel build-machine patches (linux-kernel/): only where the kernel
+          # builds the affected host tool (extract-cert with 4.9.0's cfg80211)
+          if grep -q '^CONFIG_CFG80211=m$' target/linux/mediatek/mt7981/config-5.4; then
+            cp /work/gl-4.2.0-patches/linux-kernel/*.patch target/linux/generic/hack-5.4/
+            echo "kernel build-machine patches -> target/linux/generic/hack-5.4"
+          fi
           if [ "${CLOSED:-}" = true ]; then
             # GL.iNet's closed packages (generated in the run), copied into the
             # tree (src-cpy) so their Source: reads feeds/...; with the
