@@ -1848,18 +1848,20 @@ different.
 | Part | Releases | Where it shows |
 |---|---|---|
 | MediaTek iwinfo support (HE rate table, HT mode, country) | 4.6.2+ | `iwinfo`, `libiwinfo`, the Lua module |
-| RM500U 5G modem entry (`rm500u_5gnet`) | 4.6.2+ | `usbnet.ko` |
+| RM500U 5G modem entry (`rm500u_5gnet`; from 4.7.4 also `simonet`) | 4.6.2+ | `usbnet.ko` (privately bridged 2026-10-28) |
 | USB port power control (`power_ctl`) | 4.6.x | `usb_port_shutdown` |
-| EN8811H (Airoha) PHY driver changes | 4.6.2+ | `air_en8811h.ko` |
+| EN8811H (Airoha) PHY driver changes (probe at MDIO address \| 8, one PBUS write) | 4.6.2+ | `air_en8811h.ko` (privately bridged 2026-10-28) |
 | Airoha link-state polling | 4.6.2+ | `phylink_fixed_state`, `mtk_mac_link_up`, `mtk_rx_irq_disable` |
 | C45 read in `get_phy_device` | 4.6.2+ | `get_phy_device` |
 | opkg size option | 4.6.2+ | `opkg` (about 480 bytes) |
 | PCIe probe (one more sleep) | 4.7.0+ | `mtk_pcie_probe` |
 | Emergency-reboot flag | 4.7.4 | `psci_sys_reset`, `emergency_restart`, restart handlers |
 | Earlier version of dnsmasq patch 304 | 4.7.4 | `dnsmasq` layout (size and strings equal) |
-| Server side of ubus auto-subscribe | 4.9.0 | `ubusd` (48 bytes) |
-| sipcalc output with spaces instead of tabs (33 strings) | 4.7.4+ | `sipcalc` in `gl-sdk4-ipv6` |
+| ~~Server side of ubus auto-subscribe~~ public after all: three upstream ubus fixes of October 2025 | 4.9.0 | `ubusd` (identical since 2026-10-28) |
+| sipcalc output with spaces instead of tabs (66 literals) | 4.7.4+ | `sipcalc` in `gl-sdk4-ipv6` (privately bridged 2026-10-28) |
 | Unidentified commits (count only) | 4.5.x: 1, 4.6.x: 2, 4.7.x: 1 | the revision number |
+| `ipheth` from the upstream CDC NCM work (11 of 15 commits, small 5.4 adaptations) | 4.9.0 | `ipheth.ko` (privately bridged 2026-10-28) |
+| MediaTek warp newer than 5f71ec, built without `-fno-caller-saves` | 4.9.0 | `mtk_warp.ko` (privately bridged 2026-10-28) |
 
 Re-checked on 2026-10-27 with a wider net: key strings of every item
 searched in all 70 `gl-feeds` branches (not only the pinned ones, e.g.
@@ -2174,3 +2176,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-28 | **4.9.0 `mtk_warp.ko` bridged to byte-identical** (private reconstruction, owner-approved function-by-function comparison, 8 commits): MediaTek's public warp 5f71ec with chipset `mt7981` and `MTK_MEMORY_SHRINK`, built **without** OpenWrt's `-fno-caller-saves` (GL.iNet's private-feed recipe doesn't pass the KCFLAGS: 18 of the 25 differing functions were only register allocation), plus four small source changes (a second `fifo_left` query, two bounds checks with their messages, `msleep_interruptible` in the SER thread). Not public source, so it stays out of the public recipe. |
 | 2026-10-28 | **`air_en8811h.ko` bridged to byte-identical** (one file in 4.6.2–4.9.0; private reconstruction, 3 commits). GL.iNet's change to the v1.2.5 driver: the probe reads the PHY IDs at MDIO address \| 8 (the device tree's 5 becomes 13, upstream's address for this PHY; message `PHY(0x%x) = %x - %x`), writes 0x180000 to PBUS register 0xcf998, then restores the original address. The bridge tool now also builds in-tree drivers as such (`intree=Y`). Still not public source, so the public recipe keeps GL.iNet's file. |
 | 2026-10-28 | **`usbnet.ko` (both versions) and `ipheth.ko` bridged to byte-identical** (private reconstructions). `usbnet`: `usbnet_probe` names Quectel 2c7c:0900 `rm500u_5gnet` (4.6.2+) and from 4.7.4 also MediaTek 0e8d:2010 or product 0x2005 `simonet`. `ipheth` (4.9.0): 5.4.211's driver with 11 of the 15 upstream ipheth commits of 2023–2025 (the CDC NCM support and its fixes), without the probe error-label fix, transmit without padding, the close-order change and the carrier-modes fix, plus small 5.4 adaptations; the upstream commits are public, the selection and adaptations are GL.iNet's. 99zc failed on the new conninfra recipe (headers found through `SUBDIRS`, which the `build.mk` didn't pass); fixed, the recipe test-built in a tree copy (package identical), 99zd running. |
+| 2026-10-28 | **`ubusd` (4.9.0) public after all:** GL.iNet's build carries, besides its published auto-subscribe patch, three upstream ubus security fixes of October 2025 (`d31effb`, `aa4a7ee`, `60e0404`, found by cherry-picking the later upstream `ubusd` commits one by one and in combination). Added to the `ubus-auto-subscribe` extra commit as patches 0002–0004 (test-applied with `patch -p1`): byte-identical. Privately bridged as well: `sipcalc` 4.7.4–4.9.0 (66 output literals with spaces for tabs). The not-public table now marks what's bridged. |
