@@ -445,12 +445,14 @@ define Build/Prepare
 endef
 
 # MediaTek's recipe options as GL.iNet set them: APSOC MT7981, EMI support,
-# conninfra up by itself, first card's EEPROM file e2p
+# conninfra up by itself, first card's EEPROM file e2p (its Makefile finds
+# the headers through SUBDIRS)
 CONNINFRA_KCONFIG:=CONFIG_MTK_CONNINFRA_APSOC=y CONFIG_MTK_CONNINFRA_APSOC_MT7981=y \
 	CONFIG_CONNINFRA_EMI_SUPPORT=y CONFIG_CONNINFRA_AUTO_UP=y
 
 define Build/Compile
 	$(MAKE) -C "$(LINUX_DIR)" ARCH="$(LINUX_KARCH)" CROSS_COMPILE="$(TARGET_CROSS)" M="$(PKG_BUILD_DIR)" \
+		SUBDIRS="$(PKG_BUILD_DIR)" \
 		KCFLAGS="-fmacro-prefix-map=$(BUILD_DIR)=$(notdir $(BUILD_DIR)) -fno-caller-saves" \
 		EXTRA_CFLAGS="-DEEPROM_NAME=e2p $(patsubst %=y,-D%=1,$(CONNINFRA_KCONFIG))" $(CONNINFRA_KCONFIG) modules
 	# stripped like OpenWrt's strip-kmod.sh
