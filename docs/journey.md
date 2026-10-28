@@ -1925,6 +1925,14 @@ binary still copied from the official images:
   apart: hanwckf's later `f2fa25` adds four register writes and a chip
   revision check (152 bytes). The recipe downloads the 47 files by commit
   with hashes (`overrides@4.9.0..4.9.0/mt798x/drivers/connectivity/conninfra/build.mk`).
+- `mtk_warp.ko` (4.9.0): 48 test builds (four public warp versions,
+  chipset and memory options). Closest is `5f71ec` with chipset `colgin`
+  and no leak debugging: `.text` 40 bytes larger, `.data` identical.
+  GL.iNet's has two bounds checks (`ring_id(%d) or cell_idx(0x%x) out of
+  range`, `invalid length (len1:%d)`) and no `LogLevel` message, which are
+  in no public warp source. It is a newer MediaTek release than 5f71ec
+  (2023-12; GL.iNet's package date is 2024-09-27). Not public; a
+  candidate for a private bridge.
 - Not public: `mt_wifi.ko` and `mtk_warp_proxy.ko` are SDK 7.6.7.1. The
   public sources are 7.6.6.1, 7.6.7.2 and 7.6.7.3. `mtfwd`, `mtqos` and
   `fwdd` are in none of the community trees.
@@ -2161,3 +2169,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-28 | Second public-source search (chapter 15): 95 gl-inet/zhaojh329 repositories and a web search on 79 binary fingerprints: no new unmodified sources. iwinfo's HE table is MediaTek SDK code (hanwckf, same 192 values), but GL.iNet's library is still its own merge of it. Of the 4.9.0 MT7981 firmware only `MT7981_ePAeLNA_EEPROM.bin` is public (linux-firmware); the 2024-09-24 WM/WA/patch builds and the 2023-06-28 WO build are not. |
 | 2026-10-28 | 4.9.0 `conninfra.ko` built unmodified from MediaTek's public conninfra (padavanonly 21.02 tree), byte-identical in a targeted compile. Recipe `build.mk` with 47 hashed downloads (all verified); `gen-closed-feed.py` now merges `build.mk` into kmod-only recipes too. It joins the next 4.9.0 batch. |
 | 2026-10-28 | **4.9.0 batch (99za):** 483/483 packages, 4960/4960 files, kernel configuration identical; left are the known not-public parts (`opkg`, `ubusd`, iwinfo, `sipcalc`, `wg`, `usbnet`, `ipheth`, EN8811H) plus one cache effect. GL.iNet's AdGuardHome 0.107.73 embeds the web frontend of 0.107.56. The recipe downloads the frontend under an unversioned name and copies it to the versioned one only when that is missing, so GL.iNet's download cache, still holding 4.8.2's frontend, gave the old one. 99v had the same effect by chance (w2's cache) and was identical; 99za, with a fresh download, wasn't. The workflow now puts 0.107.56's release frontend (hash-checked) under 0.107.73's name. 99zc queued with this and conninfra. |
+| 2026-10-28 | 4.9.0 `mtk_warp.ko`: none of 48 builds from the four public warp sources is identical; closest `5f71ec` (colgin, no leak debugging), 40 bytes of code and two bounds-check messages apart: a newer, unpublished MediaTek release. |
