@@ -9,9 +9,9 @@ taken from the image: built-from-public.txt (packages built from public
 source instead) and overrides/<feed>/<path>/Makefile (recipes that build
 their programs from source; files/ still comes from the image and the
 built programs are installed over it). overrides@<release>/ holds recipes
-for that release and later (--release=<this release>; the newest one at or
-below it wins, other files in the recipe folder, e.g. src/, are copied
-along). Run inside the workflow only: the
+for that release and later (overrides@<from>..<to>/: for that range only;
+--release=<this release>; the newest one at or below it wins, other files
+in the recipe folder, e.g. src/, are copied along). Run inside the workflow only: the
 output contains GL.iNet's files and is never stored or published.
 
 For every closed package (default: all whose control file names a source in
@@ -101,8 +101,10 @@ def main():
     vkey = lambda v: tuple(int(x) for x in re.findall(r"\d+", v))
     ovdirs = [closed / "overrides"]
     if relarg:
-        ovdirs += [d for d in sorted(closed.glob("overrides@*"), key=lambda d: vkey(d.name.split("@", 1)[1]))
-                   if vkey(d.name.split("@", 1)[1]) <= vkey(relarg[0])]
+        # overrides@<from>..<to>/: only for releases in that range
+        rng = lambda d: (d.name.split("@", 1)[1].split("..") + [None])[:2]
+        ovdirs += [d for d in sorted(closed.glob("overrides@*"), key=lambda d: vkey(rng(d)[0]))
+                   if vkey(rng(d)[0]) <= vkey(relarg[0]) and (rng(d)[1] is None or vkey(relarg[0]) <= vkey(rng(d)[1]))]
     # --umask=<umask>: GL.iNet's builder umask for this release (002 from 4.7.0)
     umask = ([a.split("=", 1)[1] for a in sys.argv[4:] if a.startswith("--umask=")] or ["-"])[0]
     opts_all = opts + [a for a in sys.argv[4:] if a.startswith(("--skip-override=", "--release=", "--umask="))]
