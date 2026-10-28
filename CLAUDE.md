@@ -178,9 +178,10 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   4.1.1, 4.2.0, 4.2.1, 4.2.3, 4.4.5, 4.4.6, 4.5.0, 4.5.16 (2026-10-28).
   4.6.2, 4.6.4, 4.6.8: reproducible without ccache; left only the
   not-public parts (journey ch. 15 keeps the list, 13 items) and
-  `ethsys_reset`. 4.7.0, 4.7.4: GL.iNet's revisions, all packages and
-  files; left also a few closed-package folder modes. 4.8.2 (dropbear without autoreconf) and 4.9.0:
-  first full builds 2026-10-28. Release values beyond the first ones:
+  `ethsys_reset`. 4.7.0, 4.7.4 (99k): reproducible without ccache, left
+  only the not-public parts. 4.8.2 (99y): at that level too, validation
+  without ccache running (99zb). 4.9.0: batch run with the cfg80211
+  kernel config, WireGuard 954 and the rest (99za). Release values beyond the first ones:
   `sdk_mode` (4.8.2+ built with SDK=1, empty revision), `build_dir`
   (4.1.1 Actions runner, Jenkins path from 4.7.0), `umask` (002 from
   4.7.0), `early_patches` also as a range (4.8.2+). Release-specific
@@ -206,6 +207,11 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   4.7.4/4.8.2 and `parental_control.ko` 4.8.2 (gl-image sources). Leads
   are found with string scans against local sources (`~/provenance.py`,
   `~/kmodsrc.sh` on the M5+); "GL.iNet's own code" only on evidence.
+  Private reconstructions (`reconstructed/<release>/<package>/` in the
+  private repo): all compiled Lua 5.1/5.3/5.4 with build-path chunk names
+  (unluac 2025, owner-approved, plus `tools/lnum2std.py`, `lua5xstd.py`,
+  `relayout.py`), data-only Lua, `oopslog` 4.1.1-4.7.0. C decompilation
+  stops on the safety classifier (2026-10-28 again): don't retry it.
 - **Next:** phase C (upstream
   OpenWrt on the old unit, iperf with the GMKtec). Ask the owner before any
   write to a router.
