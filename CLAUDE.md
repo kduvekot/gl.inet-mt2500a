@@ -75,6 +75,9 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   applies it (`patch -p1` on the source with the preceding patches)
   before it's committed; new files need `--- /dev/null` (2026-10-27: the
   musl patch lost its new file and job 70b built without it).
+  Generated recipes too: before queueing a release, `~/recipecheck.sh
+  <release> [private_now]` on the M5+ (OpenWrt parses every closed recipe,
+  ~1 min) (2026-10-28: 4.9.0's preflight 99p lost to a missing `kernel.mk`).
 - **Watching runs:** by run id with the token; never `pkill -f` or
   `pgrep -f` a pattern that occurs in your own command line (wait on a
   file or the queue log instead); long builds print progress with
