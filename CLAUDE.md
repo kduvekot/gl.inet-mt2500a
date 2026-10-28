@@ -277,13 +277,15 @@ for line in open(sys.argv[1]):
   `source-diff.py`, `firmware-versions.py`, `release-values.py`,
   `kernel-functions.py` (two kernels function by function, with
   vmlinux-to-elf for GL.iNet's)
+  and `private-binaries.py` (generates `docs/closed-binaries/`: every
+  binary we can't build identically, per release; rerun after new results)
 - `openwrt/packages.txt`: extra packages for the OpenWrt images
 - `recovery/`: `pi-setup.sh`, `uartboot.sh`, `console.sh`, `web-flash.sh`,
   `get-stock-firmware.sh` (GL.iNet's firmware is fetched from GL.iNet, never
   bundled or stored in this public repo; private copies go on the NAS)
 - `pi/`: `claude-rc.sh`, `claude-rc.service`, `dirigera-token.py`,
   `plug.sh`
-- `docs/`: `journey.md`, `firmware-sources.md`, `driver-analysis.md`
+- `docs/`: `journey.md`, `closed-binaries/`, `firmware-sources.md`, `driver-analysis.md`
   (plan: `driver-analysis-plan.md`), `recovery-uart-raspberry-pi.md`, `raspberry-pi-sd-chromebook.md`
 
 ## Git
