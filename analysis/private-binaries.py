@@ -289,6 +289,10 @@ def write(per_rel, rows):
                     P.append("")
             os.makedirs(private, exist_ok=True)
             open(f"{private}/{rel}.md", "w").write("\n".join(P) + "\n")
+    if private:   # the selection itself, for the private per-binary notes
+        import json
+        sel = [{k: v for k, v in r.items() if not k.startswith("_")} for r in rows]
+        json.dump(sel, open(f"{private}/binaries.json", "w"), indent=0)
         L += ["", "## Details", ""]
         for r in d["recs"]:
             L += [f"### `{md(r['path'])}`", ""]
