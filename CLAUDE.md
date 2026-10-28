@@ -185,6 +185,14 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   `results/user/`); origins inventory in the private repo
   `notes/oss-origins-4.2.0.md`. Further work on them stopped (safety
   classifier stops). `docs/releases.md` only once all releases are done.
+  Public origins found 2026-10-28 and turned into recipes (build steps in
+  `overrides@<from>..<to>/…/build.mk`, which keep the generated recipe's
+  metadata): 4.5.16 Tailscale (official 1.58.2 release, sstripped),
+  4.1.1–4.7.0 `oui/system.so` (oui `lsystem.c`, `-O1`), 4.8.2/4.9.0
+  bundled LuCI ipks (our own LuCI builds), `black_white_list.ko`
+  4.7.4/4.8.2 and `parental_control.ko` 4.8.2 (gl-image sources). Leads
+  are found with string scans against local sources (`~/provenance.py`,
+  `~/kmodsrc.sh` on the M5+); "GL.iNet's own code" only on evidence.
 - **Next:** phase C (upstream
   OpenWrt on the old unit, iperf with the GMKtec). Ask the owner before any
   write to a router.
