@@ -442,10 +442,15 @@ jobs:
           grep -n 'opkg/keys/' package/base-files/Makefile
           # Every copy of the package gets them: from 4.7.0 on, the MPTCP
           # feed's iproute2 6.3.0 replaces OpenWrt's (CONFIG_OVERRIDE_PKGS)
+          # A folder named <package>@<feed> goes only into that feed's copy
+          # (iproute2@mptcp_feeds: tc's sorted order, 4.7.0+)
           for d in /work/gl-4.2.0-patches/*/; do
-            find package feeds -path "*/$(basename "$d")/Makefile" | while read -r m; do
+            n=$(basename "$d"); p=${n%@*}; f=
+            [ "$n" = "$p" ] || f=${n#*@}
+            find package feeds -path "*/$p/Makefile" | while read -r m; do
+              if [ -n "$f" ]; then case "$m" in feeds/"$f"/*) ;; *) continue ;; esac; fi
               t="$(dirname "$m")/patches"
-              mkdir -p "$t" && cp "$d"*.patch "$t/" && echo "patches for $(basename "$d") -> $t"
+              mkdir -p "$t" && cp "$d"*.patch "$t/" && echo "patches for $n -> $t"
             done
           done
           if [ "${CLOSED:-}" = true ]; then
