@@ -475,6 +475,16 @@ jobs:
             for f in $closed_feeds; do ./scripts/feeds install -a -p "$f" > /dev/null; done
             ./scripts/feeds install -a > /dev/null
           fi
+          # GL.iNet's dropbear 2024.86 (gl_feed_common, 4.8.2+) is built with the
+          # tarball's own configure (autoconf 2.71): its recipe's autoreconf
+          # (OpenWrt 21.02's 2.69) leaves a configure that can't find
+          # src/install-sh, and a configure.ac fix gives another binary. Without
+          # the fixup our dropbear is byte-identical to GL.iNet's 4.8.2 one.
+          m=feeds/gl_feed_common/dropbear/Makefile
+          if [ -f "$m" ] && grep -q '^PKG_VERSION:=2024\.86$' "$m"; then
+            sed -i 's/^PKG_FIXUP:=autoreconf$/# (PKG_FIXUP:=autoreconf: not in GL.iNet'"'"'s build)/' "$m"
+            grep -n 'PKG_FIXUP' "$m"
+          fi
           python3 - << 'PY'
           import os, re, subprocess
           official = {l.strip() for l in open("/work/official-packages.txt") if l.strip()}
