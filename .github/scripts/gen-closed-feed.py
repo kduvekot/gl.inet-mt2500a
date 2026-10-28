@@ -355,6 +355,8 @@ def merge_shared(out, generated, shared, versions):
         m2 = (t / "Makefile").read_text()
         body = m2[m2.index("\ndefine ") + 1:].replace("./files/", f"./files-{name2}/")
         (t / "files").rename(d / f"files-{name2}")
+        if name2.startswith("kmod-") and "/kernel.mk" not in mk:   # KernelPackage needs it
+            mk = mk.replace("include $(TOPDIR)/rules.mk\n", "include $(TOPDIR)/rules.mk\n\ninclude $(INCLUDE_DIR)/kernel.mk\n", 1)
         if (t / "Module.symvers").exists() and not (d / "Module.symvers").exists():
             (t / "Module.symvers").rename(d / "Module.symvers")
         (d / "Makefile").write_text(mk.rstrip("\n") + "\n\n" + pin(body, name2))
