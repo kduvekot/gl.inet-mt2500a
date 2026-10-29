@@ -735,6 +735,15 @@ jobs:
                 && mv "$ccache_tc.tmp" "$ccache_tc" && echo "toolchain cached as $ckey"
             fi
           fi
+          if [ "${KERNEL_ONLY:-}" = 1 ]; then
+            # Kernel tree only (local runs): host tools, toolchain and the
+            # kernel with its modules, so a single kernel module can be built
+            # against this release's kernel (private module bridges); no
+            # packages, no image
+            make -j"$(nproc)" BUILD_LOG=1 tools/install toolchain/install
+            make -j"$(nproc)" BUILD_LOG=1 target/linux/compile
+            exit 0
+          fi
           if [ "${REBUILT_PACKAGES:--}" != "-" ]; then
             # build these once and clean them (clean keeps pkginfo/*.version),
             # so the main build builds them again, as GL.iNet's tree did (see env)
@@ -830,7 +839,7 @@ jobs:
           case "$GL_DIR" in ""|-) GL_DIR=/home/glinet/work/_github ;; esac
           timeout 320m docker run --rm -v "$PWD/work:/work" \
             ${KEEP_TREE:+-v "$KEEP_TREE:$(dirname "$GL_DIR")"} \
-            -e DRY_RUN -e FORK -e MTK_FEED_OLD -e MTK_FEED_MIRROR -e USE_CCACHE -e PUBLISH_SDK -e CLOSED \
+            -e DRY_RUN -e KERNEL_ONLY -e FORK -e MTK_FEED_OLD -e MTK_FEED_MIRROR -e USE_CCACHE -e PUBLISH_SDK -e CLOSED \
             ubuntu:20.04 bash /work/build.sh 2>&1 | tee work/out/build.log \
             | { grep --line-buffered -E "^ make\[[0-9]+\] |ERROR: |ccache wrapper|^\+ make |Collected errors" || true; } \
             | tee work/out/progress.log
