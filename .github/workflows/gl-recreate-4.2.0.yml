@@ -498,8 +498,28 @@ jobs:
             # Source: glinet, and mt7981 up to 4.5.16, mt798x from 4.6.2 on)
             F=feeds.conf; [ -f "$F" ] || F=feeds.conf.default
             closed_feeds=$(cd /work/closed && ls -d */ | tr -d /)
-            for f in $closed_feeds; do printf 'src-cpy %s /work/closed/%s\n' "$f" "$f" >> "$F"; done
-            ( umask "$U"; ./scripts/feeds update $closed_feeds > /dev/null )
+            # A folder named after a public feed (4.2.1's gl_feed_common: its
+            # parental-control is closed though the feed still has it) can't be
+            # a second feed of that name ("Duplicate feed name"): its packages
+            # replace those package folders in that feed's tree instead, so
+            # Source: stays feeds/<feed>/... as in GL.iNet's control files
+            new_feeds=
+            for f in $closed_feeds; do
+              if grep -q "^src-[a-z-]* $f " "$F"; then
+                for m in $(cd "/work/closed/$f" && find . -name Makefile -printf '%h\n'); do
+                  rm -rf "feeds/$f/$m"
+                  ( umask "$U"; mkdir -p "feeds/$f/$m" && cp -R "/work/closed/$f/$m/." "feeds/$f/$m/" )
+                  echo "closed package replaces feeds/$f/${m#./}"
+                done
+                ./scripts/feeds update -i "$f" > /dev/null
+              else
+                printf 'src-cpy %s /work/closed/%s\n' "$f" "$f" >> "$F"
+                new_feeds="$new_feeds $f"
+              fi
+            done
+            # (word splitting intended: one argument per feed)
+            # shellcheck disable=SC2086
+            [ -z "$new_feeds" ] || ( umask "$U"; ./scripts/feeds update $new_feeds > /dev/null )
             # OpenWrt names a source package after its folder: GL.iNet's
             # gl-ui4.0/module/adguardhome (gl-sdk4-ui-adguardhome) clashes with
             # the packages feed's adguardhome (not in the official image), and
