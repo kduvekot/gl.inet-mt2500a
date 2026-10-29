@@ -38,7 +38,23 @@ new = """ endif
 +obj-$(CONFIG_AIROHA_EN8811H_PHY)	+= air_en8811h.o
  obj-$(CONFIG_AQUANTIA_PHY)	+= aquantia.o"""
 assert s.count(old) == 1, "Makefile hunk not found"
-open(p, "w").write(s.replace(old, new))
+s = s.replace(old, new)
+# GL.iNet's kernels (4.6.2-4.9.0) list the two options last in the PHY
+# menu, after XILINX_GMII2RGMII (their embedded .config); MediaTek's patch
+# puts them before ADIN_PHY. Same lines, hunk moved (our construction):
+# the order shows in the embedded configuration only.
+i = s.index("@@ -345,6 +345,17 @@ config SFP\n")
+j = s.index("diff --git a/drivers/net/phy/Makefile")
+added = [l for l in s[i:j].split("\n") if l.startswith("+")]
+assert len(added) == 11, "Kconfig hunk not as expected"
+hunk = ("@@ -611,6 +611,17 @@ config XILINX_GMII2RGMII\n"
+        " \t  the Reduced Gigabit Media Independent Interface(RGMII) between\n"
+        " \t  Ethernet physical media devices and the Gigabit Ethernet controller.\n"
+        " \n" + "\n".join(added) + "\n"
+        " endif # PHYLIB\n"
+        " \n"
+        " config MICREL_KS8995MA\n")
+open(p, "w").write(s[:i] + hunk + s[j:])
 PYP
 fetch mt7981/base-files/lib/firmware/EthMD32.dm.bin $T/en8811h-firmware/EthMD32.dm.bin c4212623112b7e55fe677d56ca77c859ad30d34619984d881e2225a92bdbcd72
 fetch mt7981/base-files/lib/firmware/EthMD32.DSP.bin $T/en8811h-firmware/EthMD32.DSP.bin 05c4abe35d3838a2d106db796c5a7058d4c2edd74ac545bbef256382459828fd

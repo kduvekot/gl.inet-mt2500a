@@ -580,7 +580,9 @@ jobs:
                       + ("CONFIG_SDK=y\nCONFIG_IB=y\n" if os.environ.get("PUBLISH_SDK") == "true" and os.environ.get("CLOSED") != "true"
                          else "# CONFIG_SDK is not set\n# CONFIG_IB is not set\n") +
                       # GL.iNet's kernel banner: "5.4.211 (glinet@glinet)"; the
-                      # string length shifts all later read-only data.
+                      # string length shifts all later read-only data. From
+                      # 4.7.0 on another builder (EXTRA_CONFIG, written later,
+                      # overrides these two).
                       "CONFIG_KERNEL_BUILD_USER=\"glinet\"\nCONFIG_KERNEL_BUILD_DOMAIN=\"glinet\"\n"
                       # LuCI builds translation packages only for enabled
                       # languages; the official image has en and zh-cn ones.
