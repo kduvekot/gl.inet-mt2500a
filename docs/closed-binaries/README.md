@@ -8,7 +8,7 @@ Each cell holds the first 8 hex digits of the file's MD5 in that release (`·`: 
 
 | Release | Image | Comparison | Private binaries |
 |---|---|---|---|
-| [4.1.1](4.1.1.md) | `openwrt-mt2500-4.1.1-1105-1667584249.bin` | 99f-release-4.1.1-buildpath | 49 |
+| [4.1.1](4.1.1.md) | `openwrt-mt2500-4.1.1-1105-1667584249.bin` | 99n-validation-4.1.1-noccache | 48 |
 | [4.2.0](4.2.0.md) | `openwrt-mt2500-4.2.0-0314-1678763050.bin` | 04-validation-repeat | 50 |
 | [4.2.1](4.2.1.md) | `openwrt-mt2500-4.2.1-0414-1681475801.bin` | 16-validation-4.2.1-noccache | 51 |
 | [4.2.3](4.2.3.md) | `openwrt-mt2500-4.2.3-0706-1688623638.bin` | 21-validation-4.2.3-noccache | 52 |
@@ -20,13 +20,13 @@ Each cell holds the first 8 hex digits of the file's MD5 in that release (`·`: 
 | [4.6.4](4.6.4.md) | `openwrt-mt2500-4.6.4-0904-1725455606.bin` | 97-validation-4.6.4-noccache | 101 |
 | [4.6.8](4.6.8.md) | `openwrt-mt2500-4.6.8-1017-1729169844.bin` | 96-validation-4.6.8-noccache | 101 |
 | [4.7.0](4.7.0.md) | `openwrt-mt2500-4.7.0-1205-1733363804.bin` | 99o-validation-4.7.0-noccache | 150 |
-| [4.7.4](4.7.4.md) | `openwrt-mt2500-4.7.4-0328-1743128340.bin` | 98b-release-4.7.4-netifd-tc-exfat | 149 |
-| [4.8.2](4.8.2.md) | `openwrt-mt2500-4.8.2-0912-1757664241.bin` | 99h-release-4.8.2-opkg | 158 |
-| [4.9.0](4.9.0.md) | `mt2500-4.9.0_beta3-1048-0704-1783130560.bin` | none yet | 199 |
+| [4.7.4](4.7.4.md) | `openwrt-mt2500-4.7.4-0328-1743128340.bin` | 99k-validation-4.7.4-noccache | 148 |
+| [4.8.2](4.8.2.md) | `openwrt-mt2500-4.8.2-0912-1757664241.bin` | 99zb-validation-4.8.2-noccache | 154 |
+| [4.9.0](4.9.0.md) | `mt2500-4.9.0_beta3-1048-0704-1783130560.bin` | 99ze-validation-4.9.0-noccache-ubusd | 207 |
 
 | Path | Package | 4.1.1 | 4.2.0 | 4.2.1 | 4.2.3 | 4.4.5 | 4.4.6 | 4.5.0 | 4.5.16 | 4.6.2 | 4.6.4 | 4.6.8 | 4.7.0 | 4.7.4 | 4.8.2 | 4.9.0 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `(kernel)` | kernel | · | · | · | · | · | · | · | · | `7e6bd4b7` | `65508f27` | `c6e8803f` | `bb74ea80` | `bd014beb` | `a095ee93` | · |
+| `(kernel)` | kernel | · | · | · | · | · | · | · | · | `7e6bd4b7` | `65508f27` | `c6e8803f` | `bb74ea80` | `bd014beb` | `a095ee93` | `bb015ff3` |
 | `/usr/sbin/dnsmasq` | dnsmasq-full | · | · | · | · | · | · | · | · | · | · | · | · | `f4481b7f ⚠` | · | · |
 | `/usr/bin/fwdd` | fwdd | `6e4c6c83` | `6e4c6c83` | `56a725ed` | `56a725ed` | `56a725ed` | `56a725ed` | `56a725ed` | `56a725ed` | `56a725ed` | `56a725ed` | `56a725ed` | `56a725ed` | `56a725ed` | `56a725ed` | `56a725ed` |
 | `/www/images/wizard-cellular.png` | gl-line-graph | · | · | · | · | · | · | · | · | · | · | · | `c0934398` | `c0934398` | `c0934398` | `c0934398` |
@@ -178,7 +178,7 @@ Each cell holds the first 8 hex digits of the file's MD5 in that release (`·`: 
 | `/usr/lib/oui-httpd/rpc/firewall` | gl-sdk4-firewall | · | · | · | · | · | · | `31fca15c` | `31fca15c` | `64224133` | `ccc29103` | `ccc29103` | `bd177d5c` | `20a8e110` | `39eae096` | `211b4ac0` |
 | `/usr/share/gl-validator.d/firewall.lua` | gl-sdk4-firewall | · | · | · | · | · | · | · | · | `ae899ec9` | `ae899ec9` | `ae899ec9` | `9777e501` | `11adb7e1` | `11adb7e1` | `30be363d` |
 | `/usr/lib/oui-httpd/rpc/igmp` | gl-sdk4-igmp | · | · | · | · | · | · | `b00ffed8` | `b00ffed8` | `d73b2f79` | `d73b2f79` | `d73b2f79` | `3a8fc047` | `db146127` | `ef7f4c18` | `b96e12d3` |
-| `/usr/bin/sipcalc` | gl-sdk4-ipv6 | · | · | · | · | · | · | · | · | · | · | · | · | `c4768eeb` | `c4768eeb` | · |
+| `/usr/bin/sipcalc` | gl-sdk4-ipv6 | · | · | · | · | · | · | · | · | · | · | · | · | `c4768eeb` | `c4768eeb` | `c4768eeb` |
 | `/usr/lib/oui-httpd/rpc/lan` | gl-sdk4-lan | · | · | · | · | · | · | `8a2526aa` | `29c08afa` | `0d551784` | `0d551784` | `0d551784` | `2c343179` | `551187cc` | `a6da82a4` | `88d7811a` |
 | `/usr/share/gl-validator.d/lan.lua` | gl-sdk4-lan | · | · | · | · | · | · | · | · | · | · | · | `d0300ecc` | `67724ae1` | `67724ae1` | `67724ae1` |
 | `/usr/lib/oui-httpd/rpc/led` | gl-sdk4-led | · | · | · | · | · | · | `7d6d030f` | `7d6d030f` | `7d6d030f` | `7d6d030f` | `7d6d030f` | `5a36a68e` | `fdac4b17` | `7601ff60` | `7601ff60` |
@@ -291,15 +291,14 @@ Each cell holds the first 8 hex digits of the file's MD5 in that release (`·`: 
 | `/usr/lib/oui-httpd/rpc/wg-server.so` | gl-sdk4-wg-server | `4065c6f2` | `27cfe1e5` | `27cfe1e5` | `90b669be` | `27cfe1e5` | `c47ee1fc` | `df4a98df` | `fcb876d7` | `64a1848d` | `64a1848d` | `2f25a769` | `357550a7` | `89daec0d` | `452a863b` | `687872a1` |
 | `/usr/share/gl-validator.d/wg-server.lua` | gl-sdk4-wg-server | · | · | · | · | · | · | · | · | `d16e60b8` | `d16e60b8` | `d16e60b8` | `4492ced5` | `45550178` | `84ff08fd` | `cdbad608` |
 | `/usr/lib/oui-httpd/rpc/zerotier` | gl-sdk4-zerotier | · | · | · | · | · | · | · | · | · | · | · | · | · | · | `99a86143` |
-| `/usr/bin/iwinfo` | iwinfo | · | · | · | · | · | · | · | · | `d90d2560` | `d90d2560` | `d90d2560` | `d90d2560` | `d90d2560` | `d90d2560` | · |
-| `/lib/modules/5.4.211/conninfra.ko` | kmod-conninfra | · | · | · | · | · | · | · | · | · | · | · | · | · | · | `957e0e97` |
-| `/lib/modules/5.4.211/gl-sdk4-black_white_list.ko` | kmod-gl-sdk4-black_white_list | · | · | · | · | `04f70c6b` | `7572011a` | `5964a650` | `5964a650` | `a8099b7e` | `a8099b7e` | `a8099b7e` | `a8099b7e` | `fabeb382` | `fabeb382` | `ffa7d3fb` |
+| `/usr/bin/iwinfo` | iwinfo | · | · | · | · | · | · | · | · | `d90d2560` | `d90d2560` | `d90d2560` | `d90d2560` | `d90d2560` | `d90d2560` | `d90d2560` |
+| `/lib/modules/5.4.211/gl-sdk4-black_white_list.ko` | kmod-gl-sdk4-black_white_list | · | · | · | · | `04f70c6b` | `7572011a` | `5964a650` | `5964a650` | `a8099b7e` | `a8099b7e` | `a8099b7e` | `a8099b7e` | · | · | `ffa7d3fb` |
 | `/usr/lib/oui-httpd/rpc/black_white_list` | kmod-gl-sdk4-black_white_list | · | · | · | · | · | `db97e1e4` | `9acec465` | `9acec465` | `ef3c726a` | `ef3c726a` | `ef3c726a` | `e4e4be7c` | `2642eb9e` | `05b2d2d7` | · |
 | `/lib/modules/5.4.211/dns_mark.ko` | kmod-gl-sdk4-dns-mark | · | · | · | · | · | · | · | · | · | · | · | · | · | `97b0aede` | `36cba313` |
 | `/lib/modules/5.4.211/kmwan.ko` | kmod-gl-sdk4-kmwan | · | · | · | · | · | · | `6ee024d8` | `79016742` | `d8556fcf` | `9217dc14` | `8ea61751` | `4b893334` | `b15b1a3b` | `581bac75` | `334cae9f` |
 | `/usr/lib/oui-httpd/rpc/kmwan` | kmod-gl-sdk4-kmwan | · | · | · | · | · | · | `30edf628` | `f5d9510a` | `ecf3d4d8` | `ea2929b3` | `88c26c50` | `5148f336` | `93e0be28` | `0b2d052d` | · |
 | `/lib/modules/5.4.211/gl-mpflow.ko` | kmod-gl-sdk4-mpflow_statistics | · | · | · | · | · | · | · | · | · | · | · | `93b58c7b` | · | · | · |
-| `/lib/modules/5.4.211/parental_control.ko` | kmod-gl-sdk4-parental-control | `8388a2ab` | `ec3b5699` | `11bcc1e2` | `c7fe5820` | `c7fe5820` | `c7fe5820` | `ae5cbfeb` | `ae5cbfeb` | `68e0d83e` | `b8d9be5d` | `b8d9be5d` | `fd94cc72` | `5ae07845` | `fe34763b` | `377ff108` |
+| `/lib/modules/5.4.211/parental_control.ko` | kmod-gl-sdk4-parental-control | · | `ec3b5699` | `11bcc1e2` | `c7fe5820` | `c7fe5820` | `c7fe5820` | `ae5cbfeb` | `ae5cbfeb` | `68e0d83e` | `b8d9be5d` | `b8d9be5d` | `fd94cc72` | `5ae07845` | · | `377ff108` |
 | `/usr/bin/gl-pc_domain_list.lua` | kmod-gl-sdk4-parental-control | · | · | · | · | · | · | · | · | · | · | · | `fbcac2e7` | `fbcac2e7` | `fbcac2e7` | · |
 | `/usr/lib/oui-httpd/rpc/parental-control` | kmod-gl-sdk4-parental-control | · | · | · | · | `f487edfc` | `f487edfc` | `d599a3f7` | `d599a3f7` | `ff984140` | `3117d475` | `3117d475` | `b693f946` | `a09f8e05` | `a9a92817` | `a4d9bf53` |
 | `/usr/share/gl-validator.d/parental-control.lua` | kmod-gl-sdk4-parental-control | · | · | · | · | · | · | · | · | · | · | · | `d4c569b2` | `1d0f6543` | `1d0f6543` | · |
@@ -315,14 +314,13 @@ Each cell holds the first 8 hex digits of the file's MD5 in that release (`·`: 
 | `/lib/modules/5.4.211/mtk_warp_proxy.ko` | kmod-mt_wifi | · | · | · | · | · | · | · | · | · | · | · | · | · | · | `2a16d61b` |
 | `/lib/modules/5.4.211/mtfwd.ko` | kmod-mtfwd | `cbb61880` | `54a1f309` | `54a1f309` | `54a1f309` | `54a1f309` | `54a1f309` | `54a1f309` | `f9e4c4e8` | `54a1f309` | `54a1f309` | `54a1f309` | `54a1f309` | `54a1f309` | `54a1f309` | `54a1f309` |
 | `/lib/modules/5.4.211/mtqos.ko` | kmod-mtqos | `00616994` | `e128bc04` | `e128bc04` | `e128bc04` | `e128bc04` | `e128bc04` | `e128bc04` | `6ae18e96` | `e128bc04` | `e128bc04` | `e128bc04` | `e128bc04` | `e128bc04` | `e128bc04` | `e128bc04` |
-| `/lib/modules/5.4.211/air_en8811h.ko` | kmod-phy-air_en8811h | · | · | · | · | · | · | · | · | `8a7a3245` | `8a7a3245` | `8a7a3245` | `8a7a3245` | `8a7a3245` | `8a7a3245` | · |
-| `/lib/modules/5.4.211/usbnet.ko` | kmod-usb-net | · | · | · | · | · | · | · | · | `72a0a47e` | `72a0a47e` | `72a0a47e` | `72a0a47e` | `e2cbd9af` | `e2cbd9af` | · |
+| `/lib/modules/5.4.211/air_en8811h.ko` | kmod-phy-air_en8811h | · | · | · | · | · | · | · | · | `8a7a3245` | `8a7a3245` | `8a7a3245` | `8a7a3245` | `8a7a3245` | `8a7a3245` | `8a7a3245` |
+| `/lib/modules/5.4.211/usbnet.ko` | kmod-usb-net | · | · | · | · | · | · | · | · | `72a0a47e` | `72a0a47e` | `72a0a47e` | `72a0a47e` | `e2cbd9af` | `e2cbd9af` | `e2cbd9af` |
+| `/lib/modules/5.4.211/ipheth.ko` | kmod-usb-net-ipheth | · | · | · | · | · | · | · | · | · | · | · | · | · | · | `a7d3f3e8` |
 | `/lib/firmware/7981_WOCPU0_RAM_CODE_release.bin` | kmod-warp | · | · | · | · | · | · | · | · | · | · | · | · | · | · | `14f4d2e0` |
 | `/lib/modules/5.4.211/mtk_warp.ko` | kmod-warp | · | · | · | · | · | · | · | · | · | · | · | · | · | · | `7ff8fbb4 ⚠` |
-| `/lib/libc.so` | libc | · | · | · | · | · | · | · | · | · | · | · | · | · | `c6617408 ⚠` | · |
-| `/usr/lib/lua/iwinfo.so` | libiwinfo-lua | · | · | · | · | · | · | · | · | `f0d4150e` | `f0d4150e` | `f0d4150e` | `f0d4150e` | `f0d4150e` | `f0d4150e` | · |
-| `/usr/lib/libiwinfo.so.20210430` | libiwinfo20210430 | · | · | · | · | · | · | · | · | `60c3a320` | `60c3a320` | `60c3a320` | `992bf078` | `992bf078` | `992bf078` | · |
-| `/usr/sbin/openvpn` | openvpn-openssl | · | · | · | · | · | · | · | · | · | · | · | · | · | `0e0b7a2e ⚠` | · |
-| `/bin/opkg` | opkg | · | · | · | · | · | · | · | · | `77e3689b` | `77e3689b` | `77e3689b` | `77e3689b` | `77e3689b` | `77e3689b` | · |
+| `/usr/lib/lua/iwinfo.so` | libiwinfo-lua | · | · | · | · | · | · | · | · | `f0d4150e` | `f0d4150e` | `f0d4150e` | `f0d4150e` | `f0d4150e` | `f0d4150e` | `f0d4150e` |
+| `/usr/lib/libiwinfo.so.20210430` | libiwinfo20210430 | · | · | · | · | · | · | · | · | `60c3a320` | `60c3a320` | `60c3a320` | `992bf078` | `992bf078` | `992bf078` | `992bf078` |
+| `/bin/opkg` | opkg | · | · | · | · | · | · | · | · | `77e3689b` | `77e3689b` | `77e3689b` | `77e3689b` | `77e3689b` | `77e3689b` | `77e3689b` |
 | `/usr/lib/liboui-rpc.so` | oui-librpc | `fa521ae1` | `e8984641` | `e8984641` | `e8984641` | `e8984641` | `e8984641` | `e8984641` | `e8984641` | `e8984641` | `e8984641` | `e8984641` | `e8984641` | `9cf61f3d` | `9cf61f3d` | `9cf61f3d` |
 | `/usr/lib/oui-httpd/rpc/mptun` | v2ray-core | · | · | · | · | · | · | · | · | · | · | · | `cba62ad5` | · | · | · |

@@ -120,7 +120,8 @@ def closed_from_image(r):
             # still comes from the image
             ov = re.search(r"\(build steps: (\S+)\)", m.group(3)).group(1)
             bm = open(f"{repo}/openwrt/gl-4.2.0-closed/{ov}/{m.group(2)}/build.mk").read()
-            built = set(re.findall(r"> \$\(1\)/(\S+)", bm))
+            # make variables in the paths (e.g. $(LINUX_VERSION)) match anything
+            built = {re.sub(r"\$\([^)]*\)", "*", p) for p in re.findall(r"> \$\(1\)/(\S+)", bm)}
             if "bundle-luci.sh" in bm:
                 built.add("etc/luci_ipks/*.ipk")
             pk[m.group(1)] = ("from the image", built)
@@ -303,16 +304,16 @@ def write(per_rel, rows):
                     P.append("")
             os.makedirs(private, exist_ok=True)
             open(f"{private}/{rel}.md", "w").write("\n".join(P) + "\n")
-    if private:   # the selection itself, for the private per-binary notes
-        import json
-        sel = [{k: v for k, v in r.items() if not k.startswith("_")} for r in rows]
-        json.dump(sel, open(f"{private}/binaries.json", "w"), indent=0)
         L += ["", "## Details", ""]
         for r in d["recs"]:
             L += [f"### `{md(r['path'])}`", ""]
             L += [f"- {k}: `{md(r[k])}`" for k in FIELDS[2:] if r.get(k)]
             L.append("")
         open(f"{out}/{rel}.md", "w").write("\n".join(L) + "\n")
+    if private:   # the selection itself, for the private per-binary notes
+        import json
+        sel = [{k: v for k, v in r.items() if not k.startswith("_")} for r in rows]
+        json.dump(sel, open(f"{private}/binaries.json", "w"), indent=0)
     # overview: one row per binary path, one column per release (short MD5)
     by_path = collections.OrderedDict()
     for r in sorted(rows, key=lambda r: (r["path"] != "(kernel)", r["package"], r["path"])):
