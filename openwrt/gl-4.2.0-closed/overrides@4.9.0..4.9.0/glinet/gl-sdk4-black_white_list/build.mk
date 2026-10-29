@@ -23,7 +23,7 @@ GL_IMAGE_KSRC:=https://raw.githubusercontent.com/gl-inet/gl-image/617e1f1d8f3cce
 define Download/black-white-list-ko0
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=Makefile
-  FILE:=black-white-list-617e1f1-Makefile
+  FILE:=black-white-list-490-617e1f1-Makefile
   HASH:=8adb662a6e87c8d6b9e213db3dbb797faa10193b8fbfa0a54aa69732650973a1
 endef
 $(eval $(call Download,black-white-list-ko0))
@@ -31,7 +31,7 @@ $(eval $(call Download,black-white-list-ko0))
 define Download/black-white-list-ko1
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=black_white_list.c
-  FILE:=black-white-list-617e1f1-black_white_list.c
+  FILE:=black-white-list-490-617e1f1-black_white_list.c
   HASH:=09733d5183c02aef99d172c491861e64f16821d82d1fda5cda3c558fea7019b8
 endef
 $(eval $(call Download,black-white-list-ko1))
@@ -39,7 +39,7 @@ $(eval $(call Download,black-white-list-ko1))
 define Download/black-white-list-ko2
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=black_white_list.h
-  FILE:=black-white-list-617e1f1-black_white_list.h
+  FILE:=black-white-list-490-617e1f1-black_white_list.h
   HASH:=2bd06c0ffdfb2612f176df6e4e8f3a84c6855d70802c82cb5a5eac7e6e738c77
 endef
 $(eval $(call Download,black-white-list-ko2))
@@ -47,9 +47,9 @@ $(eval $(call Download,black-white-list-ko2))
 define Build/Prepare
 	$(INSTALL_DIR) $(PKG_BUILD_DIR)/files
 	$(CP) $(DL_DIR)/black-white-list-0649a9d-black_white_list.lua $(PKG_BUILD_DIR)/files/black_white_list.lua
-	$(CP) $(DL_DIR)/black-white-list-617e1f1-Makefile $(PKG_BUILD_DIR)/Makefile
-	$(CP) $(DL_DIR)/black-white-list-617e1f1-black_white_list.c $(PKG_BUILD_DIR)/black_white_list.c
-	$(CP) $(DL_DIR)/black-white-list-617e1f1-black_white_list.h $(PKG_BUILD_DIR)/black_white_list.h
+	$(CP) $(DL_DIR)/black-white-list-490-617e1f1-Makefile $(PKG_BUILD_DIR)/Makefile
+	$(CP) $(DL_DIR)/black-white-list-490-617e1f1-black_white_list.c $(PKG_BUILD_DIR)/black_white_list.c
+	$(CP) $(DL_DIR)/black-white-list-490-617e1f1-black_white_list.h $(PKG_BUILD_DIR)/black_white_list.h
 endef
 
 define Build/Compile

@@ -23,7 +23,7 @@ GL_IMAGE_KSRC:=https://raw.githubusercontent.com/gl-inet/gl-image/617e1f1d8f3cce
 define Download/kmwan-ko0
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=Makefile
-  FILE:=kmwan-617e1f1-Makefile
+  FILE:=kmwan-490-617e1f1-Makefile
   HASH:=0718432a8db4fe1bd607c5ab6dff1eef372aee49898c963419e02dd7a7ed9274
 endef
 $(eval $(call Download,kmwan-ko0))
@@ -31,7 +31,7 @@ $(eval $(call Download,kmwan-ko0))
 define Download/kmwan-ko1
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=cJSON.c
-  FILE:=kmwan-617e1f1-cJSON.c
+  FILE:=kmwan-490-617e1f1-cJSON.c
   HASH:=3bb2ee1e105f27396fec28802cbbb13c07b1ba846c5a4bf669727493a37b5105
 endef
 $(eval $(call Download,kmwan-ko1))
@@ -39,7 +39,7 @@ $(eval $(call Download,kmwan-ko1))
 define Download/kmwan-ko2
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=cJSON.h
-  FILE:=kmwan-617e1f1-cJSON.h
+  FILE:=kmwan-490-617e1f1-cJSON.h
   HASH:=7d4dc0903bb941357e71553f37d2a5373edf2a36fcf89b7d016e619368b673a4
 endef
 $(eval $(call Download,kmwan-ko2))
@@ -47,7 +47,7 @@ $(eval $(call Download,kmwan-ko2))
 define Download/kmwan-ko3
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=config.c
-  FILE:=kmwan-617e1f1-config.c
+  FILE:=kmwan-490-617e1f1-config.c
   HASH:=89c1bf142cd76a4fcf67bca74ee8399b79dc5dc5052c5f565f3a537a41321dec
 endef
 $(eval $(call Download,kmwan-ko3))
@@ -55,7 +55,7 @@ $(eval $(call Download,kmwan-ko3))
 define Download/kmwan-ko4
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=fib.c
-  FILE:=kmwan-617e1f1-fib.c
+  FILE:=kmwan-490-617e1f1-fib.c
   HASH:=e819c83444f92d208148b69e96a5a630465de97240b4367ee73d231e221788ce
 endef
 $(eval $(call Download,kmwan-ko4))
@@ -63,7 +63,7 @@ $(eval $(call Download,kmwan-ko4))
 define Download/kmwan-ko5
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=hook.c
-  FILE:=kmwan-617e1f1-hook.c
+  FILE:=kmwan-490-617e1f1-hook.c
   HASH:=7824b7a096f26375cbf98bc4626ff64df31cd746019b99b85effae51e3d451d5
 endef
 $(eval $(call Download,kmwan-ko5))
@@ -71,7 +71,7 @@ $(eval $(call Download,kmwan-ko5))
 define Download/kmwan-ko6
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=hook6.c
-  FILE:=kmwan-617e1f1-hook6.c
+  FILE:=kmwan-490-617e1f1-hook6.c
   HASH:=b1cd24df3186bb70ec7333b674efb2829d124347c095b9d0e6655cbbe7f75a08
 endef
 $(eval $(call Download,kmwan-ko6))
@@ -79,7 +79,7 @@ $(eval $(call Download,kmwan-ko6))
 define Download/kmwan-ko7
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=hotplug.c
-  FILE:=kmwan-617e1f1-hotplug.c
+  FILE:=kmwan-490-617e1f1-hotplug.c
   HASH:=c003f4a4c5909b61212c560420876c1850d73fae50ddd004f14e928d2b4d7fdc
 endef
 $(eval $(call Download,kmwan-ko7))
@@ -87,7 +87,7 @@ $(eval $(call Download,kmwan-ko7))
 define Download/kmwan-ko8
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=icmp.c
-  FILE:=kmwan-617e1f1-icmp.c
+  FILE:=kmwan-490-617e1f1-icmp.c
   HASH:=f7f6ab435b3620cc61e911451ba35aff1b0e03247ae8368c277f5204233e5a12
 endef
 $(eval $(call Download,kmwan-ko8))
@@ -95,7 +95,7 @@ $(eval $(call Download,kmwan-ko8))
 define Download/kmwan-ko9
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=kmwan.h
-  FILE:=kmwan-617e1f1-kmwan.h
+  FILE:=kmwan-490-617e1f1-kmwan.h
   HASH:=421ab8b51eea18bd4a30b02ceac3a0f3c2b84208bba0653216acde388ca83bd5
 endef
 $(eval $(call Download,kmwan-ko9))
@@ -103,16 +103,16 @@ $(eval $(call Download,kmwan-ko9))
 define Build/Prepare
 	$(INSTALL_DIR) $(PKG_BUILD_DIR)/files
 	$(CP) $(DL_DIR)/kmwan-0649a9d-kmwan.lua $(PKG_BUILD_DIR)/files/kmwan.lua
-	$(CP) $(DL_DIR)/kmwan-617e1f1-Makefile $(PKG_BUILD_DIR)/Makefile
-	$(CP) $(DL_DIR)/kmwan-617e1f1-cJSON.c $(PKG_BUILD_DIR)/cJSON.c
-	$(CP) $(DL_DIR)/kmwan-617e1f1-cJSON.h $(PKG_BUILD_DIR)/cJSON.h
-	$(CP) $(DL_DIR)/kmwan-617e1f1-config.c $(PKG_BUILD_DIR)/config.c
-	$(CP) $(DL_DIR)/kmwan-617e1f1-fib.c $(PKG_BUILD_DIR)/fib.c
-	$(CP) $(DL_DIR)/kmwan-617e1f1-hook.c $(PKG_BUILD_DIR)/hook.c
-	$(CP) $(DL_DIR)/kmwan-617e1f1-hook6.c $(PKG_BUILD_DIR)/hook6.c
-	$(CP) $(DL_DIR)/kmwan-617e1f1-hotplug.c $(PKG_BUILD_DIR)/hotplug.c
-	$(CP) $(DL_DIR)/kmwan-617e1f1-icmp.c $(PKG_BUILD_DIR)/icmp.c
-	$(CP) $(DL_DIR)/kmwan-617e1f1-kmwan.h $(PKG_BUILD_DIR)/kmwan.h
+	$(CP) $(DL_DIR)/kmwan-490-617e1f1-Makefile $(PKG_BUILD_DIR)/Makefile
+	$(CP) $(DL_DIR)/kmwan-490-617e1f1-cJSON.c $(PKG_BUILD_DIR)/cJSON.c
+	$(CP) $(DL_DIR)/kmwan-490-617e1f1-cJSON.h $(PKG_BUILD_DIR)/cJSON.h
+	$(CP) $(DL_DIR)/kmwan-490-617e1f1-config.c $(PKG_BUILD_DIR)/config.c
+	$(CP) $(DL_DIR)/kmwan-490-617e1f1-fib.c $(PKG_BUILD_DIR)/fib.c
+	$(CP) $(DL_DIR)/kmwan-490-617e1f1-hook.c $(PKG_BUILD_DIR)/hook.c
+	$(CP) $(DL_DIR)/kmwan-490-617e1f1-hook6.c $(PKG_BUILD_DIR)/hook6.c
+	$(CP) $(DL_DIR)/kmwan-490-617e1f1-hotplug.c $(PKG_BUILD_DIR)/hotplug.c
+	$(CP) $(DL_DIR)/kmwan-490-617e1f1-icmp.c $(PKG_BUILD_DIR)/icmp.c
+	$(CP) $(DL_DIR)/kmwan-490-617e1f1-kmwan.h $(PKG_BUILD_DIR)/kmwan.h
 endef
 
 define Build/Compile

@@ -31,7 +31,7 @@ GL_IMAGE_KSRC:=https://raw.githubusercontent.com/gl-inet/gl-image/617e1f1d8f3cce
 define Download/parental-control-ko0
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=Makefile
-  FILE:=parental-control-617e1f1-Makefile
+  FILE:=parental-control-490-617e1f1-Makefile
   HASH:=2bd8aa727335e2a919c82e6e8c2fc7fd35d805815a2a5e761a91797169af7aa5
 endef
 $(eval $(call Download,parental-control-ko0))
@@ -39,7 +39,7 @@ $(eval $(call Download,parental-control-ko0))
 define Download/parental-control-ko1
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=cJSON.c
-  FILE:=parental-control-617e1f1-cJSON.c
+  FILE:=parental-control-490-617e1f1-cJSON.c
   HASH:=3685a64278d77456cfffe1a49f20ea68052e22127d447826f7e13f3cd6f2b104
 endef
 $(eval $(call Download,parental-control-ko1))
@@ -47,7 +47,7 @@ $(eval $(call Download,parental-control-ko1))
 define Download/parental-control-ko2
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=cJSON.h
-  FILE:=parental-control-617e1f1-cJSON.h
+  FILE:=parental-control-490-617e1f1-cJSON.h
   HASH:=fc5aad47eb39f70b1f4326292e2ffb04cd56a819ad8058c72264f9d38da5ff3c
 endef
 $(eval $(call Download,parental-control-ko2))
@@ -55,7 +55,7 @@ $(eval $(call Download,parental-control-ko2))
 define Download/parental-control-ko3
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=pc_app.c
-  FILE:=parental-control-617e1f1-pc_app.c
+  FILE:=parental-control-490-617e1f1-pc_app.c
   HASH:=9d4ea4ffbb71220599472d12d20a4c2a407a57ce8baefa6a51783abf94c389e3
 endef
 $(eval $(call Download,parental-control-ko3))
@@ -63,7 +63,7 @@ $(eval $(call Download,parental-control-ko3))
 define Download/parental-control-ko4
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=pc_config.c
-  FILE:=parental-control-617e1f1-pc_config.c
+  FILE:=parental-control-490-617e1f1-pc_config.c
   HASH:=1102cbcaa123fa97c3bdbcd1094ff02d3470d506e2dfb4f76e24a9bfa2fcaf96
 endef
 $(eval $(call Download,parental-control-ko4))
@@ -71,7 +71,7 @@ $(eval $(call Download,parental-control-ko4))
 define Download/parental-control-ko5
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=pc_filter.c
-  FILE:=parental-control-617e1f1-pc_filter.c
+  FILE:=parental-control-490-617e1f1-pc_filter.c
   HASH:=2937807605f4c599f3c13e0de639b64f69f1ae5728329b2ba182ae4e429bfc11
 endef
 $(eval $(call Download,parental-control-ko5))
@@ -79,7 +79,7 @@ $(eval $(call Download,parental-control-ko5))
 define Download/parental-control-ko6
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=pc_policy.c
-  FILE:=parental-control-617e1f1-pc_policy.c
+  FILE:=parental-control-490-617e1f1-pc_policy.c
   HASH:=8c7948cd9f2174dfd3ef412a906022162b9b142d90b894efdfd0c097619188f3
 endef
 $(eval $(call Download,parental-control-ko6))
@@ -87,7 +87,7 @@ $(eval $(call Download,parental-control-ko6))
 define Download/parental-control-ko7
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=pc_policy.h
-  FILE:=parental-control-617e1f1-pc_policy.h
+  FILE:=parental-control-490-617e1f1-pc_policy.h
   HASH:=dc15a636d712d50fabff35a32bff3d3598fce7d0dfab10a6374bdbb10b5d8f89
 endef
 $(eval $(call Download,parental-control-ko7))
@@ -95,7 +95,7 @@ $(eval $(call Download,parental-control-ko7))
 define Download/parental-control-ko8
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=pc_utils.c
-  FILE:=parental-control-617e1f1-pc_utils.c
+  FILE:=parental-control-490-617e1f1-pc_utils.c
   HASH:=cef7ab71a5eeed184cba5e77f8208832b72ce108e209514b3097efa89a72bdba
 endef
 $(eval $(call Download,parental-control-ko8))
@@ -103,7 +103,7 @@ $(eval $(call Download,parental-control-ko8))
 define Download/parental-control-ko9
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=pc_utils.h
-  FILE:=parental-control-617e1f1-pc_utils.h
+  FILE:=parental-control-490-617e1f1-pc_utils.h
   HASH:=aa1782a03f160c9fbdc98c1788ea5cfdac732361f2c306fd3a32c73511beb6b4
 endef
 $(eval $(call Download,parental-control-ko9))
@@ -111,7 +111,7 @@ $(eval $(call Download,parental-control-ko9))
 define Download/parental-control-ko10
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=regexp.c
-  FILE:=parental-control-617e1f1-regexp.c
+  FILE:=parental-control-490-617e1f1-regexp.c
   HASH:=4dbcbb1eb88a52bd8f48390306dad7c75ba6451b6576963861eef29e1c98eb71
 endef
 $(eval $(call Download,parental-control-ko10))
@@ -120,17 +120,17 @@ define Build/Prepare
 	$(INSTALL_DIR) $(PKG_BUILD_DIR)/files
 	$(CP) $(DL_DIR)/parental-control-0649a9d-apps_domain_list.lua $(PKG_BUILD_DIR)/files/apps_domain_list.lua
 	$(CP) $(DL_DIR)/parental-control-0649a9d-validator.lua $(PKG_BUILD_DIR)/files/validator.lua
-	$(CP) $(DL_DIR)/parental-control-617e1f1-Makefile $(PKG_BUILD_DIR)/Makefile
-	$(CP) $(DL_DIR)/parental-control-617e1f1-cJSON.c $(PKG_BUILD_DIR)/cJSON.c
-	$(CP) $(DL_DIR)/parental-control-617e1f1-cJSON.h $(PKG_BUILD_DIR)/cJSON.h
-	$(CP) $(DL_DIR)/parental-control-617e1f1-pc_app.c $(PKG_BUILD_DIR)/pc_app.c
-	$(CP) $(DL_DIR)/parental-control-617e1f1-pc_config.c $(PKG_BUILD_DIR)/pc_config.c
-	$(CP) $(DL_DIR)/parental-control-617e1f1-pc_filter.c $(PKG_BUILD_DIR)/pc_filter.c
-	$(CP) $(DL_DIR)/parental-control-617e1f1-pc_policy.c $(PKG_BUILD_DIR)/pc_policy.c
-	$(CP) $(DL_DIR)/parental-control-617e1f1-pc_policy.h $(PKG_BUILD_DIR)/pc_policy.h
-	$(CP) $(DL_DIR)/parental-control-617e1f1-pc_utils.c $(PKG_BUILD_DIR)/pc_utils.c
-	$(CP) $(DL_DIR)/parental-control-617e1f1-pc_utils.h $(PKG_BUILD_DIR)/pc_utils.h
-	$(CP) $(DL_DIR)/parental-control-617e1f1-regexp.c $(PKG_BUILD_DIR)/regexp.c
+	$(CP) $(DL_DIR)/parental-control-490-617e1f1-Makefile $(PKG_BUILD_DIR)/Makefile
+	$(CP) $(DL_DIR)/parental-control-490-617e1f1-cJSON.c $(PKG_BUILD_DIR)/cJSON.c
+	$(CP) $(DL_DIR)/parental-control-490-617e1f1-cJSON.h $(PKG_BUILD_DIR)/cJSON.h
+	$(CP) $(DL_DIR)/parental-control-490-617e1f1-pc_app.c $(PKG_BUILD_DIR)/pc_app.c
+	$(CP) $(DL_DIR)/parental-control-490-617e1f1-pc_config.c $(PKG_BUILD_DIR)/pc_config.c
+	$(CP) $(DL_DIR)/parental-control-490-617e1f1-pc_filter.c $(PKG_BUILD_DIR)/pc_filter.c
+	$(CP) $(DL_DIR)/parental-control-490-617e1f1-pc_policy.c $(PKG_BUILD_DIR)/pc_policy.c
+	$(CP) $(DL_DIR)/parental-control-490-617e1f1-pc_policy.h $(PKG_BUILD_DIR)/pc_policy.h
+	$(CP) $(DL_DIR)/parental-control-490-617e1f1-pc_utils.c $(PKG_BUILD_DIR)/pc_utils.c
+	$(CP) $(DL_DIR)/parental-control-490-617e1f1-pc_utils.h $(PKG_BUILD_DIR)/pc_utils.h
+	$(CP) $(DL_DIR)/parental-control-490-617e1f1-regexp.c $(PKG_BUILD_DIR)/regexp.c
 endef
 
 define Build/Compile

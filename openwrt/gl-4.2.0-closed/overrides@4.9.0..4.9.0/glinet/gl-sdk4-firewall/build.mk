@@ -10,7 +10,7 @@ GL_IMAGE_KSRC:=https://raw.githubusercontent.com/gl-inet/gl-image/617e1f1d8f3cce
 define Download/port-forward-ko0
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=Kbuild
-  FILE:=port-forward-617e1f1-Kbuild
+  FILE:=port-forward-490-617e1f1-Kbuild
   HASH:=6df2d6442fc47cb07b3448e19476006bd5084928b63569034b378fa371701a6f
 endef
 $(eval $(call Download,port-forward-ko0))
@@ -18,7 +18,7 @@ $(eval $(call Download,port-forward-ko0))
 define Download/port-forward-ko1
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=port_forward.c
-  FILE:=port-forward-617e1f1-port_forward.c
+  FILE:=port-forward-490-617e1f1-port_forward.c
   HASH:=8c0cfd31288dba45bb7878b2f3fdd75ecc7c4d36815b257b0cc2d2082d5f53b7
 endef
 $(eval $(call Download,port-forward-ko1))
@@ -26,16 +26,16 @@ $(eval $(call Download,port-forward-ko1))
 define Download/port-forward-ko2
   URL:=$(GL_IMAGE_KSRC)
   URL_FILE:=port_forward.h
-  FILE:=port-forward-617e1f1-port_forward.h
+  FILE:=port-forward-490-617e1f1-port_forward.h
   HASH:=5a4f73b62e15a64fd12dedf08609016828b304da51851f9347540bccd2e3d60c
 endef
 $(eval $(call Download,port-forward-ko2))
 
 define Build/Prepare
 	$(INSTALL_DIR) $(PKG_BUILD_DIR)
-	$(CP) $(DL_DIR)/port-forward-617e1f1-Kbuild $(PKG_BUILD_DIR)/Kbuild
-	$(CP) $(DL_DIR)/port-forward-617e1f1-port_forward.c $(PKG_BUILD_DIR)/port_forward.c
-	$(CP) $(DL_DIR)/port-forward-617e1f1-port_forward.h $(PKG_BUILD_DIR)/port_forward.h
+	$(CP) $(DL_DIR)/port-forward-490-617e1f1-Kbuild $(PKG_BUILD_DIR)/Kbuild
+	$(CP) $(DL_DIR)/port-forward-490-617e1f1-port_forward.c $(PKG_BUILD_DIR)/port_forward.c
+	$(CP) $(DL_DIR)/port-forward-490-617e1f1-port_forward.h $(PKG_BUILD_DIR)/port_forward.h
 endef
 
 define Build/Compile

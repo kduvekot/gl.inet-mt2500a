@@ -114,6 +114,13 @@ def main():
     i18n = ([a.split("=", 1)[1] for a in sys.argv[4:] if a.startswith("--i18n=")] or [None])[0]
     opts_all = opts + [a for a in sys.argv[4:] if a.startswith(("--skip-override=", "--release=", "--umask=", "--i18n="))]
     only = set(a for a in sys.argv[4:] if a not in opts_all)
+    # recipes share the download folder: a file name two recipes use must be
+    # the same file, or a build takes the other recipe's cached copy unchecked
+    # (2026-10-29: 4.9.0's parental-control got 4.8.2's sources)
+    dl_hash = {}
+    for bm in sorted(closed.glob("overrides*/**/build.mk")):
+        for f, h in re.findall(r"FILE:=(\S+)\n\s*HASH:=(\S+)", bm.read_text()):
+            assert dl_hash.setdefault(f, (h, bm))[0] == h, f"download name {f} in {bm} and {dl_hash[f][1]} with different hashes"
     # packages verified identical from public source: not part of this feed
     pub = closed / "built-from-public.txt"
     public = {l.strip() for l in pub.read_text().splitlines() if l.strip() and not l.startswith("#")} if pub.exists() else set()
