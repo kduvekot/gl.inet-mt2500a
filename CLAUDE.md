@@ -204,7 +204,9 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   metadata): 4.5.16 Tailscale (official 1.58.2 release, sstripped),
   4.1.1–4.7.0 `oui/system.so` (oui `lsystem.c`, `-O1`), 4.8.2/4.9.0
   bundled LuCI ipks (our own LuCI builds), `black_white_list.ko`
-  4.7.4/4.8.2 and `parental_control.ko` 4.8.2 (gl-image sources). Leads
+  4.7.4/4.8.2 and `parental_control.ko` 4.8.2 (gl-image sources); 4.9.0's
+  `black_white_list`, `dns_mark`, `kmwan`, `parental_control`, `port_forward`,
+  `tertf` (gl-image MT3600BE 4.9.0, 2026-10-29; 99zf validates). Leads
   are found with string scans against local sources (`~/provenance.py`,
   `~/kmodsrc.sh` on the M5+); "GL.iNet's own code" only on evidence.
   Private reconstructions (`reconstructed/<release>/<package>/` in the

@@ -1936,6 +1936,21 @@ binary still copied from the official images:
   in no public warp source. It is a newer MediaTek release than 5f71ec
   (2023-12; GL.iNet's package date is 2024-09-27). Not public; a
   candidate for a private bridge.
+- **GL.iNet's own kernel modules of 4.9.0 are public (2026-10-29):**
+  `black_white_list`, `dns_mark`, `kmwan`, `parental_control`,
+  `port_forward` (in `gl-sdk4-firewall`) and `tertf` build byte-identical
+  from GL.iNet's published sources in gl-image (MT3600BE `versions/4.9.0`;
+  most also from 4.9.1 or 4.8.6), built against our 4.9.0 kernel like the
+  4.7.4/4.8.2 recipes. The 4.9.0 recipes download them at commit `617e1f1`
+  with hashes (`overrides@4.9.0..4.9.0/glinet/`); `gl-sdk4-firewall` is no
+  kernel-module recipe and includes `kernel.mk` itself. A tree test built
+  all six packages identical to the official ones (7, 2, 11, 13, 12 and 4
+  files). On the way: 4.9.0's parental-control downloads had the same names
+  as 4.8.2's (same commit, other folder), and OpenWrt took the cached 4.8.2
+  files without checking them. Download names now carry the release, and
+  `gen-closed-feed.py` stops when two recipes use one name with different
+  hashes. Left closed among 4.9.0's modules: MediaTek's `mt_wifi`,
+  `mtk_warp_proxy`, `mtfwd` and `mtqos`.
 - Not public: `mt_wifi.ko` and `mtk_warp_proxy.ko` are SDK 7.6.7.1. The
   public sources are 7.6.6.1, 7.6.7.2 and 7.6.7.3. `mtfwd`, `mtqos` and
   `fwdd` are in none of the community trees.
@@ -2189,3 +2204,4 @@ The old unit's board (2026-10-23 photos): **MT2500-V1.1**, dated 2022/11/1, chip
 | 2026-10-29 | **iwinfo `mtk_get_rate` step 13** (private): a 512-variant sweep of where each field is read from (pointer or local copy, and what `getRate` gets) reaches GL.iNet's exact size with 28 of 209 instructions different (registers masked; was 59). GL.iNet's code reads the fields through the pointer and passes `&re->rate` down; the rest is how it reads the setting's second byte before the first store. Diminishing returns: parked. |
 | 2026-10-29 | **`docs/closed-binaries/` regenerated** against each release's newest validation without ccache (4.8.2: 99zb, 4.9.0: 99ze, first real comparison for 4.9.0). Two bugs in `analysis/private-binaries.py` fixed: make variables in a build step's install path (`$(LINUX_VERSION)`) never matched, so modules we build from public source (conninfra 4.9.0, parental_control 4.1.1/4.8.2, black_white_list 4.7.4/4.8.2) were still listed; and since the private-notes output was added, only the newest release's file was written (the others were stale). Now: 4.1.1 48, 4.2.0 50, 4.2.1 51, 4.2.3 52, 4.4.5 60, 4.4.6 63, 4.5.0/4.5.16 81, 4.6.2 99, 4.6.4/4.6.8 101, 4.7.0 150, 4.7.4 148, 4.8.2 154, 4.9.0 207 (198 closed-package files, the 8 not-public public-package files, the kernel). |
 | 2026-10-29 | **All compiled Lua reconstructed** (private): a file-by-file check of the closed-binaries lists against the private repository found one gap, `gl-sdk4-cloud`'s `rpc/cloud` in 4.7.4, 4.8.2 and 4.9.0. The Lua inventory had taken its chunk-name form (`files/usr/lib/oui-httpd/rpc/cloud[.lua]`) for stripped bytecode. With the same owner-approved pipeline as the rest it is byte-identical in all three; every compiled Lua file of 4.4.5–4.9.0 now has a private source. For 4.9.0, 112 of the 207 binaries we can't build from public source have one (102 Lua, 5 programs, 4 modules, the kernel); 68 code files have none (58 C programs and libraries, 10 modules, plus firmware, Netify packages and assets). |
+| 2026-10-29 | **4.9.0's six GL.iNet kernel modules from public source**: `black_white_list`, `dns_mark`, `kmwan`, `parental_control`, `port_forward`, `tertf` byte-identical from gl-image's MT3600BE 4.9.0 sources (recipes in `overrides@4.9.0..4.9.0`, tree test: all six packages identical). Download-name collision with 4.8.2's parental-control found and guarded in `gen-closed-feed.py`. 99zf queued: 4.9.0 validation without ccache with these recipes. |
