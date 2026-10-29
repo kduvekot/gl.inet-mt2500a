@@ -9,11 +9,11 @@ Each cell holds the first 8 hex digits of the file's MD5 in that release (`·`: 
 | Release | Image | Comparison | Private binaries |
 |---|---|---|---|
 | [4.1.1](4.1.1.md) | `openwrt-mt2500-4.1.1-1105-1667584249.bin` | 99n-validation-4.1.1-noccache | 48 |
-| [4.2.0](4.2.0.md) | `openwrt-mt2500-4.2.0-0314-1678763050.bin` | 04-validation-repeat | 50 |
-| [4.2.1](4.2.1.md) | `openwrt-mt2500-4.2.1-0414-1681475801.bin` | 16-validation-4.2.1-noccache | 51 |
-| [4.2.3](4.2.3.md) | `openwrt-mt2500-4.2.3-0706-1688623638.bin` | 21-validation-4.2.3-noccache | 52 |
-| [4.4.5](4.4.5.md) | `openwrt-mt2500-4.4.5-0811-1691755660.bin` | 84-validation-4.4.5-noccache | 60 |
-| [4.4.6](4.4.6.md) | `openwrt-mt2500-4.4.6-1008-1696765612.bin` | 85-validation-4.4.6-noccache | 63 |
+| [4.2.0](4.2.0.md) | `openwrt-mt2500-4.2.0-0314-1678763050.bin` | 99zs-validation-4.2.0-noccache-pcrecipe | 49 |
+| [4.2.1](4.2.1.md) | `openwrt-mt2500-4.2.1-0414-1681475801.bin` | 99zu-validation-4.2.1-noccache-pcrecipe2 | 50 |
+| [4.2.3](4.2.3.md) | `openwrt-mt2500-4.2.3-0706-1688623638.bin` | 99zv-validation-4.2.3-noccache-tertf | 51 |
+| [4.4.5](4.4.5.md) | `openwrt-mt2500-4.4.5-0811-1691755660.bin` | 84-validation-4.4.5-noccache | 59 |
+| [4.4.6](4.4.6.md) | `openwrt-mt2500-4.4.6-1008-1696765612.bin` | 99zt-validation-4.4.6-noccache-tertf | 62 |
 | [4.5.0](4.5.0.md) | `openwrt-mt2500-4.5.0-0123-1706007069.bin` | 92-validation-4.5.0-noccache | 81 |
 | [4.5.16](4.5.16.md) | `openwrt-mt2500-4.5.16-0330-1711782730.bin` | 93-validation-4.5.16-noccache | 81 |
 | [4.6.2](4.6.2.md) | `openwrt-mt2500-4.6.2-0628-1719560735.bin` | 94-validation-4.6.2-noccache | 99 |
@@ -297,11 +297,11 @@ Each cell holds the first 8 hex digits of the file's MD5 in that release (`·`: 
 | `/lib/modules/5.4.211/kmwan.ko` | kmod-gl-sdk4-kmwan | · | · | · | · | · | · | `6ee024d8` | `79016742` | `d8556fcf` | `9217dc14` | `8ea61751` | `4b893334` | `b15b1a3b` | `581bac75` | · |
 | `/usr/lib/oui-httpd/rpc/kmwan` | kmod-gl-sdk4-kmwan | · | · | · | · | · | · | `30edf628` | `f5d9510a` | `ecf3d4d8` | `ea2929b3` | `88c26c50` | `5148f336` | `93e0be28` | `0b2d052d` | · |
 | `/lib/modules/5.4.211/gl-mpflow.ko` | kmod-gl-sdk4-mpflow_statistics | · | · | · | · | · | · | · | · | · | · | · | `93b58c7b` | · | · | · |
-| `/lib/modules/5.4.211/parental_control.ko` | kmod-gl-sdk4-parental-control | · | `ec3b5699` | `11bcc1e2` | `c7fe5820` | `c7fe5820` | `c7fe5820` | `ae5cbfeb` | `ae5cbfeb` | `68e0d83e` | `b8d9be5d` | `b8d9be5d` | `fd94cc72` | `5ae07845` | · | · |
+| `/lib/modules/5.4.211/parental_control.ko` | kmod-gl-sdk4-parental-control | · | · | · | `c7fe5820` | `c7fe5820` | `c7fe5820` | `ae5cbfeb` | `ae5cbfeb` | `68e0d83e` | `b8d9be5d` | `b8d9be5d` | `fd94cc72` | `5ae07845` | · | · |
 | `/usr/bin/gl-pc_domain_list.lua` | kmod-gl-sdk4-parental-control | · | · | · | · | · | · | · | · | · | · | · | `fbcac2e7` | `fbcac2e7` | `fbcac2e7` | · |
 | `/usr/lib/oui-httpd/rpc/parental-control` | kmod-gl-sdk4-parental-control | · | · | · | · | `f487edfc` | `f487edfc` | `d599a3f7` | `d599a3f7` | `ff984140` | `3117d475` | `3117d475` | `b693f946` | `a09f8e05` | `a9a92817` | `a4d9bf53` |
 | `/usr/share/gl-validator.d/parental-control.lua` | kmod-gl-sdk4-parental-control | · | · | · | · | · | · | · | · | · | · | · | `d4c569b2` | `1d0f6543` | `1d0f6543` | · |
-| `/lib/modules/5.4.211/gl-sdk4-tertf.ko` | kmod-gl-sdk4-tertf | · | · | · | `43332a67` | `43332a67` | `43332a67` | `93940ed7` | `9221a01c` | `ed338117` | `ed338117` | `ed338117` | `47dce821` | `daefa9ff` | `daefa9ff` | · |
+| `/lib/modules/5.4.211/gl-sdk4-tertf.ko` | kmod-gl-sdk4-tertf | · | · | · | · | · | · | `93940ed7` | `9221a01c` | `ed338117` | `ed338117` | `ed338117` | `47dce821` | `daefa9ff` | `daefa9ff` | · |
 | `/lib/firmware/7981_WACPU_RAM_CODE_release.bin` | kmod-mt_wifi | · | · | · | · | · | · | · | · | · | · | · | · | · | · | `7739296c` |
 | `/lib/firmware/MT7981_ePAeLNA_EEPROM.bin` | kmod-mt_wifi | · | · | · | · | · | · | · | · | · | · | · | · | · | · | `e1eb8042` |
 | `/lib/firmware/MT7981_iPAiLNA_EEPROM.bin` | kmod-mt_wifi | · | · | · | · | · | · | · | · | · | · | · | · | · | · | `6c4b905d` |
