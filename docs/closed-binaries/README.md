@@ -12,7 +12,7 @@ Each cell holds the first 8 hex digits of the file's MD5 in that release (`·`: 
 | [4.2.0](4.2.0.md) | `openwrt-mt2500-4.2.0-0314-1678763050.bin` | 99zs-validation-4.2.0-noccache-pcrecipe | 49 |
 | [4.2.1](4.2.1.md) | `openwrt-mt2500-4.2.1-0414-1681475801.bin` | 99zu-validation-4.2.1-noccache-pcrecipe2 | 50 |
 | [4.2.3](4.2.3.md) | `openwrt-mt2500-4.2.3-0706-1688623638.bin` | 99zv-validation-4.2.3-noccache-tertf | 51 |
-| [4.4.5](4.4.5.md) | `openwrt-mt2500-4.4.5-0811-1691755660.bin` | 84-validation-4.4.5-noccache | 59 |
+| [4.4.5](4.4.5.md) | `openwrt-mt2500-4.4.5-0811-1691755660.bin` | 99zw-validation-4.4.5-noccache-tertf | 59 |
 | [4.4.6](4.4.6.md) | `openwrt-mt2500-4.4.6-1008-1696765612.bin` | 99zt-validation-4.4.6-noccache-tertf | 62 |
 | [4.5.0](4.5.0.md) | `openwrt-mt2500-4.5.0-0123-1706007069.bin` | 92-validation-4.5.0-noccache | 81 |
 | [4.5.16](4.5.16.md) | `openwrt-mt2500-4.5.16-0330-1711782730.bin` | 93-validation-4.5.16-noccache | 81 |
