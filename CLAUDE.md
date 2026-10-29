@@ -105,7 +105,7 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
 - **Decompilation** (private repo): one commit per iteration, never
   squashed.
 
-## Where things stand (2026-10-28)
+## Where things stand (2026-10-29)
 
 - Workflows on `main`: **Build OpenWrt**, **Recovery kit**, **Raspberry Pi
   OS image** (all Node 24 actions). The `recovery-kit` release is
@@ -195,6 +195,10 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
 - **M5+ workflow:** two job workers (`~/queue/`, `~/queue2/`, verdict
   `~/brief.sh NN`), each keeps its last OpenWrt tree (`~/trees/w1|w2`) for
   `~/rebuild.sh <w> <package>` (minutes instead of a ~31-minute full run).
+  Finished trees move to `~/archive/trees/` (pruned beyond 7 days or 500 GB,
+  owner 2026-10-29). Runner option `kernel=true` (`KERNEL_ONLY=1`): host
+  tools, toolchain and kernel only, ~30–45 min, a release's kernel tree for
+  module bridges; trees for every release 4.1.1–4.9.0 exist (2026-10-29).
 - **Closed binaries:** 11 of 45 byte-identical (private repo `user/`,
   `results/user/`); origins inventory in the private repo
   `notes/oss-origins-4.2.0.md`. Further work on them stopped (safety
@@ -217,7 +221,21 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   Bridging a close public version function by function (disassembly
   compared with our build, source edited, one commit per step) is
   owner-approved (2026-10-28): private `tools/kbridge.sh` for kernel
-  modules; 4.9.0 `mtk_warp.ko` done that way.
+  modules; 4.9.0 `mtk_warp.ko` done that way. GL.iNet's own kernel modules
+  (2026-10-29, journey logbook): `parental_control`, `tertf`,
+  `black_white_list`, `gl-mpflow`, `dns_mark` byte-identical for every
+  release back to 4.4.5 (each against its own tree); `parental_control`
+  4.2.0/4.2.1 and `tertf` 4.2.3–4.4.6 are public gl-feeds commits unchanged
+  (recipes, validation jobs 99zs/99zt/99zu); open: `parental_control`
+  4.2.3–4.4.6 (139 instructions, string order) and `kmwan` 4.5.0–4.7.0 (one
+  shared register-allocation residue). Helpers in the private `tools/`
+  (`kconfirm.sh`, `candscore.sh`, `diffuncs.py`, `fnhunks.py`, `klines.sh`,
+  `fnswap.py`). **Subagents** (Sonnet) work in their own clone
+  (`~/agent/mt2500-decomp` on the M5+, branch `agent/*`, `KBRIDGE_WORK=~/agent/kbridge`),
+  push with `~/agent/push-private.sh <branch>` on the Pi; the main session
+  verifies by rebuilding and merges. Brief them: copy only `src/` and
+  `build.opts`, push after every commit. Interrupting the main session's tool
+  call can stop a running subagent.
 - **Next:** phase C (upstream
   OpenWrt on the old unit, iperf with the GMKtec). Ask the owner before any
   write to a router.
