@@ -231,10 +231,10 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   release back to 4.4.5 (each against its own tree); `parental_control`
   4.2.0/4.2.1 and `tertf` 4.2.3–4.4.6 are public gl-feeds commits unchanged
   (recipes, all validated: 99zs 4.2.0, 99zu 4.2.1, 99zv 4.2.3, 99zw 4.4.5,
-  99zt 4.4.6; `docs/closed-binaries/` updated). `kmwan` 4.7.0 and 4.6.8
-  byte-identical; open (parked, small): `kmwan` `saddr_conversion_hook`
-  (4.6.4–4.5.0, register-allocation order), the IPv6 hooks (4.6.4, block
-  layout), `remove_netcell` (4.5.0); `parental_control` 4.2.3–4.4.6 (139
+  99zt 4.4.6; `docs/closed-binaries/` updated). `kmwan` byte-identical for
+  4.5.16–4.7.0 (2026-10-30: 4.5.0–4.6.4's `IS_IP`/`IS_IPV6` also skip
+  packets with a VLAN tag present); open (parked, small): `remove_netcell`
+  (4.5.0, 3 instructions, same behaviour); `parental_control` 4.2.3–4.4.6 (139
   instructions, string order). Notes per residue in the private `notes/`. Helpers in the private `tools/`
   (`kconfirm.sh`, `candscore.sh`, `diffuncs.py`, `fnhunks.py`, `klines.sh`,
   `fnswap.py`). **Subagents** (Sonnet) work in their own clone
