@@ -99,7 +99,10 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
 - **Nothing new after midnight (owner, 2026-10-29):** from 00:00 no new
   jobs, subagents or work of any kind, and no analysis of tasks that
   finish (not even in check-ins); what is already running may finish
-  unreviewed until the owner resumes.
+  unreviewed until the owner resumes. The rule is about Claude's token
+  use (owner, 2026-10-30): queued M5+ jobs may keep running through the
+  night without a watcher, as long as everything needed afterwards is
+  kept (reports, logs, trees).
 - **Order of work:** a release step only after the previous base is
   validated; `docs/releases.md` only once all releases are done (collect
   data meanwhile). No GPL source request to GL.iNet until all firmwares
