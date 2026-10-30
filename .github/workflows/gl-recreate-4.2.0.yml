@@ -732,7 +732,7 @@ jobs:
             # string), version.date, the whole .config and the content of
             # toolchain/ and target/linux/ (kernel headers, GL.iNet's kernel
             # patches, our extra commits). Saved after the ccache wrappers.
-            ckey=$( { echo "$tkey"; ./scripts/getver.sh; cat version.date; sha1sum .config
+            ckey=$( { echo "$tkey"; echo wrapper-names; ./scripts/getver.sh; cat version.date; sha1sum .config
                       find toolchain target/linux -type f -print0 | sort -z | xargs -0 sha1sum; } | sha1sum | cut -c1-16)
             ccache_tc=/work/cache/toolchain/$ckey.tar
             if [ -f "$ccache_tc" ]; then
@@ -743,10 +743,16 @@ jobs:
             for c in staging_dir/toolchain-*/bin/aarch64-openwrt-linux-musl-{gcc,g++,c++,cpp} \
                      staging_dir/toolchain-*/bin/aarch64-openwrt-linux-{gcc,g++,c++,cpp}; do
               [ -f "$c" ] && [ ! -L "$c" ] && [ ! -e "$(dirname "$c")/.$(basename "$c").real" ] || continue
-              mv "$c" "$(dirname "$c")/.$(basename "$c").real"
-              # (falls back to the real compiler without ccache: the SDK built in
-              # this run carries these wrappers)
-              printf '#!/bin/sh\nr="$(dirname "$0")/.%s.real"\ncommand -v ccache >/dev/null && exec ccache "$r" "$@"\nexec "$r" "$@"\n' "$(basename "$c")" > "$c"
+              b=$(dirname "$c"); n=$(basename "$c")
+              mv "$c" "$b/.$n.real"
+              # The wrapper runs ccache on a link named like the compiler (in
+              # .names/): the compiler takes its name from argv[0], so gcc
+              # --version, and with it the kernel's '# Compiler:' line, read as
+              # GL.iNet's instead of '.<name>.real'. (Falls back to the real
+              # compiler without ccache: the SDK built in this run carries these
+              # wrappers.)
+              mkdir -p "$b/.names" && ln -sfn "../.$n.real" "$b/.names/$n"
+              printf '#!/bin/sh\nr="$(dirname "$0")/.names/%s"\ncommand -v ccache >/dev/null && exec ccache "$r" "$@"\nexec "$r" "$@"\n' "$n" > "$c"
               chmod +x "$c"; echo "ccache wrapper: $c"
             done
             if [ ! -f "$ccache_tc" ]; then
