@@ -233,8 +233,9 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   (recipes, all validated: 99zs 4.2.0, 99zu 4.2.1, 99zv 4.2.3, 99zw 4.4.5,
   99zt 4.4.6; `docs/closed-binaries/` updated). `kmwan` byte-identical for
   4.5.16–4.7.0 (2026-10-30: 4.5.0–4.6.4's `IS_IP`/`IS_IPV6` also skip
-  packets with a VLAN tag present); open (parked, small): `remove_netcell`
-  (4.5.0, 3 instructions, same behaviour); `parental_control` 4.2.3–4.4.6 (139
+  packets with a VLAN tag present); 4.5.0's `remove_netcell` accepted but kept
+  open (3 instructions, compiler placement, same behaviour; ~115 source
+  forms, GCC dumps and hints tried, journey logbook 2026-10-30); `parental_control` 4.2.3–4.4.6 (139
   instructions, string order). Notes per residue in the private `notes/`. Helpers in the private `tools/`
   (`kconfirm.sh`, `candscore.sh`, `diffuncs.py`, `fnhunks.py`, `klines.sh`,
   `fnswap.py`). **Subagents** (Sonnet) work in their own clone
