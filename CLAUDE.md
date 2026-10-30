@@ -203,6 +203,9 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   owner 2026-10-29). Runner option `kernel=true` (`KERNEL_ONLY=1`): host
   tools, toolchain and kernel only, ~30–45 min, a release's kernel tree for
   module bridges; trees for every release 4.1.1–4.9.0 exist (2026-10-29).
+- **Wi-Fi baggage out of scope** (owner, 2026-10-30): `mt_wifi`, `mtk_warp_proxy`,
+  `mtk_warp`, `mtfwd`, `mtqos`, `fwdd` do nothing on a Brume 2 (no Wi-Fi
+  hardware; checked on the running 4.7.4 unit); not reconstructed further.
 - **Closed binaries:** 11 of 45 byte-identical (private repo `user/`,
   `results/user/`); origins inventory in the private repo
   `notes/oss-origins-4.2.0.md`. Further work on them stopped (safety
