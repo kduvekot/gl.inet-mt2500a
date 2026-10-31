@@ -108,7 +108,12 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   data meanwhile). No GPL source request to GL.iNet until all firmwares
   are done (owner, 2026-10-27); keep the list of not-public parts current.
 - **Naming:** GitHub workflow runs by their run number (#N); M5+ jobs by
-  their queue number.
+  their queue number: plain increasing integers from 100 on (owner,
+  2026-10-31; older jobs 02–99zzz16 keep their names), e.g.
+  `100-validation-4.8.2.args`. A preflight (dry run up to defconfig) only
+  when a release's configuration changes, as its own number: `100` the
+  preflight, `101` the build with `needs=100`; small-fix re-validations go
+  without one (`recipecheck.sh` first).
 - **Decompilation** (private repo): one commit per iteration, never
   squashed.
 
