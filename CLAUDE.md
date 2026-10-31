@@ -117,7 +117,7 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
 - **Decompilation** (private repo): one commit per iteration, never
   squashed.
 
-## Where things stand (2026-10-29)
+## Where things stand (2026-10-31)
 
 - Workflows on `main`: **Build OpenWrt**, **Recovery kit**, **Raspberry Pi
   OS image** (all Node 24 actions). The `recovery-kit` release is
@@ -257,6 +257,17 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
   own (one kept re-sending its report), compare `__LINE__` values as sorted
   sets, read where GL.iNet's branches jump before reordering code.
   Interrupting the main session's tool call can stop a running subagent.
+- **Status 2026-10-31 (journey logbook 10-30/10-31):** final no-ccache
+  validation batch of all 15 releases (99zzz01–15, jobs 101/102): counts
+  and differing-file lists as before; `docs/closed-binaries/` regenerated.
+  Kernel bridged privately for 4.6.2–4.9.0 (Image identical except the
+  20-byte build ID, which covers DWARF of GL.iNet's not-public source:
+  needs their files). GL.iNet's own kernel modules byte-identical in every
+  release except `kmwan` 4.5.0 (17 bytes, accepted, open; ~11,000 variants
+  tried, generator `~/agent/kmgen/` on the M5+). All closed Lua
+  reconstructed. Left: closed C programs (C decompilation stopped),
+  `docs/releases.md`. Lessons: when placement differs, check the data
+  structures the code touches; measure function lengths in GL.iNet's binary.
 - **Next:** phase C (upstream
   OpenWrt on the old unit, iperf with the GMKtec). Ask the owner before any
   write to a router.
