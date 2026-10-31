@@ -175,7 +175,8 @@ Details and history are in docs/journey.md (chapters plus logbook).
 - Two workers (`~/queue/`, `~/queue2/`, tmux `queue`/`queue2`, log
   `~/queue.log`, verdict `~/brief.sh <job>`); jobs numbered 101, 102, …
 - Each keeps its last tree (`~/trees/w1|w2`, `~/rebuild.sh`); finished trees
-  in `~/archive/trees/` (7 days / 500 GB). `kernel=true`: kernel-only tree.
+  in `~/archive/trees/` (60 days, owner 2026-10-31; 500 GB). `kernel=true`: kernel-only tree.
+  M5+ scripts backed up in the private repo (`tools/m5/`, `tools/variants/`).
   `~/recipecheck.sh <release>` before queueing.
 - **Subagents** (Sonnet; Haiku for simple checks) work in
   `~/agent/mt2500-decomp` (branch `agent/*`; refresh by pushing the Pi's
