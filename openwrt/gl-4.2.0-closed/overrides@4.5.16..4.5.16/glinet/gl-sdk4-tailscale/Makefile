@@ -23,6 +23,10 @@ define Package/gl-sdk4-tailscale/description
  TAILSCALE Info API for Gl.inet
 endef
 
+define Package/gl-sdk4-tailscale/conffiles
+/etc/config/tailscale
+endef
+
 define Download/tailscale-static
   URL:=https://pkgs.tailscale.com/stable
   URL_FILE:=tailscale_$(TS_VERSION)_arm64.tgz
