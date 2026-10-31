@@ -119,161 +119,72 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
 
 ## Where things stand (2026-10-31)
 
-- Workflows on `main`: **Build OpenWrt**, **Recovery kit**, **Raspberry Pi
-  OS image** (all Node 24 actions). The `recovery-kit` release is
-  published (2026-10-23).
-- Raspberry Pi set up and running Claude Code (below).
-- **UART works** (2026-10-24): wired via a breadboard with 3 × 4.7 kΩ in
-  parallel in Pi TX → J13 RX; `pi-setup.sh` done. The old U-Boot (Sep 12
-  2022) fails the eMMC (`-110` / `-524`), as in Irakli's log. Console:
-  `env -u TMUX ~/mt2500-recovery-kit/console.sh start|show|send|stop`
-  (`env -u TMUX` because Claude itself runs inside the claude-rc tmux
-  server); raw logs in `~/mt2500-recovery-kit/logs/`, on the Pi only.
-- **Router power** is switchable from the Pi: `pi/plug.sh` (below).
-- **Plan B works** (2026-10-24): the 2025-02-24 U-Boot loaded into RAM
-  (`uartboot.sh -y` in tmux session `uartboot`, router switched with
-  `pi/plug.sh`) reads the eMMC and its intact partition table. Nothing
-  written yet; a power cycle brings back the old U-Boot. The published kit's
-  `uartboot.sh` lacks the port-release fix: stop the console a few seconds
-  before running it.
-- **Full eMMC backup done** (2026-10-24), SHA256-verified against the
-  router: `~/mt2500-backup/2026-10-24/` on the Pi (boot0, boot1, full image
-  + `.zst`, `parts/`). boot1 holds the unit's MAC and serial number: **never
-  put backup contents or their hashes in this public repo.** Method: OpenWrt
-  initramfs over TFTP (`tftpd-hpa`, eth0 only, autostart off, TFTP root
-  kept empty because GL's U-Boot auto-flashes `openwrt-gl-mt2500.bin` /
-  `uboot-gl-mt2500.bin` from it), then `cat` over SSH. See the checklist,
-  step 3b.
-- **The old unit boots by itself again** (2026-10-24): the 2025-02-24 U-Boot
-  is on the eMMC (`fip`, written with `dd` from the initramfs, verified),
-  booting GL.iNet 4.7.4 (official, untouched), factory-reset and set up:
-  English, Europe/Amsterdam, `root` password in
-  `~/.config/mt2500/admin-password` on the Pi (never in the repo). Web UI
-  and JSON-RPC at 192.168.8.1 from the Pi. Factory reset from failsafe:
-  `mount_root; firstboot -y; sync; reboot -f` (without `mount_root` it does
-  nothing on this firmware).
-- WAN of the old unit is connected (home LAN switch); GL.iNet 4.7.4
-  running, used for read-only analysis.
-- **Analysis done** (docs/driver-analysis.md, journey chapters 11-12):
-  phases A and B (vendor vs mainline drivers), 16 firmware versions
-  compared, GL.iNet 4.2.0 recreated (kernel config and all modules
-  identical; SDK published as release `gl-4.2.0-sdk`), phase D (closed
-  modules: only `mtkhnat` touches hardware and it is public code), kernel
-  image byte-identical when built without ccache (2026-10-26; with ccache
-  the build IDs differ). The
-  decompiled code lives in a private repo on the owner's account (name in
-  Claude's memory), never in this one.
-- **4.2.0 recreation, complete image** (journey chapter 13, 2026-10-25):
-  public part identical except accepted differences (Samba library order
-  and ~25 `.pyc`, both random in GL.iNet's own builds too; vermagic hash;
-  `wg`'s tree hash). The complete image, with GL.iNet's closed packages
-  generated *inside the run* from the official image, builds on the free
-  public runners: `gl-recreate-4.2.0.yml` input `closed` (full build) or
-  `gl-assemble-4.2.0.yml` (published SDK + ImageBuilder, ~10 min). Both
-  publish reports only, never the image. 466 packages, 6071 files like the
-  official, `status` identical apart from vermagic, every `Installed-Size`
-  explained. **Validated 2026-10-26** (two runs without ccache, identical);
-  Samba and `.pyc` differences proven to be order only (function-by-function
-  and code-object comparison, journey chapter 13).
-- **Release by release (2026-10-27, journey chapter 15):** one recipe, a
-  row per release in `openwrt/gl-releases.tsv` (workflow input `release`);
-  release values found so far: `patches_rev` (4.4.x came from a release
-  branch: patch folder of 25 June 2023, 4.4.6 plus the wireguard fix),
-  `extra_config`, `feed_revs` (gl-feeds pinned by `SourceDateEpoch`,
-  `analysis/release-values.py` reads all releases' values in one run),
-  `extra_commits` (`openwrt/gl-extra-commits/`: GL.iNet patches missing
-  from the public set, two of them published in `gl-inet/gl-image`, plus a
-  labelled placeholder for 4.5.x's unidentified 885th commit, kept until a
-  reason to remove it or its real content is found). Build-machine orders
-  are read from the official binaries (`.github/scripts/link-order.py`).
-  **Proved** (validated without ccache, only the accepted classes left):
-  4.1.1, 4.2.0, 4.2.1, 4.2.3, 4.4.5, 4.4.6, 4.5.0, 4.5.16 (2026-10-28).
-  4.6.2, 4.6.4, 4.6.8: reproducible without ccache; left only the
-  not-public parts (journey ch. 15 keeps the list, 13 items) and
-  `ethsys_reset`. 4.7.0, 4.7.4 (99k): reproducible without ccache, left
-  only the not-public parts. 4.8.2 (99y, 99zb without ccache): at that level too. 4.9.0 (99ze, without ccache): at that level too (cfg80211
-  kernel config, WireGuard 954, AdGuardHome 0.107.56 frontend, conninfra
-  and ubusd from public sources). Release values beyond the first ones:
-  `sdk_mode` (4.8.2+ built with SDK=1, empty revision), `build_dir`
-  (4.1.1 Actions runner, Jenkins path from 4.7.0), `umask` (002 from
-  4.7.0), `early_patches` also as a range (4.8.2+). Release-specific
-  closed-package recipes: `openwrt/gl-4.2.0-closed/overrides@<release>/`;
-  feed-specific source patches: `openwrt/gl-4.2.0-patches/<pkg>@<feed>/`.
-  GL.iNet's private MediaTek feed is called `mt798x` from 4.6.2 on.
-  `gl-inet/gl-image` holds complete GPL trees of later GL.iNet releases
-  for other models (gl-be10000 `versions/4.8.6`, gl-be14000 `4.9.1`,
-  gl-mt3600be `4.8.7`/`4.9.0`): source for GL.iNet's package patches and
-  some of their own packages (e.g. `gl-sdk4-nas-exfat`).
-- **M5+ workflow:** two job workers (`~/queue/`, `~/queue2/`, verdict
-  `~/brief.sh NN`), each keeps its last OpenWrt tree (`~/trees/w1|w2`) for
-  `~/rebuild.sh <w> <package>` (minutes instead of a ~31-minute full run).
-  Finished trees move to `~/archive/trees/` (pruned beyond 7 days or 500 GB,
-  owner 2026-10-29). Runner option `kernel=true` (`KERNEL_ONLY=1`): host
-  tools, toolchain and kernel only, ~30–45 min, a release's kernel tree for
-  module bridges; trees for every release 4.1.1–4.9.0 exist (2026-10-29).
-- **Wi-Fi baggage out of scope** (owner, 2026-10-30): `mt_wifi`, `mtk_warp_proxy`,
-  `mtk_warp`, `mtfwd`, `mtqos`, `fwdd` do nothing on a Brume 2 (no Wi-Fi
-  hardware; checked on the running 4.7.4 unit); not reconstructed further.
-- **Closed binaries:** 11 of 45 byte-identical (private repo `user/`,
-  `results/user/`); origins inventory in the private repo
-  `notes/oss-origins-4.2.0.md`. Further work on them stopped (safety
-  classifier stops). `docs/releases.md` only once all releases are done.
-  Public origins found 2026-10-28 and turned into recipes (build steps in
-  `overrides@<from>..<to>/…/build.mk`, which keep the generated recipe's
-  metadata): 4.5.16 Tailscale (official 1.58.2 release, sstripped),
-  4.1.1–4.7.0 `oui/system.so` (oui `lsystem.c`, `-O1`), 4.8.2/4.9.0
-  bundled LuCI ipks (our own LuCI builds), `black_white_list.ko`
-  4.7.4/4.8.2 and `parental_control.ko` 4.8.2 (gl-image sources); 4.9.0's
-  `black_white_list`, `dns_mark`, `kmwan`, `parental_control`, `port_forward`,
-  `tertf` (gl-image MT3600BE 4.9.0, 2026-10-29; 99zf validates). Leads
-  are found with string scans against local sources (`~/provenance.py`,
-  `~/kmodsrc.sh` on the M5+); "GL.iNet's own code" only on evidence.
-  Private reconstructions (`reconstructed/<release>/<package>/` in the
-  private repo): all compiled Lua 5.1/5.3/5.4 with build-path chunk names
-  (unluac 2025, owner-approved, plus `tools/lnum2std.py`, `lua5xstd.py`,
-  `relayout.py`), data-only Lua, `oopslog` 4.1.1-4.7.0. C decompilation
-  stops on the safety classifier (2026-10-28 again): don't retry it.
-  Bridging a close public version function by function (disassembly
-  compared with our build, source edited, one commit per step) is
-  owner-approved (2026-10-28): private `tools/kbridge.sh` for kernel
-  modules; 4.9.0 `mtk_warp.ko` done that way. GL.iNet's own kernel modules
-  (2026-10-29, journey logbook): `parental_control`, `tertf`,
-  `black_white_list`, `gl-mpflow`, `dns_mark` byte-identical for every
-  release back to 4.4.5 (each against its own tree); `parental_control`
-  4.2.0/4.2.1 and `tertf` 4.2.3–4.4.6 are public gl-feeds commits unchanged
-  (recipes, all validated: 99zs 4.2.0, 99zu 4.2.1, 99zv 4.2.3, 99zw 4.4.5,
-  99zt 4.4.6; `docs/closed-binaries/` updated). `kmwan` byte-identical for
-  4.5.16–4.7.0 (2026-10-30: 4.5.0–4.6.4's `IS_IP`/`IS_IPV6` also skip
-  packets with a VLAN tag present); 4.5.0's `remove_netcell` accepted but kept
-  open (3 instructions, compiler placement, same behaviour; ~115 source
-  forms, GCC dumps and hints tried, journey logbook 2026-10-30); `parental_control` 4.2.3–4.4.6 byte-identical since
-  2026-10-30 (no `rcu_head` in its `pc_app_t`). Notes per residue in the private `notes/`. Helpers in the private `tools/`
-  (`kconfirm.sh`, `candscore.sh`, `diffuncs.py`, `fnhunks.py`, `klines.sh`,
-  `fnswap.py`). **Subagents** (Sonnet) work in their own clone
-  (`~/agent/mt2500-decomp` on the M5+, branch `agent/*`, `KBRIDGE_WORK=~/agent/kbridge`),
-  push with `~/agent/push-private.sh <branch>` on the Pi; the main session
-  verifies by rebuilding and merges. Brief them: copy only `src/` and
-  `build.opts`, push after every commit, no wait timers or monitors of their
-  own (one kept re-sending its report), compare `__LINE__` values as sorted
-  sets, read where GL.iNet's branches jump before reordering code.
-  Interrupting the main session's tool call can stop a running subagent.
-- **Status 2026-10-31 (journey logbook 10-30/10-31):** final no-ccache
-  validation batch of all 15 releases (99zzz01–15, jobs 101/102): counts
-  and differing-file lists as before; `docs/closed-binaries/` regenerated.
-  Kernel bridged privately for 4.6.2–4.9.0 (Image identical except the
-  20-byte build ID, which covers DWARF of GL.iNet's not-public source:
-  needs their files). GL.iNet's own kernel modules byte-identical in every
-  release except `kmwan` 4.5.0 (17 bytes, accepted, open; ~11,000 variants
-  tried, generator `~/agent/kmgen/` on the M5+). All closed Lua
-  reconstructed. Left: closed C programs (C decompilation stopped),
-  `docs/releases.md`. Lessons: when placement differs, check the data
-  structures the code touches; measure function lengths in GL.iNet's binary.
-- **Next:** phase C (upstream
-  OpenWrt on the old unit, iperf with the GMKtec). Ask the owner before any
-  write to a router.
-- WAN PHY: old unit MaxLinear GPY211C0VC (`glinet_gl-mt2500`; board
-  MT2500-V1.1, DDR4 1 GB, Samsung 8 GB eMMC); replacement Airoha EN8811H (`glinet_gl-mt2500-airoha`; GL.iNet 4.7.13; table in docs/journey.md). The old unit's UART is
-  J13: 3.3V (square pad), RX, TX, GND, open through-holes.
+Details and history are in docs/journey.md (chapters plus logbook).
+
+**Infrastructure**
+- Workflows on `main`: **Build OpenWrt**, **Recovery kit** (release
+  published 2026-10-23), **Raspberry Pi OS image** (Node 24 actions).
+- Pi runs Claude Code (below). UART works (J13 via breadboard, 3 × 4.7 kΩ
+  in Pi TX); console `env -u TMUX ~/mt2500-recovery-kit/console.sh
+  start|show|send|stop`; logs only on the Pi. Router power: `pi/plug.sh`.
+- **Old unit recovered** (2026-10-24): 2025-02-24 U-Boot in `fip`; runs
+  GL.iNet 4.7.4 (latest stable for the MT2500; 4.8.2/4.9.0 are testing),
+  factory-reset, at 192.168.8.1 from the Pi; root password in
+  `~/.config/mt2500/admin-password`; SSH with
+  `SSH_ASKPASS=~/.config/mt2500/askpass.sh`. WAN on the home LAN. Failsafe
+  reset: `mount_root; firstboot -y; sync; reboot -f`.
+- **Full eMMC backup** `~/mt2500-backup/2026-10-24/` on the Pi (and NAS):
+  boot1 holds MAC and serial, **never put contents or hashes in this repo.**
+- WAN PHY: old unit GPY211C0VC (`glinet_gl-mt2500`, MT2500-V1.1, 1 GB,
+  8 GB eMMC); replacement EN8811H (`glinet_gl-mt2500-airoha`, 4.7.13).
+
+**Recreation of GL.iNet's firmware (journey chapters 13–15)**
+- One recipe (`gl-recreate-4.2.0.yml`), a row per release in
+  `openwrt/gl-releases.tsv` (values: `patches_rev`, `extra_config`,
+  `feed_revs`, `extra_commits` in `openwrt/gl-extra-commits/`,
+  `early_patches`, `sdk_mode`, `build_dir`, `umask`). Closed packages are
+  generated in the run from the official image; release-specific recipes
+  in `openwrt/gl-4.2.0-closed/overrides@<from>..<to>/`; workflows publish
+  reports only. Accepted differences: Samba library order, `.pyc` order,
+  vermagic hash, `wg`'s tree hash (and the `Installed-Size` it shifts).
+- **All 15 releases validated without ccache** (final batch 99zzz01–15,
+  jobs 101/102, 2026-10-31): counts and differing-file lists as before;
+  `docs/closed-binaries/` regenerated (`analysis/private-binaries.py`).
+  4.1.1–4.5.16 kernel byte-identical; 4.6.2–4.9.0 kernel public except the
+  not-public parts (journey ch. 15 list).
+- **Private (repo `mt2500-decomp`, name in memory; never here):**
+  - Kernel bridged for 4.6.2–4.9.0: Image identical except the 20-byte
+    build ID, which covers DWARF of GL.iNet's not-public source (needs their
+    files; gl-image already searched).
+  - GL.iNet's own kernel modules byte-identical in every release except
+    `kmwan` 4.5.0 (17 bytes in `remove_netcell`, accepted, open; ~11,000
+    variants, generator `~/agent/kmgen/` on the M5+).
+  - All closed Lua reconstructed (unluac, owner-approved; line layout from
+    the bytecode). Closed C programs partly (C decompilation stopped by the
+    safety classifier: don't retry); bridging close public versions
+    function by function is owner-approved (`tools/kbridge.sh`, `vbridge.sh`).
+  - Wi-Fi baggage out of scope (owner, 2026-10-30): `mt_wifi`,
+    `mtk_warp_proxy`, `mtk_warp`, `mtfwd`, `mtqos`, `fwdd`.
+- Lessons: when code placement differs, check the data structures it
+  touches; measure function lengths in GL.iNet's binary; compare `__LINE__`
+  values as sorted sets; blank-line layout is our construction.
+- Left: closed C programs, `docs/releases.md` (only when all is done), GPL
+  source request to GL.iNet afterwards.
+
+**M5+ workflow**
+- Two workers (`~/queue/`, `~/queue2/`, tmux `queue`/`queue2`, log
+  `~/queue.log`, verdict `~/brief.sh <job>`); jobs numbered 101, 102, …
+- Each keeps its last tree (`~/trees/w1|w2`, `~/rebuild.sh`); finished trees
+  in `~/archive/trees/` (7 days / 500 GB). `kernel=true`: kernel-only tree.
+  `~/recipecheck.sh <release>` before queueing.
+- **Subagents** (Sonnet; Haiku for simple checks) work in
+  `~/agent/mt2500-decomp` (branch `agent/*`; refresh by pushing the Pi's
+  private `main` to its `pi-main`), push with `~/agent/push-private.sh`;
+  the main session verifies by rebuilding and merges. Brief them: copy only
+  `src/` and `build.opts`, push after every commit, no waits or monitors.
+
+**Next:** phase C (upstream OpenWrt on the old unit, iperf with the
+GMKtec). Ask the owner before any write to a router.
 
 ## Hardware
 
