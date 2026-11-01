@@ -152,7 +152,7 @@ Details and history are in docs/journey.md (chapters plus logbook).
   `docs/closed-binaries/` regenerated (`analysis/private-binaries.py`).
   4.1.1–4.5.16 kernel byte-identical; 4.6.2–4.9.0 kernel public except the
   not-public parts (journey ch. 15 list).
-- **Private (repo `mt2500-decomp`, name in memory; never here):**
+- **Private (private decompilation repo, name in memory; never here):**
   - Kernel bridged for 4.6.2–4.9.0: Image identical except the 20-byte
     build ID, which covers DWARF of GL.iNet's not-public source (needs their
     files; gl-image already searched).
@@ -179,7 +179,7 @@ Details and history are in docs/journey.md (chapters plus logbook).
   M5+ scripts backed up in the private repo (`tools/m5/`, `tools/variants/`).
   `~/recipecheck.sh <release>` before queueing.
 - **Subagents** (Sonnet; Haiku for simple checks) work in
-  `~/agent/mt2500-decomp` (branch `agent/*`; refresh by pushing the Pi's
+  a clone of the private repo under `~/agent/` (branch `agent/*`; refresh by pushing the Pi's
   private `main` to its `pi-main`), push with `~/agent/push-private.sh`;
   the main session verifies by rebuilding and merges. Brief them: copy only
   `src/` and `build.opts`, push after every commit, no waits or monitors.
