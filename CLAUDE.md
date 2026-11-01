@@ -181,7 +181,10 @@ Details and history are in docs/journey.md (chapters plus logbook).
   image recipes, source-collection manifest, network settings, result
   files), `tools/variants/` (generators) and `results/m5/` (all job reports,
   `queue.log`, generator results); on the NAS `swap/m5-results/` (build logs)
-  and `swap/gl-firmware/mt2500/` (official images). Trees, caches, `~/versions`
+  and `swap/gl-firmware/mt2500/` (official images). The Pi's MT2500 part
+  can be wiped too: its private config (router, plug and M5+ credentials),
+  the UART logs, the M5+ netboot setup and Claude's transcripts and memory
+  are on the NAS (`swap/pi-backup/pi-mt2500-2026-11-01.tar`, verified). Trees, caches, `~/versions`
   and the source clones are reproducible (recipe, `versions-local.sh`,
   manifest).
   `~/recipecheck.sh <release>` before queueing.
