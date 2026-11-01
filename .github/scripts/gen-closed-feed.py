@@ -8,7 +8,12 @@ unpacked official image, so a full build can reproduce them.
 taken from the image: built-from-public.txt (packages built from public
 source instead) and overrides/<feed>/<path>/Makefile (recipes that build
 their programs from source; files/ still comes from the image and the
-built programs are installed over it). Run inside the workflow only: the
+built programs are installed over it; overrides/<feed>/<path>/build.mk
+instead only adds build steps and Package/<name>/install-built to the
+generated recipe, which keeps its metadata). overrides@<release>/ holds recipes
+for that release and later (overrides@<from>..<to>/: for that range only;
+--release=<this release>; the newest one at or below it wins, other files
+in the recipe folder, e.g. src/, are copied along). Run inside the workflow only: the
 output contains GL.iNet's files and is never stored or published.
 
 For every closed package (default: all whose control file names a source in
@@ -30,6 +35,7 @@ from pathlib import Path
 
 CLOSED_PREFIX = ("gl-sdk4", "gl-", "oui-", "kmod-gl-sdk4", "libgl")
 CLOSED_EXTRA = {"fwdd", "kmod-mtfwd", "kmod-mtqos", "mtk-base-files"}
+CLOSED_FEEDS = {"glinet", "mt7981", "mt798x"}   # GL.iNet's private feeds
 # Files a package's postinst moved at image build (OpenWrt's rootfs.mk runs
 # and then deletes every postinst, so the script itself isn't in the image):
 # package -> {listed path: final path}. Our reconstruction of the effect.
@@ -89,7 +95,32 @@ def mk_escape(s):
 def main():
     root, out, closed = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
     opts = [a for a in sys.argv[4:] if a.startswith("--private-now=")]
-    only = set(a for a in sys.argv[4:] if a not in opts)
+    # --skip-override=<package>: generate it from the image like the others
+    # (gl-sdk4-adguardhome from 4.8.2 on: AdGuardHome is its own package)
+    skip = {a.split("=", 1)[1] for a in sys.argv[4:] if a.startswith("--skip-override=")}
+    # --release=<release>: picks overrides@<release>/ recipes (see above)
+    relarg = [a.split("=", 1)[1] for a in sys.argv[4:] if a.startswith("--release=")]
+    vkey = lambda v: tuple(int(x) for x in re.findall(r"\d+", v))
+    ovdirs = [closed / "overrides"]
+    if relarg:
+        # overrides@<from>..<to>/: only for releases in that range
+        rng = lambda d: (d.name.split("@", 1)[1].split("..") + [None])[:2]
+        ovdirs += [d for d in sorted(closed.glob("overrides@*"), key=lambda d: vkey(rng(d)[0]))
+                   if vkey(rng(d)[0]) <= vkey(relarg[0]) and (rng(d)[1] is None or vkey(relarg[0]) <= vkey(rng(d)[1]))]
+    # --umask=<umask>: GL.iNet's builder umask for this release (002 from 4.7.0)
+    umask = ([a.split("=", 1)[1] for a in sys.argv[4:] if a.startswith("--umask=")] or ["-"])[0]
+    # --i18n=<table>: translations to take from GL.iNet's public language
+    # repository instead of the image (openwrt/gl-4.2.0-closed/i18n/<release>.md)
+    i18n = ([a.split("=", 1)[1] for a in sys.argv[4:] if a.startswith("--i18n=")] or [None])[0]
+    opts_all = opts + [a for a in sys.argv[4:] if a.startswith(("--skip-override=", "--release=", "--umask=", "--i18n="))]
+    only = set(a for a in sys.argv[4:] if a not in opts_all)
+    # recipes share the download folder: a file name two recipes use must be
+    # the same file, or a build takes the other recipe's cached copy unchecked
+    # (2026-10-29: 4.9.0's parental-control got 4.8.2's sources)
+    dl_hash = {}
+    for bm in sorted(closed.glob("overrides*/**/build.mk")):
+        for f, h in re.findall(r"FILE:=(\S+)\n\s*HASH:=(\S+)", bm.read_text()):
+            assert dl_hash.setdefault(f, (h, bm))[0] == h, f"download name {f} in {bm} and {dl_hash[f][1]} with different hashes"
     # packages verified identical from public source: not part of this feed
     pub = closed / "built-from-public.txt"
     public = {l.strip() for l in pub.read_text().splitlines() if l.strip() and not l.startswith("#")} if pub.exists() else set()
@@ -98,6 +129,7 @@ def main():
     for o in opts:
         public -= set(o.split("=", 1)[1].split()) - {"-"}
     info = root / "usr/lib/opkg/info"
+    generated, shared, versions = {}, [], {}   # folder -> first package; shared folders
     # ABI-versioned names (jansson4) -> the name DEPENDS uses (jansson)
     abi = {}
     for f in info.glob("*.control"):
@@ -108,7 +140,11 @@ def main():
         name = cf.stem
         if only and name not in only:
             continue
-        if not only and not (name.startswith(CLOSED_PREFIX) or name in CLOSED_EXTRA):
+        # closed: by name, or built from one of GL.iNet's private feeds (4.9.0's
+        # kmod-dpi, kmod-mt_wifi, ... don't follow the naming)
+        src_feed = (control(cf).get("Source", "").split("/") + ["", ""])[1]
+        if not only and not (name.startswith(CLOSED_PREFIX) or name in CLOSED_EXTRA
+                             or src_feed in CLOSED_FEEDS):
             continue
         if name in public:
             print(f"{name:40} -> built from public source, skipped")
@@ -117,6 +153,12 @@ def main():
         src = c["Source"]                       # feeds/<feed>/<path>
         parts = src.split("/")
         d = out / parts[1] / "/".join(parts[2:]) if parts[0] == "feeds" else out / "misc" / name
+        versions[name] = c["Version"]
+        if d in generated:                     # a second package from the same folder:
+            shared.append((d, name))           # generated on its own, merged below
+            d = out / ".shared" / name
+        else:
+            generated[d] = name
         if d.exists():
             shutil.rmtree(d)
         (d / "files").mkdir(parents=True)
@@ -183,6 +225,15 @@ def main():
             t = d / "files/rootfs-overlay" / f
             if t.is_file():
                 t.chmod(m)
+        # With umask 002 (GL.iNet's Jenkins, 4.7.0 on) the package holds its
+        # executable overlay files group-writable (775), while the image shows
+        # the mode of the file they replace: gl-sdk4-modem and gl-line-graph
+        # get GL.iNet's exact 4.7.4 Installed-Size with it (gl-sdk4-base-files
+        # keeps MODES).
+        if umask == "002" and name not in MODES:
+            for t in (d / "files/rootfs-overlay").rglob("*"):
+                if t.is_file() and not t.is_symlink() and t.stat().st_mode & 0o100:
+                    t.chmod(0o775)
         (d / "version.date").write_text(c.get("SourceDateEpoch", "") + "\n")
         pkg = name[5:] if kmod else name
         lines = ["include $(TOPDIR)/rules.mk", ""]
@@ -239,6 +290,9 @@ def main():
                       f"$(eval $(call KernelPackage,{pkg}))"]
         else:
             lines += [f"define Package/{name}",
+                      # an empty release ("1-", 4.9.0's mtk-base-files and
+                      # wifi-profile) would otherwise become plain "1"
+                      *([f"  VERSION:={c['Version']}"] if c["Version"].endswith("-") else []),
                       f"  SECTION:={c.get('Section', 'base')}",
                       "  CATEGORY:=GL.iNet (closed, from the official image)",
                       f"  TITLE:={mk_escape(title)}",
@@ -273,7 +327,28 @@ def main():
                       "endef", "",
                       f"$(eval $(call BuildPackage,{name}))"]
         (d / "Makefile").write_text("\n".join(lines) + "\n")
-        ov = closed / "overrides" / d.relative_to(out) / "Makefile"
+        ov = closed / "overrides" / "-"
+        for od in ovdirs:                # the newest applicable recipe
+            for f in ("Makefile", "build.mk"):
+                if (od / d.relative_to(out) / f).exists():
+                    ov = od / d.relative_to(out) / f
+        if name in skip:
+            ov = closed / "overrides" / "-"     # (none)
+        if ov.name == "build.mk":        # build steps only: the generated recipe
+            mk = (d / "Makefile").read_text()  # keeps its metadata (conffiles, ...);
+            # (a kmod recipe's Build/Compile may write Module.symvers: the
+            # real build makes its own)
+            compile_ = re.search(r"^define Build/Compile\n(?:.*\n)*?endef\n", mk, re.M)
+            assert compile_ and "\t$(CP) ./files/* $(1)/\n" in mk, name
+            mk = mk.replace(compile_[0], ov.read_text(), 1)                        # its programs
+            mk = mk.replace("\t$(CP) ./files/* $(1)/\n",                         # go over files/
+                            f"\t$(CP) ./files/* $(1)/\n\t$(call Package/{name}/install-built,$(1))\n", 1)
+            (d / "Makefile").write_text(mk)
+            for x in ov.parent.iterdir():
+                if x.name != "build.mk":
+                    (shutil.copytree if x.is_dir() else shutil.copy2)(x, d / x.name)
+            print(f"{name:40} -> {d.relative_to(out)} (build steps: {ov.parent.relative_to(closed).parts[0]})")
+            continue
         if ov.exists():                  # built from source (files/ from the image)
             m = ov.read_text()           # with this release's version
             if ver:
@@ -284,7 +359,73 @@ def main():
             m = re.sub(r"^  DEPENDS:=$", "  DEPENDS:=" + " ".join("+" + x for x in deps),
                        m, count=1, flags=re.M)
             (d / "Makefile").write_text(m)
-        print(f"{name:40} -> {d.relative_to(out)}{' (override: built from source)' if ov.exists() else ''}")
+            for x in ov.parent.iterdir():  # the recipe's own sources (src/)
+                if x.name != "Makefile":
+                    (shutil.copytree if x.is_dir() else shutil.copy2)(x, d / x.name)
+        print(f"{name:40} -> {d.relative_to(out)}{' (override: built from source, ' + ov.parent.relative_to(closed).parts[0] + ')' if ov.exists() else ''}")
+    if i18n:
+        public_i18n(out, i18n)
+    merge_shared(out, generated, shared, versions)
+
+
+def public_i18n(out, table):
+    """Replace the image's translation files with the same files downloaded
+    from gl-inet/router-sdk-languages at the commit the table names, each
+    checked against its SHA256 (a failed download or check stops the run)."""
+    import hashlib, time, urllib.request
+    n = 0
+    for l in open(table):
+        m = re.match(r"^\| `(/[^`]+)` \| `([0-9a-f]{40})` \| `([^`]+)` \| `([0-9a-f]{64})` \|$", l.strip())
+        if not m:
+            continue
+        path, commit, rpath, sha = m.groups()
+        targets = [t for t in out.glob("**/files" + path)] + [t for t in out.glob("**/files-*" + path)]
+        if not targets:
+            continue                    # not part of a package taken from the image
+        url = f"https://raw.githubusercontent.com/gl-inet/router-sdk-languages/{commit}/{urllib.request.quote(rpath)}"
+        for attempt in range(5):              # waits 2, 4, 8, 16 s (DNS hiccups)
+            try:
+                data = urllib.request.urlopen(url, timeout=60).read()
+                break
+            except OSError:
+                if attempt == 4:
+                    raise
+                time.sleep(2 ** (attempt + 1))
+        if hashlib.sha256(data).hexdigest() != sha:
+            sys.exit(f"i18n: {url} doesn't match {sha}")
+        for t in targets:
+            t.write_bytes(data)         # keeps the file's mode
+        n += 1
+    print(f"i18n: {n} translation files from gl-inet/router-sdk-languages ({table})")
+
+
+def merge_shared(out, generated, shared, versions):
+    """GL.iNet builds some packages from one folder (4.9.0: gl-sdk4-dpi and
+    kmod-dpi in glinet/gl-sdk4-dpi, Source: the same for both). OpenWrt reads
+    one Makefile per folder, so the packages are merged into one: each keeps
+    its own files (files-<package>) and gets its exact official version
+    (VERSION:= in its definition; their PKG_VERSION/PKG_RELEASE split differs)."""
+    def pin(text, name):
+        head = f"define Package/{name}\n" if not name.startswith("kmod-") else f"define KernelPackage/{name[5:]}\n"
+        assert text.count(head) == 1, (name, head)
+        return text.replace(head, head + f"  VERSION:={versions[name]}\n")
+    for d, name2 in shared:
+        name1 = generated[d]
+        mk = (d / "Makefile").read_text()
+        if (d / "files").exists():
+            (d / "files").rename(d / f"files-{name1}")
+            mk = pin(mk.replace("./files/", f"./files-{name1}/"), name1)
+        t = out / ".shared" / name2
+        m2 = (t / "Makefile").read_text()
+        body = m2[m2.index("\ndefine ") + 1:].replace("./files/", f"./files-{name2}/")
+        (t / "files").rename(d / f"files-{name2}")
+        if name2.startswith("kmod-") and "/kernel.mk" not in mk:   # KernelPackage needs it
+            mk = mk.replace("include $(TOPDIR)/rules.mk\n", "include $(TOPDIR)/rules.mk\n\ninclude $(INCLUDE_DIR)/kernel.mk\n", 1)
+        if (t / "Module.symvers").exists() and not (d / "Module.symvers").exists():
+            (t / "Module.symvers").rename(d / "Module.symvers")
+        (d / "Makefile").write_text(mk.rstrip("\n") + "\n\n" + pin(body, name2))
+        print(f"{name2:40} -> merged into {d.relative_to(out)} (folder shared with {name1})")
+    shutil.rmtree(out / ".shared", ignore_errors=True)
 
 
 if __name__ == "__main__":

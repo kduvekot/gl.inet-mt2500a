@@ -25,7 +25,7 @@ define Package/gl-sdk4-ipv6
   SECTION:=base
   CATEGORY:=GL.iNet (closed, from the official image)
   TITLE:=glinet SDK4 ipv6 module
-  DEPENDS:=+libiwinfo-lua +kmod-ipt-nat6 +gl-sdk4-lua-utils
+  DEPENDS:=
 endef
 
 define Package/gl-sdk4-ipv6/description

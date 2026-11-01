@@ -1,0 +1,1 @@
+toolchain: musl: full crypt() support by default (GL.iNet, 4.8.2+)

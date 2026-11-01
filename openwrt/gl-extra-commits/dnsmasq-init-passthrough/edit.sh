@@ -10,3 +10,10 @@ f=package/network/services/dnsmasq/files/dnsmasq.init
 o=/work/cmp/off_root/etc/init.d/dnsmasq
 grep -q "passthrough.passthrough.enable" "$o"
 cat "$o" > "$f"
+# netifd's udhcpc script, same mode (4.7.4+: masquerade address and proxy
+# ARP for cable passthrough); netifd has a fixed PKG_RELEASE, so this
+# commit leaves its version as GL.iNet's (2021-10-30-8f82742c-1)
+f=package/network/config/netifd/files/usr/share/udhcpc/default.script
+o=/work/cmp/off_root/usr/share/udhcpc/default.script
+grep -q "passthrough.passthrough.enable" "$o"
+cat "$o" > "$f"

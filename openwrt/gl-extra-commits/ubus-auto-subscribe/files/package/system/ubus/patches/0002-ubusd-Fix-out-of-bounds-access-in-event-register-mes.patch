@@ -1,0 +1,32 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hauke Mehrtens <hauke@hauke-m.de>
+Date: Mon, 13 Oct 2025 23:59:33 +0200
+Subject: [PATCH 2/4] ubusd: Fix out of bounds access in event register message
+
+The code assumes that the provided pattern is at least one byte long.
+reject shorter patterns.
+
+Empty messages could lead to heap corruptions and ubusd_acl_check()
+bypass.
+
+Reported-by: Karsten Sperling <ksperling@apple.com>
+Fixes: 12623b43060a ("trim the wildcard of partial patterns to keep the avl tree sorted properly")
+Signed-off-by: Hauke Mehrtens <hauke@hauke-m.de>
+---
+ ubusd_event.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/ubusd_event.c b/ubusd_event.c
+index ef433f8..8b9332d 100644
+--- a/ubusd_event.c
++++ b/ubusd_event.c
+@@ -81,6 +81,9 @@ static int ubusd_alloc_event_pattern(struct ubus_client *cl, struct blob_attr *m
+ 	pattern = blobmsg_data(attr[EVREG_PATTERN]);
+ 
+ 	len = strlen(pattern);
++	if (len <= 0)
++		return UBUS_STATUS_PERMISSION_DENIED;
++
+ 	if (pattern[len - 1] == '*') {
+ 		partial = true;
+ 		pattern[len - 1] = 0;

@@ -1,1 +1,1 @@
-dnsmasq: passthrough mode, DHCP range and mark for outgoing packets (GL.iNet, 4.7.4+)
+dnsmasq, netifd: passthrough mode, DHCP range, mark for outgoing packets, udhcpc script (GL.iNet, 4.7.4+)

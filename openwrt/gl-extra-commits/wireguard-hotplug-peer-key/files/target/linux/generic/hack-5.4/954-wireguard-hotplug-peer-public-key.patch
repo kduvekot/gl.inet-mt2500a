@@ -1,0 +1,216 @@
+--- a/drivers/net/wireguard/hotplug.h
++++ b/drivers/net/wireguard/hotplug.h
+@@ -5,9 +5,10 @@
+ #define  REKEY_TIMEOUT_EVENT "REKEY-TIMEOUT"
+ #define  KEYPAIR_CREATED_EVENT "KEYPAIR-CREATED"
+ 
+-extern void wireguard_hotplug(const char *ifname, const char *action);
++extern void wireguard_hotplug(const char *ifname, const char *action, unsigned char *peerpubkey);
+ extern void wg_hotplug_init(void);
+ extern void wg_hotplug_free(void);
+ 
+ #endif
+ 
++
+--- a/drivers/net/wireguard/hotplug.c
++++ b/drivers/net/wireguard/hotplug.c
+@@ -4,79 +4,118 @@
+ #include <linux/skbuff.h>
+ #include <linux/if.h>
+ 
+-#define SUBSYSTEM_NAME	"wireguard"
++#include "messages.h"
+ 
+-#define EVENT_BUF_SIZE	2048
++#define SUBSYSTEM_NAME  "wireguard"
+ 
++#define EVENT_BUF_SIZE  2048
++#define ACTION_BUF_LEN  128
++#define PEER_PUB_BUF_LEN        64
+ struct wg_event {
+-	struct work_struct work;
+-	char ifname[IFNAMSIZ];
+-	const char *action;
++    struct work_struct work;
++    char ifname[IFNAMSIZ];
++    char action[ACTION_BUF_LEN];
++    unsigned char peerpubkey[PEER_PUB_BUF_LEN];
+ };
+ 
+ 
+ /* -------------------------------------------------------------------------*/
++
++static const char b64_table[] =
++    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
++
++static void keytobase64(const unsigned char *src, int len, char *out)
++{
++    size_t i = 0, j = 0, mod = 0;
++
++    while (i < len) {
++        uint32_t octet_a = i < len ? (uint32_t)src[i++] : 0;
++        uint32_t octet_b = i < len ? (uint32_t)src[i++] : 0;
++        uint32_t octet_c = i < len ? (uint32_t)src[i++] : 0;
++
++        uint32_t triple = (octet_a << 16) | (octet_b << 8) | octet_c;
++
++        out[j++] = b64_table[(triple >> 18) & 0x3F];
++        out[j++] = b64_table[(triple >> 12) & 0x3F];
++        out[j++] = (i - 1 > len) ? '=' : b64_table[(triple >> 6) & 0x3F];
++        out[j++] = (i > len) ? '=' : b64_table[triple & 0x3F];
++    }
++
++    mod = len % 3;
++    if (mod == 1) {
++        out[j - 1] = '=';
++        out[j - 2] = '=';
++    } else if (mod == 2) {
++        out[j - 1] = '=';
++    }
++
++    out[j] = '\0';
++}
++
+ static int bh_event_add_var(struct sk_buff *skb, int argv,
+-							const char *format, ...)
++                                                       const char *format, ...)
+ {
+-	static char buf[128];
+-	char *s;
+-	va_list args;
+-	int len;
+-
+-	if (argv)
+-		return 0;
+-
+-	va_start(args, format);
+-	len = vsnprintf(buf, sizeof(buf), format, args);
+-	va_end(args);
+-
+-	if (len >= sizeof(buf)) {
+-		//WARN(1, "buffer size too small\n");
+-		return -ENOMEM;
+-	}
++    static char buf[128];
++    char *s;
++    va_list args;
++    int len;
++
++    if (argv)
++        return 0;
++
++    va_start(args, format);
++    len = vsnprintf(buf, sizeof(buf), format, args);
++    va_end(args);
++
++    if (len >= sizeof(buf)) {
++        //WARN(1, "buffer size too small\n");
++        return -ENOMEM;
++    }
+ 
+-	s = skb_put(skb, len + 1);
+-	strcpy(s, buf);
++    s = skb_put(skb, len + 1);
++    strcpy(s, buf);
+ 
+-	return 0;
++    return 0;
+ }
+ 
+ static void hotplug_work(struct work_struct *work)
+ {
+-	struct wg_event *event = container_of(work, struct wg_event, work);
+-	struct sk_buff *skb;
++    struct wg_event *event = container_of(work, struct wg_event, work);
++    struct sk_buff *skb;
+ 
+-	skb = alloc_skb(EVENT_BUF_SIZE, GFP_KERNEL);
+-	if (!skb)
+-		goto out_free_event;
+-
+-	bh_event_add_var(skb, 0, "SUBSYSTEM=%s", SUBSYSTEM_NAME);
+-	bh_event_add_var(skb, 0, "ACTION=%s", event->action);
+-	bh_event_add_var(skb, 0, "ifname=%s", event->ifname);
++    skb = alloc_skb(EVENT_BUF_SIZE, GFP_KERNEL);
++    if (!skb)
++        goto out_free_event;
++
++    bh_event_add_var(skb, 0, "SUBSYSTEM=%s", SUBSYSTEM_NAME);
++    bh_event_add_var(skb, 0, "ACTION=%s", event->action);
++    bh_event_add_var(skb, 0, "ifname=%s", event->ifname);
++    bh_event_add_var(skb, 0, "peerpubkey=%s", event->peerpubkey);
+ 
+-	NETLINK_CB(skb).dst_group = 1;
+-	broadcast_uevent(skb, 0, 1, GFP_KERNEL);
++    NETLINK_CB(skb).dst_group = 1;
++    broadcast_uevent(skb, 0, 1, GFP_KERNEL);
+ 
+ out_free_event:
+-	kfree(event);
++    kfree(event);
+ }
+ 
+-void wireguard_hotplug(const char *ifname, const char *action)
++void wireguard_hotplug(const char *ifname, const char *action, unsigned char *peerpubkey)
+ {
+-	struct wg_event *event;
+-
+-	if (!strcmp(ifname, "wgserver"))
+-		return;
+-
+-	event = kzalloc(sizeof(struct wg_event), GFP_ATOMIC);
+-	if (!event)
+-		return;
++    struct wg_event *event;
++    unsigned char pubkey_str[PEER_PUB_BUF_LEN] = {0};
+ 
+-	memcpy(event->ifname, ifname, IFNAMSIZ);
++    if (!strcmp(ifname, "wgserver"))
++        return;
+ 
+-	event->action = action;
++    keytobase64(( const unsigned char *)peerpubkey, NOISE_PUBLIC_KEY_LEN, pubkey_str);
++    event = kzalloc(sizeof(struct wg_event), GFP_ATOMIC);
++    if (!event)
++        return;
++
++    memcpy(event->ifname, ifname, IFNAMSIZ);
++    memcpy(event->peerpubkey, pubkey_str, PEER_PUB_BUF_LEN);
++    memcpy(event->action, action, strlen(action) < ACTION_BUF_LEN ? strlen(action) : ACTION_BUF_LEN-1);
+ 
+-	INIT_WORK(&event->work, hotplug_work);
+-	schedule_work(&event->work);
++    INIT_WORK(&event->work, hotplug_work);
++    schedule_work(&event->work);
+ }
+--- a/drivers/net/wireguard/noise.c
++++ b/drivers/net/wireguard/noise.c
+@@ -852,7 +852,7 @@
+ 			handshake->entry.peer->device->index_hashtable,
+ 			&handshake->entry, &new_keypair->entry);
+ 
+-		wireguard_hotplug(handshake->entry.peer->device->dev->name, KEYPAIR_CREATED_EVENT);
++		wireguard_hotplug(handshake->entry.peer->device->dev->name, KEYPAIR_CREATED_EVENT, handshake->remote_static);
+ 	} else {
+ 		kzfree(new_keypair);
+ 	}
+--- a/drivers/net/wireguard/timers.c
++++ b/drivers/net/wireguard/timers.c
+@@ -63,7 +63,7 @@
+ 			mod_peer_timer(peer, &peer->timer_zero_key_material,
+ 				       jiffies + REJECT_AFTER_TIME * 3 * HZ);
+ 
+-		wireguard_hotplug(peer->device->dev->name, REKEY_GIVEUP_EVENT);
++		wireguard_hotplug(peer->device->dev->name, REKEY_GIVEUP_EVENT, peer->handshake.remote_static);
+ 	} else {
+ 		++peer->timer_handshake_attempts;
+ 		pr_debug("%s: Handshake for peer %llu (%pISpfsc) did not complete after %d seconds, retrying (try %d)\n",
+@@ -81,7 +81,7 @@
+ 		if(is_retry_count_wg > 3)
+ 		{
+ 			is_retry_count_wg = 0;
+-			wireguard_hotplug(peer->device->dev->name, REKEY_TIMEOUT_EVENT);
++			wireguard_hotplug(peer->device->dev->name, REKEY_TIMEOUT_EVENT, peer->handshake.remote_static);
+ 		}
+ 	}
+ }

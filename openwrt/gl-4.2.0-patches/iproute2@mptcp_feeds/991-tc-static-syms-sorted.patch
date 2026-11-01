@@ -1,0 +1,15 @@
+GNU make before 4.3 doesn't sort $(wildcard), so tc's static-syms.h followed the
+build machine's directory order; GL.iNet's 4.7.x tc-tiny has the sorted order
+(their Jenkins builder runs a newer make). For the MPTCP feed's iproute2 only.
+
+--- a/tc/Makefile
++++ b/tc/Makefile
+@@ -199,7 +199,7 @@
+ 
+ tc: static-syms.o
+ static-syms.o: static-syms.h
+-static-syms.h: $(wildcard *.c)
++static-syms.h: $(sort $(wildcard *.c))
+ 	files="$^" ; \
+ 	for s in `grep -B 3 '\<dlsym' $$files | sed -n '/snprintf/{s:.*"\([^"]*\)".*:\1:;s:%s::;p}'` ; do \
+ 		sed -n '/'$$s'[^ ]* =/{s:.* \([^ ]*'$$s'[^ ]*\) .*:extern char \1[] __attribute__((weak)); if (!strcmp(sym, "\1")) return \1;:;p}' $$files ; \
