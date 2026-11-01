@@ -176,7 +176,14 @@ Details and history are in docs/journey.md (chapters plus logbook).
   `~/queue.log`, verdict `~/brief.sh <job>`); jobs numbered 101, 102, …
 - Each keeps its last tree (`~/trees/w1|w2`, `~/rebuild.sh`); finished trees
   in `~/archive/trees/` (60 days, owner 2026-10-31; 500 GB). `kernel=true`: kernel-only tree.
-  M5+ scripts backed up in the private repo (`tools/m5/`, `tools/variants/`).
+  The M5+ will be wiped eventually (owner, 2026-11-01); what a rebuild
+  needs is saved: in the private repo `tools/m5/` (scripts, Dockerfiles and
+  image recipes, source-collection manifest, network settings, result
+  files), `tools/variants/` (generators) and `results/m5/` (all job reports,
+  `queue.log`, generator results); on the NAS `swap/m5-results/` (build logs)
+  and `swap/gl-firmware/mt2500/` (official images). Trees, caches, `~/versions`
+  and the source clones are reproducible (recipe, `versions-local.sh`,
+  manifest).
   `~/recipecheck.sh <release>` before queueing.
 - **Subagents** (Sonnet; Haiku for simple checks) work in
   a clone of the private repo under `~/agent/` (branch `agent/*`; refresh by pushing the Pi's
