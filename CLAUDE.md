@@ -19,7 +19,10 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
 ## Working agreements (from the owner)
 
 - **Ask before installing anything** (apt, pip, curl | bash, …) **and before
-  any `sudo` command.** Show what will change first.
+  any `sudo` command.** Show what will change first. Exception (owner,
+  2026-11-03): installing from a package manager (apt, PyPI, …) or from the
+  official site or repository of a reputable open-source project is allowed;
+  say what is installed. Other `sudo` still needs asking.
 - **Ask before anything that might trigger the safety check** (owner,
   2026-10-28): running downloaded or external programs (e.g. unluac),
   decompilers, or similar; get explicit permission first, before even
@@ -62,6 +65,11 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
 - **Scripts first, few tokens:** bulk work in scripts or workflows that
   write a short summary; raw output stays in files. Cheap subagents for
   searches; verify their claims before relaying them.
+- **Small steps when the owner follows along (owner, 2026-11-03):** for
+  interactive work, one purpose per command (copy, then restart, then
+  check), a sentence before each step on what and why, and a look at the
+  result before the next. Bulk work may stay one script, but say up front
+  that it is bulk and roughly how long it may take.
 - **Commits:** `git -c user.name=Claude -c user.email=noreply@anthropic.com`
   (no global identity on the Pi); stage files by name or `-u`, never
   `git add -A` (2026-10-27 it committed `__pycache__` files, which then
