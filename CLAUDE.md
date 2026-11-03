@@ -62,6 +62,11 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
 - **Scripts first, few tokens:** bulk work in scripts or workflows that
   write a short summary; raw output stays in files. Cheap subagents for
   searches; verify their claims before relaying them.
+- **Small steps when the owner follows along (owner, 2026-11-03):** for
+  interactive work, one purpose per command (copy, then restart, then
+  check), a sentence before each step on what and why, and a look at the
+  result before the next. Bulk work may stay one script, but say up front
+  that it is bulk and roughly how long it may take.
 - **Commits:** `git -c user.name=Claude -c user.email=noreply@anthropic.com`
   (no global identity on the Pi); stage files by name or `-u`, never
   `git add -A` (2026-10-27 it committed `__pycache__` files, which then
