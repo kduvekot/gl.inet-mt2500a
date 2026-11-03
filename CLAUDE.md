@@ -19,7 +19,10 @@ GL.iNet GL-MT2500 / GL-MT2500A (Brume 2), MediaTek MT7981B:
 ## Working agreements (from the owner)
 
 - **Ask before installing anything** (apt, pip, curl | bash, …) **and before
-  any `sudo` command.** Show what will change first.
+  any `sudo` command.** Show what will change first. Exception (owner,
+  2026-11-03): installing from a package manager (apt, PyPI, …) or from the
+  official site or repository of a reputable open-source project is allowed;
+  say what is installed. Other `sudo` still needs asking.
 - **Ask before anything that might trigger the safety check** (owner,
   2026-10-28): running downloaded or external programs (e.g. unluac),
   decompilers, or similar; get explicit permission first, before even
